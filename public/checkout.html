@@ -107,6 +107,15 @@ button{font-family:inherit;cursor:pointer}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--plum-tint)}50%{box-shadow:0 0 0 10px transparent}}
 .receipt{background:var(--ivory-2);border:1px solid var(--line);border-radius:12px;padding:4px 16px;margin:16px 0;text-align:left}
 
+/* test mode helper */
+.test-creds{background:var(--gold-tint);border:1px dashed var(--gold);border-radius:10px;padding:10px 13px;margin-bottom:12px;font-size:12px}
+.test-creds strong{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--gold-deep);display:block;margin-bottom:6px}
+.test-creds .tcrow{display:flex;justify-content:space-between;align-items:center;margin:3px 0}
+.test-creds .tcrow span{font-family:var(--mono);font-size:11.5px;color:var(--ink)}
+.test-creds .tcrow small{color:var(--muted);font-size:10.5px}
+.fill-btn{background:var(--gold-deep);color:#fff;border:none;border-radius:7px;padding:4px 10px;font-family:var(--mono);font-size:10.5px;font-weight:700;cursor:pointer;margin-top:7px;width:100%}
+.fill-btn:hover{opacity:.9}
+
 /* footer */
 .co-foot{padding:14px 22px;border-top:1px solid var(--line-2);display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--muted)}
 .co-foot .lock{display:flex;align-items:center;gap:5px}
@@ -171,6 +180,13 @@ function formFor(m){
   const payLabel='Pay '+fmt(amount(),ccy());
   const info='<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>';
   if(m==='card') return `
+    <div class="test-creds">
+      <strong>⚡ TEST CARD (Paystack sandbox)</strong>
+      <div class="tcrow"><span>4084 0840 8408 4081</span><small>Verve</small></div>
+      <div class="tcrow"><span>CVV: 408</span><small>Expiry: 01 / 99</small></div>
+      <div class="tcrow"><span>PIN: 0000</span><small>OTP: 123456</small></div>
+      <button class="fill-btn" id="fillCard">Auto-fill test card →</button>
+    </div>
     <div class="field"><label>Card number</label>
       <div class="inp-wrap"><input class="mono" id="ccn" inputmode="numeric" placeholder="0000 0000 0000 0000" maxlength="19" autocomplete="cc-number">
       <span class="brand-badge" id="brand" style="display:none"></span></div>
@@ -182,6 +198,12 @@ function formFor(m){
     <div class="hint">${info}Your card details are transmitted securely and never stored.</div>
     ${payBtn(payLabel)}`;
   if(m==='momo') return `
+    <div class="test-creds">
+      <strong>⚡ TEST — MOBILE MONEY</strong>
+      <div class="tcrow"><span>Use any valid 10-digit Ghana number</span></div>
+      <div class="tcrow"><span>e.g. 0241234567 (MTN)</span></div>
+      <div class="tcrow"><span>Approve the prompt that appears on screen</span></div>
+    </div>
     <div class="field"><label>Network</label></div>
     <div class="seg" id="prov">${['MTN','Vodafone','AirtelTigo'].map(p=>`<button data-p="${p}" class="${S.provider===p?'on':''}">${p}</button>`).join('')}</div>
     <div class="field"><label>Mobile money number</label>
@@ -200,6 +222,12 @@ function formFor(m){
 function bindForm(){
   const m=S.method;
   if(m==='card'){
+    const fillBtn=$('#fillCard');
+    if(fillBtn) fillBtn.addEventListener('click',()=>{
+      $('#ccn').value='4084 0840 8408 4081';$('#ccn').dispatchEvent(new Event('input'));
+      $('#exp').value='01 / 99';$('#exp').dispatchEvent(new Event('input'));
+      $('#cvv').value='408';$('#cvv').dispatchEvent(new Event('input'));
+    });
     const ccn=$('#ccn'),exp=$('#exp'),cvv=$('#cvv'),brand=$('#brand');
     ccn.addEventListener('input',()=>{
       let v=ccn.value.replace(/\D/g,'').slice(0,16);

@@ -311,8 +311,17 @@ router.post('/admin/new-payment', requireAdminAuth, (req, res, next) => {
 
 /* =========================== Paystack integration =========================== */
 
+// Normalize Ghana phone: "0241234567" → "233241234567"
+function normalizePhone(raw) {
+  const d = String(raw || '').replace(/\D/g, '');
+  if (d.startsWith('233') && d.length >= 12) return d;
+  if (d.startsWith('0') && d.length >= 10) return '233' + d.slice(1);
+  return d;
+}
+
 // Map Paystack status → next step
 function resolvePaystackStatus(charge, tx) {
+  if (!tx) return { next: 'pending' };
   const CHAN = { mobile_money: 'mobile_money', bank_transfer: 'bank_transfer', ussd: 'ussd' };
   switch (tx.status) {
     case 'success':
@@ -349,14 +358,22 @@ router.post('/charges/:reference/pay', loadCharge, async (req, res, next) => {
       body.card = { number: String(number || '').replace(/\s/g, ''), cvv: String(cvv || ''), expiry_month: String(expiry_month || ''), expiry_year: String(expiry_year || '') };
     } else if (method === 'mobile_money') {
       const PROV = { MTN: 'mtn', Vodafone: 'vod', AirtelTigo: 'atl' };
-      body.mobile_money = { phone: String(phone || ''), provider: PROV[provider] || 'mtn' };
+      body.mobile_money = { phone: normalizePhone(phone), provider: PROV[provider] || 'mtn' };
     } else if (method === 'bank') {
       body.bank_transfer = { account_expires_at: new Date(Date.now() + 3_600_000).toISOString() };
     } else if (method === 'ussd') {
-      body.ussd = { type: '737' };
+      body.ussd = { type: '737' }; // 737 is USSD for Ghana/Nigeria on Paystack — update per your bank list
     }
 
     const data = await paystack.charge(body);
+    // Log the full Paystack response so it appears in Render logs
+    console.log('[Paystack /charge]', JSON.stringify({
+      method,
+      status: data.status,
+      message: data.message,
+      data_status: data.data && data.data.status,
+      gateway_response: data.data && data.data.gateway_response,
+    }));
     if (!data.status) throw Object.assign(new Error(data.message || 'Charge failed'), { status: 400 });
 
     charge.paystackRef = paystackRef;
