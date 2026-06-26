@@ -519,11 +519,8 @@ function updateMerchantDisplay(){
 }
 
 document.getElementById('closeBtn').addEventListener('click',()=>{
-  if(document.referrer&&!document.referrer.includes(location.host)){
-    location.href=document.referrer;
-  }else{
-    location.href='/';
-  }
+  const url=(S.charge&&S.charge.callbackUrl)||document.referrer||'/';
+  location.href=url;
 });
 
 document.addEventListener('click',e=>{
