@@ -141,7 +141,11 @@ input,select,textarea{font-family:inherit}
   <aside class="sidebar">
     <div class="side-sect">Menu</div>
     <nav class="nav">
-      <a class="active" href="#" data-view="transactions">
+      <a class="active" href="#" data-view="overview">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Overview
+      </a>
+      <a href="#" data-view="transactions">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
         Transactions
       </a>
@@ -199,6 +203,7 @@ let M=null; // cached merchant
 
 /* ========================= Views ========================= */
 const VIEWS={
+  'overview':       {title:'Overview',            desc:'A summary of your account activity.'},
   'transactions':   {title:'Transactions',       desc:'All payments collected through your checkout.'},
   'request-payout': {title:'Request Payout',     desc:'Submit a request to withdraw your collected funds.'},
   'payout-history': {title:'My Payout Requests', desc:'Track the status of your payout requests.'},
@@ -219,7 +224,8 @@ async function loadView(view){
 
   const vc=$('#vc');
   try{
-    if(view==='transactions')    await renderTransactions(vc);
+    if(view==='overview')        await renderOverview(vc);
+    else if(view==='transactions')    await renderTransactions(vc);
     else if(view==='request-payout') renderRequestPayout(vc);
     else if(view==='payout-history') await renderPayoutHistory(vc);
     else if(view==='webhooks')   await renderWebhooks(vc);
@@ -228,6 +234,50 @@ async function loadView(view){
     if(/unauthorized/i.test(err.message)){localStorage.removeItem('cowrie_token');location.href='/login';return;}
     vc.innerHTML=`<div class="empty"><strong>Error</strong>${esc(err.message)}</div>`;
   }
+}
+
+/* ---------- Overview ---------- */
+async function renderOverview(el){
+  const [{transactions},{payouts}]=await Promise.all([API.get('/api/transactions'),API.get('/api/payouts')]);
+  const success=transactions.filter(t=>t.status==='success');
+  const failed=transactions.filter(t=>t.status==='failed');
+  const pending=transactions.filter(t=>t.status==='pending');
+  const ccy=(success[0]||transactions[0]||{}).currency||'GHS';
+  const collected=success.reduce((s,t)=>s+t.amount,0);
+  const rate=transactions.length?((success.length/transactions.length)*100).toFixed(1):'0.0';
+  const pendingPayout=payouts.filter(p=>p.status==='pending').reduce((s,p)=>s+p.amount,0);
+
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:18px">
+      <div class="panel" style="padding:18px;overflow:visible">
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Total collected</div>
+        <div style="font-family:var(--display);font-weight:900;font-size:28px;letter-spacing:-.02em">${fmt(collected,ccy)}</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px">${success.length} successful payment${success.length!==1?'s':''}</div>
+      </div>
+      <div class="panel" style="padding:18px;overflow:visible">
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Success rate</div>
+        <div style="font-family:var(--display);font-weight:900;font-size:28px;letter-spacing:-.02em">${rate}%</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px">${transactions.length} total · ${failed.length} failed</div>
+      </div>
+      <div class="panel" style="padding:18px;overflow:visible">
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Pending payments</div>
+        <div style="font-family:var(--display);font-weight:900;font-size:28px;letter-spacing:-.02em">${pending.length}</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px">awaiting completion</div>
+      </div>
+      <div class="panel" style="padding:18px;overflow:visible">
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Payout pending</div>
+        <div style="font-family:var(--display);font-weight:900;font-size:28px;letter-spacing:-.02em">${fmt(pendingPayout,'GHS')}</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px">${payouts.filter(p=>p.status==='pending').length} request${payouts.filter(p=>p.status==='pending').length!==1?'s':''} awaiting</div>
+      </div>
+    </div>
+    ${transactions.length?`
+    <div class="panel">
+      <div class="panel-head"><h2>Recent transactions</h2><span class="badge">${transactions.length} total</span></div>
+      <div style="overflow:auto"><table class="table">
+        <thead><tr><th>Reference</th><th>Method</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>${txRows(transactions.slice(0,5))}</tbody>
+      </table></div>
+    </div>`:''}`;
 }
 
 /* ---------- Transactions ---------- */
@@ -475,7 +525,7 @@ async function boot(){
   }catch(err){
     if(/unauthorized/i.test(err.message)){localStorage.removeItem('cowrie_token');location.href='/login';return;}
   }
-  loadView('transactions');
+  loadView('overview');
 }
 
 document.querySelectorAll('.nav a[data-view]').forEach(a=>{
