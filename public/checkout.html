@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cowrie Checkout — Adɔm Stores</title>
+<title>Cowrie Checkout</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -181,19 +181,22 @@ button{font-family:inherit;cursor:pointer}
 
 <div class="checkout">
   <div class="co-head">
-    <div class="co-merch"><div class="av">A</div><div><div class="nm">Adɔm Stores</div><div class="url">checkout.cowrie.africa</div></div></div>
+    <div class="co-merch">
+      <div class="av" id="avLetter">?</div>
+      <div><div class="nm" id="merchName">Loading…</div><div class="url">checkout.cowrie.africa</div></div>
+      <button id="closeBtn" title="Cancel" style="margin-left:auto;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:var(--muted);width:30px;height:30px;border-radius:8px;display:grid;place-items:center;transition:.15s;flex-shrink:0" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--muted)'">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
     <div class="co-timer" id="timer">14:59</div>
-    <div class="co-amt"><span class="l" id="amtLbl">Pay Adɔm Stores</span><span class="v" id="amtV">₵ 250.00</span></div>
-    <input class="co-email" id="email" type="email" value="ama@adom.shop" placeholder="Email address">
+    <div class="co-amt"><span class="l" id="amtLbl">Pay</span><span class="v" id="amtV">₵ 250.00</span></div>
+    <input class="co-email" id="email" type="email" placeholder="Email address">
     <span class="testbadge"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> TEST MODE</span>
   </div>
   <div class="co-body" id="body"></div>
   <div class="co-foot">
     <span class="lock"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> PCI-DSS secured</span>
     <span class="pwr"><span class="shell"></span>Cowrie</span>
-  </div>
-  <div style="position:fixed;left:14px;bottom:14px;z-index:20;">
-    <a href="index.html" style="background:rgba(14,11,34,.85);border:1px solid rgba(255,255,255,.12);color:#C9AEFF;font-family:var(--mono);font-size:11px;font-weight:700;padding:10px 12px;border-radius:10px;display:inline-flex;align-items:center;gap:7px;text-decoration:none;backdrop-filter:blur(12px)">← Back to site</a>
   </div>
 </div>
 
@@ -456,6 +459,7 @@ function stateFailed(){
 }
 
 function routeFromCharge(){
+  updateMerchantDisplay();
   const st=S.charge.status;
   if(st==='success')go('success');
   else if(st==='failed')go('failed');
@@ -504,6 +508,23 @@ async function boot(){
   if(!TEST_MODE){const tb=document.querySelector('.testbadge');if(tb)tb.style.display='none';}
   routeFromCharge();
 }
+
+function updateMerchantDisplay(){
+  const name=merchantName();
+  const nm=document.getElementById('merchName');
+  const av=document.getElementById('avLetter');
+  if(nm)nm.textContent=name;
+  if(av)av.textContent=name.charAt(0).toUpperCase();
+  document.title='Cowrie Checkout — '+name;
+}
+
+document.getElementById('closeBtn').addEventListener('click',()=>{
+  if(document.referrer&&!document.referrer.includes(location.host)){
+    location.href=document.referrer;
+  }else{
+    location.href='/';
+  }
+});
 
 document.addEventListener('click',e=>{
   if(e.target&&e.target.id==='ret')location.href='/';
