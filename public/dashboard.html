@@ -8,170 +8,249 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
+/* ─── Tokens ─── */
 :root{
-  --ivory:#F7F5F0;--ivory-2:#FBFAF6;--white:#f8fbf8;
-  --ink:#1B1330;--ink-soft:#564E68;--muted:#7A7388;--faint:#A39CB0;
-  --line:#E8E3DA;--line-2:#EFEBE3;
-  --plum:#5B2C8F;--plum-deep:#3A1A60;--plum-br:#7B45B8;--plum-tint:#EFE6F7;
-  --gold:#E0A12E;--gold-deep:#B8801C;--gold-tint:#F8EFD9;
-  --mint:#1FA877;--mint-tint:#DCF1E9;--coral:#EF6A4C;--coral-tint:#FBE7E1;
-  --display:'Plus Jakarta Sans',sans-serif;--body:'Plus Jakarta Sans',sans-serif;--mono:'JetBrains Mono',monospace;
+  --ivory:#0F0C22; --ivory-2:#141028; --white:#0D0A1E;
+  --ink:#EAE5F5; --ink-soft:rgba(234,229,245,.65); --muted:rgba(234,229,245,.4); --faint:rgba(234,229,245,.22);
+  --line:rgba(255,255,255,.09); --line-2:rgba(255,255,255,.06);
+  --plum:#5B2C8F; --plum-deep:#3A1A60; --plum-br:#7B45B8; --plum-tint:rgba(91,44,143,.22);
+  --gold:#E0A12E; --gold-deep:#B8801C; --gold-tint:rgba(224,161,46,.18);
+  --mint:#1FA877; --mint-tint:rgba(31,168,119,.18); --coral:#EF6A4C; --coral-tint:rgba(239,106,76,.15);
+  --display:'Plus Jakarta Sans',sans-serif; --body:'Plus Jakarta Sans',sans-serif; --mono:'JetBrains Mono',monospace;
 }
+
+/* ─── Reset ─── */
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{background:var(--ivory);color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased;line-height:1.55;min-height:100vh}
+body{background:#09071A;color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased;line-height:1.55;min-height:100vh;overflow-x:hidden}
 ::selection{background:var(--plum);color:#fff}
 a{color:inherit;text-decoration:none}
 button{font-family:inherit;cursor:pointer}
 input,select,textarea{font-family:inherit}
 
+/* ─── Background scene ─── */
+.bg-scene{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.bg-grid{
+  position:absolute;left:-40%;right:-40%;bottom:-5%;height:75%;
+  background-image:linear-gradient(rgba(91,44,143,.25) 1px,transparent 1px),linear-gradient(90deg,rgba(91,44,143,.25) 1px,transparent 1px);
+  background-size:70px 70px;
+  transform:perspective(550px) rotateX(58deg);transform-origin:center bottom;
+  animation:gridScroll 10s linear infinite;
+  mask-image:linear-gradient(to top,rgba(0,0,0,.9) 0%,rgba(0,0,0,.4) 55%,transparent 100%);
+  -webkit-mask-image:linear-gradient(to top,rgba(0,0,0,.9) 0%,rgba(0,0,0,.4) 55%,transparent 100%);
+}
+@keyframes gridScroll{from{background-position:0 0}to{background-position:0 70px}}
+.bg-dots{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.045) 1px,transparent 1px);background-size:28px 28px}
+.orb{position:absolute;border-radius:50%;filter:blur(90px);will-change:transform}
+.orb-1{width:700px;height:700px;top:-250px;left:-200px;background:radial-gradient(circle,rgba(91,44,143,.45),transparent 65%);animation:drift1 28s ease-in-out infinite}
+.orb-2{width:580px;height:580px;bottom:-200px;right:-150px;background:radial-gradient(circle,rgba(200,134,10,.22),transparent 65%);animation:drift2 33s ease-in-out infinite}
+.orb-3{width:450px;height:450px;top:40%;left:55%;background:radial-gradient(circle,rgba(31,168,119,.14),transparent 65%);animation:drift3 24s ease-in-out infinite;transform:translate(-50%,-50%)}
+@keyframes drift1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,-55px) scale(1.05)}}
+@keyframes drift2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-35px,30px) scale(1.04)}}
+@keyframes drift3{0%,100%{transform:translate(-50%,-50%)}50%{transform:translate(calc(-50% + 28px),calc(-50% - 34px))}}
+
+/* ─── App layer ─── */
+.app{position:relative;z-index:1}
 .wrap{max-width:1120px;margin:0 auto;padding:0 20px}
 
-/* topbar */
-.topbar{position:sticky;top:0;z-index:40;background:rgba(247,245,240,.93);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+/* ─── Topbar ─── */
+.topbar{
+  position:sticky;top:0;z-index:40;
+  background:rgba(9,7,26,.78);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  border-bottom:1px solid var(--line);transition:border-color .3s,background .3s;
+}
+.topbar.stuck{border-color:rgba(91,44,143,.3);background:rgba(9,7,26,.92)}
 .topbar-in{display:flex;align-items:center;gap:14px;padding:15px 0}
 .brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:-.02em}
-.shell{width:26px;height:26px;border-radius:50% 50% 48% 48%/60% 60% 40% 40%;background:linear-gradient(135deg,var(--gold),var(--plum));position:relative;box-shadow:inset 0 -2px 4px rgba(0,0,0,.2)}
-.shell::before{content:'';position:absolute;left:50%;top:18%;bottom:18%;width:2px;background:rgba(255,255,255,.6);transform:translateX(-50%);border-radius:2px}
+.shell{width:26px;height:26px;border-radius:50% 50% 48% 48%/60% 60% 40% 40%;background:linear-gradient(135deg,var(--gold),var(--plum-br));position:relative;box-shadow:inset 0 -2px 4px rgba(0,0,0,.3),0 0 12px rgba(224,161,46,.25)}
+.shell::before{content:'';position:absolute;left:50%;top:18%;bottom:18%;width:2px;background:rgba(255,255,255,.7);transform:translateX(-50%);border-radius:2px}
 .topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
-.merchant-tag{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--ivory-2);border:1px solid var(--line);padding:5px 10px;border-radius:8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.merchant-tag{font-family:var(--mono);font-size:11px;color:var(--muted);background:rgba(255,255,255,.05);border:1px solid var(--line);padding:5px 10px;border-radius:8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* layout */
+/* ─── Layout ─── */
 .grid{display:grid;grid-template-columns:220px 1fr;gap:18px;padding:18px 0 60px}
 @media(max-width:860px){.grid{grid-template-columns:1fr}.sidebar{display:none}}
 
-.sidebar{background:var(--white);border:none;border-radius:18px;padding:14px;align-self:start;position:sticky;top:72px;box-shadow:0 2px 16px rgba(27,19,48,.07),0 8px 40px rgba(27,19,48,.05)}
+/* ─── Sidebar ─── */
+.sidebar{
+  background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:18px;padding:14px;align-self:start;
+  position:sticky;top:72px;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  box-shadow:0 8px 32px rgba(0,0,0,.4),0 0 0 1px rgba(91,44,143,.06) inset;
+}
 .side-sect{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);margin-bottom:8px;padding-left:10px}
 .nav{display:flex;flex-direction:column;gap:3px}
-.nav a{padding:9px 10px;border-radius:11px;border:1px solid transparent;color:var(--ink-soft);font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:9px;transition:.13s}
-.nav a:hover{background:var(--ivory-2);border-color:var(--line)}
-.nav a.active{background:var(--plum-tint);border-color:rgba(91,44,143,.2);color:var(--plum)}
-.nav a svg{flex-shrink:0;opacity:.55}
+.nav a{padding:9px 10px;border-radius:11px;border:1px solid transparent;color:var(--ink-soft);font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:9px;transition:.15s}
+.nav a:hover{background:rgba(255,255,255,.06);border-color:var(--line);color:var(--ink)}
+.nav a.active{background:rgba(91,44,143,.2);border-color:rgba(91,44,143,.35);color:#C9AEFF;box-shadow:0 0 18px rgba(91,44,143,.15)}
+.nav a svg{flex-shrink:0;opacity:.5}
 .nav a.active svg{opacity:1}
 .nav-sep{height:1px;background:var(--line-2);margin:8px 0}
 
-.content{background:var(--white);border:none;border-radius:18px;padding:22px;min-height:520px;box-shadow:0 2px 16px rgba(27,19,48,.07),0 8px 40px rgba(27,19,48,.05)}
+/* ─── Content ─── */
+.content{
+  background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:18px;padding:22px;min-height:520px;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  box-shadow:0 8px 40px rgba(0,0,0,.35);
+}
 
-/* view header */
+/* ─── View header ─── */
 .vhdr{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--line-2)}
 .vhdr h1{font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-.02em}
 .vhdr p{color:var(--ink-soft);margin-top:5px;font-size:13.5px}
 .vhdr-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
 
-/* panel */
-.panel{border:none;border-radius:16px;overflow:hidden;margin-bottom:16px;background:var(--white);box-shadow:0 2px 12px rgba(27,19,48,.07),0 6px 28px rgba(27,19,48,.04)}
-.panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--ivory-2);border-bottom:1px solid var(--line-2)}
-.panel-head h2{font-family:var(--display);font-weight:800;font-size:14px}
-.badge{font-family:var(--mono);font-size:11px;color:var(--ink-soft);padding:4px 9px;border:1px solid var(--line);border-radius:999px;white-space:nowrap}
+/* ─── KPI cards (overview) ─── */
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.kpi-tile{
+  border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px 20px;
+  background:rgba(255,255,255,.05);
+  transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s,border-color .2s;
+  cursor:default;will-change:transform;
+  box-shadow:0 4px 20px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06);
+}
+.kpi-tile:hover{border-color:rgba(91,44,143,.45);box-shadow:0 0 0 1px rgba(91,44,143,.2),0 20px 50px rgba(0,0,0,.5),0 0 40px rgba(91,44,143,.12)}
+.kpi-tile .kl{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+.kpi-tile .kv{font-family:var(--display);font-weight:900;font-size:27px;letter-spacing:-.02em;background:linear-gradient(135deg,#fff,rgba(255,255,255,.75));-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.1}
+.kpi-tile .ks{margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--muted)}
 
-/* table */
+/* ─── Panel ─── */
+.panel{
+  border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden;
+  margin-bottom:16px;background:rgba(255,255,255,.04);
+  box-shadow:0 4px 20px rgba(0,0,0,.3);
+}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(255,255,255,.04);border-bottom:1px solid var(--line-2)}
+.panel-head h2{font-family:var(--display);font-weight:800;font-size:14px}
+.badge{font-family:var(--mono);font-size:11px;color:var(--ink-soft);padding:4px 9px;border:1px solid var(--line);border-radius:999px;white-space:nowrap;background:rgba(255,255,255,.04)}
+
+/* ─── Table ─── */
 .table{width:100%;border-collapse:collapse}
 .table th,.table td{padding:11px 14px;border-bottom:1px solid var(--line-2);font-size:13.5px;vertical-align:middle}
-.table th{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--ivory-2);white-space:nowrap}
+.table th{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:rgba(255,255,255,.03);white-space:nowrap}
 .table tr:last-child td{border-bottom:none}
-.table tbody tr:hover{background:var(--ivory-2)}
+.table tbody tr:hover{background:rgba(255,255,255,.05)}
 
-/* tags */
+/* ─── Tags ─── */
 .tag{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);font-family:var(--mono);font-size:10.5px;white-space:nowrap;font-weight:600}
 .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.tag.ok{border-color:rgba(31,168,119,.3);background:rgba(31,168,119,.1);color:#138050}.tag.ok .dot{background:var(--mint)}
-.tag.pend{border-color:rgba(224,161,46,.3);background:rgba(224,161,46,.1);color:var(--gold-deep)}.tag.pend .dot{background:var(--gold-deep)}
-.tag.fail{border-color:rgba(239,106,76,.3);background:rgba(239,106,76,.1);color:#bf4020}.tag.fail .dot{background:var(--coral)}
+.tag.ok{border-color:rgba(31,168,119,.4);background:rgba(31,168,119,.12);color:#4DD9A5}.tag.ok .dot{background:var(--mint)}
+.tag.pend{border-color:rgba(224,161,46,.4);background:rgba(224,161,46,.12);color:var(--gold)}.tag.pend .dot{background:var(--gold)}
+.tag.fail{border-color:rgba(239,106,76,.4);background:rgba(239,106,76,.12);color:#F4956B}.tag.fail .dot{background:var(--coral)}
 
-/* buttons */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border-radius:10px;padding:8px 13px;border:1.5px solid var(--line);background:var(--white);font-weight:700;font-size:13px;transition:.13s;cursor:pointer;color:var(--ink);white-space:nowrap}
-.btn:hover{border-color:var(--plum);color:var(--plum)}
+/* ─── Buttons ─── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border-radius:10px;padding:8px 13px;border:1px solid var(--line);background:rgba(255,255,255,.05);font-weight:700;font-size:13px;transition:.15s;cursor:pointer;color:var(--ink);white-space:nowrap}
+.btn:hover{border-color:rgba(91,44,143,.5);color:#C9AEFF;background:rgba(91,44,143,.12)}
 .btn:disabled{opacity:.45;pointer-events:none}
-.btn.primary{background:var(--plum);border-color:var(--plum);color:#fff}
-.btn.primary:hover{background:var(--plum-deep)}
+.btn.primary{background:var(--plum);border-color:var(--plum-br);color:#fff;box-shadow:0 4px 18px rgba(91,44,143,.3)}
+.btn.primary:hover{background:var(--plum-deep);box-shadow:0 6px 24px rgba(91,44,143,.45)}
 .btn.sm{padding:5px 9px;font-size:11.5px;border-radius:8px}
 
-/* fields */
+/* ─── Fields ─── */
 .field{margin-bottom:13px}
 .field .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-.field input,.field select{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;outline:none;font-size:13.5px;background:var(--white);transition:.13s;color:var(--ink)}
-.field input:focus,.field select:focus{border-color:var(--plum);box-shadow:0 0 0 3px var(--plum-tint)}
+.field input,.field select{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;outline:none;font-size:13.5px;background:rgba(255,255,255,.06);transition:.15s;color:var(--ink)}
+.field select option{background:#1A1535;color:var(--ink)}
+.field input::placeholder{color:var(--faint)}
+.field input:focus,.field select:focus{border-color:rgba(91,44,143,.55);box-shadow:0 0 0 3px rgba(91,44,143,.15)}
 .formrow{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 @media(max-width:520px){.formrow{grid-template-columns:1fr}}
 
-/* method toggle tabs */
+/* ─── Method tabs (payout) ─── */
 .method-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
-.method-tab{border:1.5px solid var(--line);background:var(--white);border-radius:10px;padding:10px;font-weight:700;font-size:13px;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;gap:8px;transition:.13s}
-.method-tab.on{border-color:var(--plum);background:var(--plum-tint);color:var(--plum)}
+.method-tab{border:1px solid var(--line);background:rgba(255,255,255,.05);border-radius:10px;padding:10px;font-weight:700;font-size:13px;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s;cursor:pointer}
+.method-tab:hover{border-color:rgba(91,44,143,.35);color:var(--ink)}
+.method-tab.on{border-color:rgba(91,44,143,.5);background:rgba(91,44,143,.18);color:#C9AEFF}
 
-/* key row */
+/* ─── Key row ─── */
 .keyrow{display:flex;gap:8px;align-items:center}
 .keyrow input{flex:1;font-family:var(--mono);font-size:12px}
 .mono-note{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:5px}
 
-/* feedback */
+/* ─── Feedback ─── */
 .fb{font-size:13px;margin-top:10px;display:none}
 .fb.ok{color:var(--mint);display:block}
 .fb.bad{color:var(--coral);display:block}
 
-/* empty / spinner */
+/* ─── States ─── */
 .empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13.5px}
 .empty strong{display:block;color:var(--ink);font-size:15px;margin-bottom:6px}
 .spinbox{padding:48px 20px;text-align:center}
-.spin{width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--plum);border-radius:50%;margin:0 auto 12px;animation:sp .75s linear infinite}
+.spin{width:36px;height:36px;border:3px solid rgba(91,44,143,.3);border-top-color:var(--plum-br);border-radius:50%;margin:0 auto 12px;animation:sp .75s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 
-/* search */
+/* ─── Search ─── */
 .search-row{margin-bottom:14px}
-.search-row input{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:10px 13px;outline:none;font-size:13.5px;transition:.13s}
-.search-row input:focus{border-color:var(--plum);box-shadow:0 0 0 3px var(--plum-tint)}
+.search-row input{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:10px 13px;outline:none;font-size:13.5px;background:rgba(255,255,255,.06);transition:.15s;color:var(--ink)}
+.search-row input::placeholder{color:var(--faint)}
+.search-row input:focus{border-color:rgba(91,44,143,.55);box-shadow:0 0 0 3px rgba(91,44,143,.15)}
 
-@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* ─── 3D reveal ─── */
+.r3d{will-change:transform,opacity;transform:perspective(900px) rotateX(18deg) translateY(30px) scale(.97);opacity:0}
+.r3d.in{transform:perspective(900px) rotateX(0) translateY(0) scale(1);opacity:1}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.r3d,.r3d.in{transform:none;opacity:1}}
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="wrap topbar-in">
-    <div class="brand"><span class="shell"></span>Cowrie</div>
-    <div class="topbar-right">
-      <span class="merchant-tag" id="merchantTag">…</span>
-      <a href="/checkout" class="btn sm">Checkout demo</a>
-      <button class="btn sm" id="logoutBtn">Sign out</button>
-    </div>
-  </div>
+<!-- 3D background -->
+<div class="bg-scene" id="bgScene">
+  <div class="bg-dots"></div>
+  <div class="bg-grid" id="bgGrid"></div>
+  <div class="orb orb-1" id="orb1"></div>
+  <div class="orb orb-2" id="orb2"></div>
+  <div class="orb orb-3" id="orb3"></div>
 </div>
 
-<div class="wrap grid">
-  <aside class="sidebar">
-    <div class="side-sect">Menu</div>
-    <nav class="nav">
-      <a class="active" href="#" data-view="overview">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        Overview
-      </a>
-      <a href="#" data-view="transactions">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-        Transactions
-      </a>
-      <a href="#" data-view="request-payout">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>
-        Request Payout
-      </a>
-      <a href="#" data-view="payout-history">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-        My Payout Requests
-      </a>
-      <div class="nav-sep"></div>
-      <a href="#" data-view="webhooks">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 16.98h-5.99c-1.1 0-1.95.94-2.48 1.9A4 4 0 0 1 2 17c.01-.7.2-1.4.57-2"/><path d="m6 17 3.13-5.78c.53-.97.1-2.18-.5-3.1a4 4 0 1 1 6.89-4.06"/><path d="m12 6 3.13 5.73C15.66 12.7 16.9 13 18 13a4 4 0 0 1 0 8"/></svg>
-        Webhook Deliveries
-      </a>
-      <a href="#" data-view="api-keys">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-        API Keys &amp; Webhook
-      </a>
-    </nav>
-  </aside>
+<div class="app">
+  <div class="topbar" id="topbar">
+    <div class="wrap topbar-in">
+      <div class="brand"><span class="shell"></span>Cowrie</div>
+      <div class="topbar-right">
+        <span class="merchant-tag" id="merchantTag">…</span>
+        <a href="/checkout" class="btn sm">Checkout demo</a>
+        <button class="btn sm" id="logoutBtn">Sign out</button>
+      </div>
+    </div>
+  </div>
 
-  <main class="content" id="main">
-    <div class="spinbox"><div class="spin"></div></div>
-  </main>
+  <div class="wrap grid">
+    <aside class="sidebar">
+      <div class="side-sect">Menu</div>
+      <nav class="nav">
+        <a class="active" href="#" data-view="overview">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Overview
+        </a>
+        <a href="#" data-view="transactions">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+          Transactions
+        </a>
+        <a href="#" data-view="request-payout">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>
+          Request Payout
+        </a>
+        <a href="#" data-view="payout-history">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          My Payout Requests
+        </a>
+        <div class="nav-sep"></div>
+        <a href="#" data-view="webhooks">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 16.98h-5.99c-1.1 0-1.95.94-2.48 1.9A4 4 0 0 1 2 17c.01-.7.2-1.4.57-2"/><path d="m6 17 3.13-5.78c.53-.97.1-2.18-.5-3.1a4 4 0 1 1 6.89-4.06"/><path d="m12 6 3.13 5.73C15.66 12.7 16.9 13 18 13a4 4 0 0 1 0 8"/></svg>
+          Webhook Deliveries
+        </a>
+        <a href="#" data-view="api-keys">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+          API Keys &amp; Webhook
+        </a>
+      </nav>
+    </aside>
+
+    <main class="content" id="main">
+      <div class="spinbox"><div class="spin"></div></div>
+    </main>
+  </div>
 </div>
 
 <script>
@@ -199,16 +278,16 @@ function statusTag(s){
   return`<span class="tag pend"><span class="dot"></span>${esc(s)}</span>`;
 }
 
-let M=null; // cached merchant
+let M=null;
 
 /* ========================= Views ========================= */
 const VIEWS={
   'overview':       {title:'Overview',            desc:'A summary of your account activity.'},
-  'transactions':   {title:'Transactions',       desc:'All payments collected through your checkout.'},
-  'request-payout': {title:'Request Payout',     desc:'Submit a request to withdraw your collected funds.'},
-  'payout-history': {title:'My Payout Requests', desc:'Track the status of your payout requests.'},
-  'webhooks':       {title:'Webhook Deliveries',  desc:'Events delivered to your webhook endpoint.'},
-  'api-keys':       {title:'API Keys & Webhook',  desc:'Manage your API keys and configure your webhook.'},
+  'transactions':   {title:'Transactions',        desc:'All payments collected through your checkout.'},
+  'request-payout': {title:'Request Payout',      desc:'Submit a request to withdraw your collected funds.'},
+  'payout-history': {title:'My Payout Requests',  desc:'Track the status of your payout requests.'},
+  'webhooks':       {title:'Webhook Deliveries',   desc:'Events delivered to your webhook endpoint.'},
+  'api-keys':       {title:'API Keys & Webhook',   desc:'Manage your API keys and configure your webhook.'},
 };
 
 async function loadView(view){
@@ -221,22 +300,23 @@ async function loadView(view){
     </div>
     <div id="vc"><div class="spinbox"><div class="spin"></div></div></div>`;
   $('#refreshBtn').addEventListener('click',()=>loadView(view));
-
   const vc=$('#vc');
   try{
-    if(view==='overview')        await renderOverview(vc);
+    if(view==='overview')             await renderOverview(vc);
     else if(view==='transactions')    await renderTransactions(vc);
-    else if(view==='request-payout') renderRequestPayout(vc);
-    else if(view==='payout-history') await renderPayoutHistory(vc);
-    else if(view==='webhooks')   await renderWebhooks(vc);
-    else if(view==='api-keys')   await renderApiKeys(vc);
+    else if(view==='request-payout')  renderRequestPayout(vc);
+    else if(view==='payout-history')  await renderPayoutHistory(vc);
+    else if(view==='webhooks')        await renderWebhooks(vc);
+    else if(view==='api-keys')        await renderApiKeys(vc);
+    reveal3d(vc);
+    initTilt(vc);
   }catch(err){
     if(/unauthorized/i.test(err.message)){localStorage.removeItem('cowrie_token');location.href='/login';return;}
     vc.innerHTML=`<div class="empty"><strong>Error</strong>${esc(err.message)}</div>`;
   }
 }
 
-/* ---------- Overview ---------- */
+/* ─── Overview ─── */
 async function renderOverview(el){
   const [{transactions},{payouts}]=await Promise.all([API.get('/api/transactions'),API.get('/api/payouts')]);
   const success=transactions.filter(t=>t.status==='success');
@@ -248,30 +328,30 @@ async function renderOverview(el){
   const pendingPayout=payouts.filter(p=>p.status==='pending').reduce((s,p)=>s+p.amount,0);
 
   el.innerHTML=`
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:18px">
-      <div class="panel" style="padding:18px;overflow:visible">
-        <div style="font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Total collected</div>
-        <div style="font-family:var(--display);font-weight:900;font-size:28px;letter-spacing:-.02em">${fmt(collected,ccy)}</div>
-        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px">${success.length} successful payment${success.length!==1?'s':''}</div>
+    <div class="kpis">
+      <div class="kpi-tile r3d">
+        <div class="kl">Total collected</div>
+        <div class="kv">${fmt(collected,ccy)}</div>
+        <div class="ks">${success.length} successful payment${success.length!==1?'s':''}</div>
       </div>
-      <div class="panel" style="padding:18px;overflow:visible">
-        <div style="font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Success rate</div>
-        <div style="font-family:var(--display);font-weight:900;font-size:28px;letter-spacing:-.02em">${rate}%</div>
-        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px">${transactions.length} total · ${failed.length} failed</div>
+      <div class="kpi-tile r3d">
+        <div class="kl">Success rate</div>
+        <div class="kv">${rate}%</div>
+        <div class="ks">${transactions.length} total · ${failed.length} failed</div>
       </div>
-      <div class="panel" style="padding:18px;overflow:visible">
-        <div style="font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Pending payments</div>
-        <div style="font-family:var(--display);font-weight:900;font-size:28px;letter-spacing:-.02em">${pending.length}</div>
-        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px">awaiting completion</div>
+      <div class="kpi-tile r3d">
+        <div class="kl">Pending payments</div>
+        <div class="kv">${pending.length}</div>
+        <div class="ks">awaiting completion</div>
       </div>
-      <div class="panel" style="padding:18px;overflow:visible">
-        <div style="font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Payout pending</div>
-        <div style="font-family:var(--display);font-weight:900;font-size:28px;letter-spacing:-.02em">${fmt(pendingPayout,'GHS')}</div>
-        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px">${payouts.filter(p=>p.status==='pending').length} request${payouts.filter(p=>p.status==='pending').length!==1?'s':''} awaiting</div>
+      <div class="kpi-tile r3d">
+        <div class="kl">Payout pending</div>
+        <div class="kv">${fmt(pendingPayout,'GHS')}</div>
+        <div class="ks">${payouts.filter(p=>p.status==='pending').length} request${payouts.filter(p=>p.status==='pending').length!==1?'s':''} awaiting</div>
       </div>
     </div>
     ${transactions.length?`
-    <div class="panel">
+    <div class="panel r3d">
       <div class="panel-head"><h2>Recent transactions</h2><span class="badge">${transactions.length} total</span></div>
       <div style="overflow:auto"><table class="table">
         <thead><tr><th>Reference</th><th>Method</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
@@ -280,13 +360,13 @@ async function renderOverview(el){
     </div>`:''}`;
 }
 
-/* ---------- Transactions ---------- */
+/* ─── Transactions ─── */
 async function renderTransactions(el){
   const {transactions}=await API.get('/api/transactions');
-  if(!transactions.length){el.innerHTML=`<div class="empty"><strong>No transactions yet</strong>Open <a href="/checkout" style="color:var(--plum);font-weight:600">/checkout</a> and complete a test payment to see it here.</div>`;return;}
+  if(!transactions.length){el.innerHTML=`<div class="empty"><strong>No transactions yet</strong>Open <a href="/checkout" style="color:#C9AEFF;font-weight:600">/checkout</a> and complete a test payment to see it here.</div>`;return;}
   el.innerHTML=`
     <div class="search-row"><input id="txSearch" placeholder="Search reference, method, status…"></div>
-    <div class="panel"><div style="overflow:auto;"><table class="table" id="txTable">
+    <div class="panel r3d"><div style="overflow:auto;"><table class="table" id="txTable">
       <thead><tr><th>Reference</th><th>Method</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
       <tbody>${txRows(transactions)}</tbody>
     </table></div></div>`;
@@ -300,10 +380,11 @@ async function renderTransactions(el){
     $('#txTable').querySelector('tbody').innerHTML=txRows(rows);
   });
 }
+
 function txRows(list){
   if(!list.length)return`<tr><td colspan="5"><div class="empty">No results</div></td></tr>`;
   return list.map(t=>`<tr>
-    <td style="font-family:var(--mono);font-size:12px">${esc(t.reference)}</td>
+    <td style="font-family:var(--mono);font-size:12px;color:var(--ink-soft)">${esc(t.reference)}</td>
     <td>${esc(ML[t.method]||t.method||'—')}</td>
     <td style="font-family:var(--mono);font-weight:700">${fmt(t.amount,t.currency)}</td>
     <td>${statusTag(t.status)}</td>
@@ -311,10 +392,10 @@ function txRows(list){
   </tr>`).join('');
 }
 
-/* ---------- Request Payout ---------- */
+/* ─── Request Payout ─── */
 function renderRequestPayout(el){
   el.innerHTML=`
-    <div class="panel">
+    <div class="panel r3d">
       <div class="panel-head"><h2>Payout details</h2></div>
       <div style="padding:18px">
         <div class="method-tabs">
@@ -332,7 +413,7 @@ function renderRequestPayout(el){
         <div id="bankFields">
           <div class="formrow">
             <div class="field"><div class="lbl">Bank name</div><input id="pyBank" placeholder="e.g. GCB Bank"></div>
-            <div class="field"><div class="lbl">Account number</div><input id="pyAccNum" class="mono" placeholder="e.g. 1234567890"></div>
+            <div class="field"><div class="lbl">Account number</div><input id="pyAccNum" placeholder="e.g. 1234567890"></div>
           </div>
           <div class="field"><div class="lbl">Account name</div><input id="pyAccName" placeholder="Full name on the account"></div>
         </div>
@@ -346,7 +427,7 @@ function renderRequestPayout(el){
                 <option value="AirtelTigo">AirtelTigo Money</option>
               </select>
             </div>
-            <div class="field"><div class="lbl">Mobile money number</div><input id="pyPhone" class="mono" placeholder="024 123 4567"></div>
+            <div class="field"><div class="lbl">Mobile money number</div><input id="pyPhone" placeholder="024 123 4567"></div>
           </div>
         </div>
 
@@ -355,7 +436,7 @@ function renderRequestPayout(el){
           <div class="field"><div class="lbl">Note <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div><input id="pyNote" placeholder="e.g. Weekly withdrawal"></div>
         </div>
 
-        <button class="btn primary" id="submitPayout" style="width:100%;padding:12px">Submit request</button>
+        <button class="btn primary" id="submitPayout" style="width:100%;padding:12px;border-radius:12px">Submit request</button>
         <div class="fb" id="pyFb"></div>
       </div>
     </div>`;
@@ -378,8 +459,7 @@ function renderRequestPayout(el){
     const amount=parseFloat(document.getElementById('pyAmount').value)||0;
     if(!amount||amount<=0){fb.textContent='Please enter a valid amount.';fb.className='fb bad';return;}
     const body={
-      method,
-      amount:Math.round(amount*100),
+      method,amount:Math.round(amount*100),
       bank:document.getElementById('pyBank').value.trim(),
       accountNumber:document.getElementById('pyAccNum').value.trim(),
       accountName:document.getElementById('pyAccName').value.trim(),
@@ -391,8 +471,7 @@ function renderRequestPayout(el){
     btn.disabled=true;btn.textContent='Submitting…';
     try{
       await API.post('/api/payouts',body);
-      fb.textContent='Payout request submitted! The admin will review and send your funds.';
-      fb.className='fb ok';
+      fb.textContent='Payout request submitted! The admin will review and send your funds.';fb.className='fb ok';
       ['pyBank','pyAccNum','pyAccName','pyPhone','pyAmount','pyNote'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     }catch(err){
       fb.textContent=err.message;fb.className='fb bad';
@@ -402,14 +481,14 @@ function renderRequestPayout(el){
   });
 }
 
-/* ---------- Payout History ---------- */
+/* ─── Payout History ─── */
 async function renderPayoutHistory(el){
   const {payouts}=await API.get('/api/payouts');
   if(!payouts.length){
     el.innerHTML=`<div class="empty"><strong>No payout requests yet</strong>Go to "Request Payout" to submit your first withdrawal.</div>`;
     return;
   }
-  el.innerHTML=`<div class="panel"><div style="overflow:auto;"><table class="table">
+  el.innerHTML=`<div class="panel r3d"><div style="overflow:auto;"><table class="table">
     <thead><tr><th>Date</th><th>Method</th><th>Destination</th><th>Amount</th><th>Note</th><th>Status</th></tr></thead>
     <tbody>${payouts.map(p=>{
       const dest=p.method==='mobile_money'
@@ -427,11 +506,11 @@ async function renderPayoutHistory(el){
   </table></div></div>`;
 }
 
-/* ---------- Webhook Deliveries ---------- */
+/* ─── Webhook Deliveries ─── */
 async function renderWebhooks(el){
   const {events}=await API.get('/api/events');
   if(!events.length){el.innerHTML=`<div class="empty"><strong>No webhook events yet</strong>Events appear here once a payment completes and Cowrie delivers it to your endpoint.</div>`;return;}
-  el.innerHTML=`<div class="panel"><div style="overflow:auto;"><table class="table">
+  el.innerHTML=`<div class="panel r3d"><div style="overflow:auto;"><table class="table">
     <thead><tr><th>Event</th><th>Charge</th><th>Status</th><th>Response</th><th>Time</th></tr></thead>
     <tbody>${events.map(e=>`<tr>
       <td style="font-family:var(--mono);font-size:12px">${esc(e.type)}</td>
@@ -443,11 +522,11 @@ async function renderWebhooks(el){
   </table></div></div>`;
 }
 
-/* ---------- API Keys & Webhook ---------- */
+/* ─── API Keys & Webhook ─── */
 async function renderApiKeys(el){
   if(!M) M=(await API.get('/api/me')).merchant;
   el.innerHTML=`
-    <div class="panel">
+    <div class="panel r3d">
       <div class="panel-head"><h2>API keys</h2></div>
       <div style="padding:18px">
         <div class="field">
@@ -470,7 +549,7 @@ async function renderApiKeys(el){
       </div>
     </div>
 
-    <div class="panel">
+    <div class="panel r3d">
       <div class="panel-head"><h2>Webhook</h2></div>
       <div style="padding:18px">
         <div class="field">
@@ -487,13 +566,11 @@ async function renderApiKeys(el){
             <input readonly value="${esc(M.webhookSecret)}" style="font-family:var(--mono);font-size:12px">
             <button class="btn sm" data-copy="${esc(M.webhookSecret)}">Copy</button>
           </div>
-          <div class="mono-note">Verify incoming webhooks using the <code>cowrie-signature</code> header.</div>
+          <div class="mono-note">Verify incoming webhooks using the <code style="font-family:var(--mono);color:var(--plum-br)">cowrie-signature</code> header.</div>
         </div>
         <div class="fb" id="webhookFb"></div>
       </div>
-    </div>
-
-    `;
+    </div>`;
 
   document.getElementById('revealSec').addEventListener('click',function(){
     const i=document.getElementById('secKey');
@@ -516,7 +593,56 @@ async function renderApiKeys(el){
   });
 }
 
-/* ========================= Boot & nav ========================= */
+/* ========================= 3D Effects ========================= */
+
+function reveal3d(container){
+  const items=container.querySelectorAll('.r3d');
+  items.forEach((el,i)=>{
+    el.style.transition='none';
+    el.classList.remove('in');
+    void el.offsetHeight;
+    el.style.transition=`opacity .6s ${i*80}ms ease, transform .65s ${i*80}ms cubic-bezier(.2,.8,.2,1)`;
+    requestAnimationFrame(()=>el.classList.add('in'));
+  });
+}
+
+function initTilt(container){
+  container.querySelectorAll('.kpi-tile').forEach(card=>{
+    card.addEventListener('mousemove',e=>{
+      const r=card.getBoundingClientRect();
+      const x=((e.clientX-r.left)/r.width-.5)*2;
+      const y=((e.clientY-r.top)/r.height-.5)*2;
+      card.style.transform=`perspective(500px) rotateX(${-y*11}deg) rotateY(${x*11}deg) translateZ(10px) scale(1.02)`;
+      card.style.borderColor=`rgba(91,44,143,${.3+Math.abs(x+y)*.15})`;
+      card.style.boxShadow=`${-x*10}px ${-y*10}px 35px rgba(91,44,143,.3), 0 22px 55px rgba(0,0,0,.5)`;
+    });
+    card.addEventListener('mouseleave',()=>{
+      card.style.transition='transform .5s cubic-bezier(.2,.8,.2,1), box-shadow .5s, border-color .3s';
+      card.style.transform='';card.style.boxShadow='';card.style.borderColor='';
+      setTimeout(()=>{card.style.transition='';},500);
+    });
+  });
+}
+
+/* Scroll parallax */
+let scrollTick=false;
+const bgGrid=document.getElementById('bgGrid');
+window.addEventListener('scroll',()=>{
+  if(scrollTick)return;
+  scrollTick=true;
+  requestAnimationFrame(()=>{
+    const sy=window.scrollY;
+    if(bgGrid)bgGrid.style.backgroundPositionY=(sy*.18)+'px';
+    const o1=document.getElementById('orb1'),o2=document.getElementById('orb2'),o3=document.getElementById('orb3');
+    if(o1)o1.style.transform=`translateY(${sy*.07}px)`;
+    if(o2)o2.style.transform=`translateY(${-sy*.05}px)`;
+    if(o3)o3.style.transform=`translate(-50%,-50%) translateY(${sy*.04}px)`;
+    document.getElementById('topbar').classList.toggle('stuck',sy>8);
+    scrollTick=false;
+  });
+},{passive:true});
+
+/* ========================= Boot & Nav ========================= */
 async function boot(){
   try{
     const {merchant}=await API.get('/api/me');
