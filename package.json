@@ -1,0 +1,16 @@
+{
+  "name": "cowrie-gateway",
+  "version": "1.0.0",
+  "description": "Cowrie - a fully functional demo payment gateway (Node/Express). Links the landing, login, checkout and dashboard pages to a real backend.",
+  "type": "commonjs",
+  "private": true,
+  "main": "server.js",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cowrie — Admin dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ivory:#F7F5F0; --ivory-2:#FBFAF6; --white:#FFFFFF;
+  --ink:#1B1330; --ink-soft:#564E68; --muted:#7A7388; --faint:#A39CB0;
+  --line:#E8E3DA; --line-2:#EFEBE3;
+  --plum:#5B2C8F; --plum-deep:#3A1A60; --plum-tint:#EFE6F7;
+  --gold:#E0A12E; --gold-deep:#B8801C; --gold-tint:#F8EFD9;
+  --mint:#1FA877; --mint-tint:#DCF1E9;
+  --display:'Plus Jakarta Sans',sans-serif; --body:'Plus Jakarta Sans',sans-serif; --mono:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--ivory);color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased;line-height:1.55;min-height:100vh}
+::selection{background:var(--plum);color:#fff}
+a{color:inherit;text-decoration:none}
+
+.wrap{max-width:1100px;margin:0 auto;padding:0 18px}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:40;background:rgba(247,245,240,.9);backdrop-filter:blur(12px);border-bottom:1px solid transparent}
+.topbar.stuck{border-color:var(--line)}
+.topbar-in{display:flex;align-items:center;gap:14px;padding:16px 0}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:-.02em}
+.shell{width:26px;height:26px;border-radius:50% 50% 48% 48%/60% 60% 40% 40%;background:linear-gradient(135deg,var(--gold),var(--plum));position:relative;box-shadow:inset 0 -2px 4px rgba(0,0,0,.2)}
+.shell::before{content:'';position:absolute;left:50%;top:18%;bottom:18%;width:2px;background:rgba(255,255,255,.6);transform:translateX(-50%);border-radius:2px}
+
+.search{margin-left:auto;display:flex;align-items:center;gap:10px}
+.search input{width:min(420px,45vw);background:var(--white);border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;outline:none;font-size:14px}
+.search input:focus{border-color:var(--plum);box-shadow:0 0 0 4px var(--plum-tint)}
+
+/* layout */
+.grid{display:grid;grid-template-columns:240px 1fr;gap:18px;padding:18px 0 60px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.sidebar{display:none}}
+
+.sidebar{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:16px}
+.side-title{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
+.nav{display:flex;flex-direction:column;gap:6px}
+.nav a{padding:10px 12px;border-radius:12px;border:1px solid transparent;color:var(--ink-soft);font-weight:600;font-size:14px}
+.nav a:hover{background:var(--ivory-2);border-color:var(--line)}
+.nav a.active{background:var(--plum-tint);border-color:rgba(91,44,143,.25);color:var(--plum)}
+
+.content{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:18px}
+
+.hdr{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.hdr h1{font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:-.02em}
+.hdr p{color:var(--ink-soft);max-width:60ch;margin-top:6px}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:12px 0 18px}
+@media(max-width:900px){.kpis{grid-template-columns:1fr 1fr}}
+.kpi{border:1px solid var(--line);border-radius:16px;padding:14px 14px;background:var(--ivory-2)}
+.kpi .l{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.kpi .v{font-family:var(--display);font-weight:900;font-size:26px;margin-top:6px;letter-spacing:-.02em}
+.kpi .t{margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--mint);display:flex;align-items:center;gap:6px}
+.kpi .t.bad{color:var(--gold-deep)}
+
+.panel{border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-top:12px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:14px 14px;background:var(--ivory-2);border-bottom:1px solid var(--line)}
+.panel-head h2{font-family:var(--display);font-weight:800;font-size:16px}
+.badge{font-family:var(--mono);font-size:11px;color:var(--ink-soft);padding:6px 10px;border:1px solid var(--line);border-radius:999px}
+
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{padding:12px 14px;border-bottom:1px solid var(--line-2);font-size:14px;vertical-align:middle}
+.table th{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--ivory-2)}
+.table tr:last-child td{border-bottom:none}
+.tag{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border-radius:999px;border:1px solid var(--line);font-family:var(--mono);font-size:11px}
+.dot{width:10px;height:10px;border-radius:50%}
+.tag.ok{border-color:rgba(31,168,119,.25);background:rgba(31,168,119,.08);color:var(--mint)}
+.tag.ok .dot{background:var(--mint)}
+.tag.pend{border-color:rgba(224,161,46,.25);background:rgba(224,161,46,.08);color:var(--gold-deep)}
+.tag.pend .dot{background:var(--gold-deep)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:10px 12px;border:1.5px solid var(--line);background:var(--white);font-weight:700}
+.btn:hover{border-color:var(--plum);color:var(--plum)}
+.btn.primary{background:var(--plum);border-color:var(--plum);color:#fff}
+.btn.primary:hover{background:var(--plum-deep)}
+
+.footer-note{margin-top:14px;color:var(--muted);font-family:var(--mono);font-size:11.5px}
+
+/* modal */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-backdrop.open{display:flex}
+.modal{width:min(560px,92vw);background:var(--white);border:1px solid var(--line);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.25);overflow:hidden}
+.modal-head{padding:14px 16px;background:var(--ivory-2);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.modal-head .ttl{font-family:var(--display);font-weight:800}
+.modal-body{padding:16px}
+.formrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+@media(max-width:520px){.formrow{grid-template-columns:1fr}}
+.label{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.field{margin-bottom:12px}
+.field input, .field select{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;outline:none}
+.field input:focus, .field select:focus{border-color:var(--plum);box-shadow:0 0 0 4px var(--plum-tint)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;padding:14px 16px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+  <div class="topbar" id="topbar">
+    <div class="wrap topbar-in">
+      <div class="brand"><span class="shell"></span>Cowrie Admin</div>
+      <div class="search">
+        <input id="q" type="text" placeholder="Search transactions… (demo)" />
+        <a href="index.html" class="btn" style="padding:10px 12px;">← Site</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap grid">
+    <aside class="sidebar">
+      <div class="side-title">Dashboard</div>
+      <nav class="nav">
+        <a class="active" href="#" data-view="overview">Overview</a>
+        <a href="#" data-view="transactions">Transactions</a>
+        <a href="#" data-view="payouts">Payouts</a>
+        <a href="#" data-view="settlements">Settlements</a>
+      </nav>
+      <div class="side-title" style="margin-top:16px;">Quick actions</div>
+      <button class="btn primary" id="newBtn" style="width:100%;">New payment</button>
+      <div class="footer-note">Demo UI only (no backend)</div>
+    </aside>
+
+    <main class="content">
+      <div class="hdr">
+        <div>
+          <h1 id="viewTitle">Overview</h1>
+          <p id="viewDesc">Real-time balances, settlements, payouts and reconciliation — for finance and ops teams.</p>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <span class="badge" id="statusBadge">Last refresh: just now</span>
+          <button class="btn" id="refreshBtn">Refresh</button>
+        </div>
+      </div>
+
+      <section class="kpis" id="kpis">
+        <div class="kpi"><div class="l">Collected today</div><div class="v" id="k1">₵ 88,240</div><div class="t">▲ 12.4%</div></div>
+        <div class="kpi"><div class="l">Paid out today</div><div class="v" id="k2">₵ 61,500</div><div class="t">▲ 4.1%</div></div>
+        <div class="kpi"><div class="l">Success rate</div><div class="v" id="k3">98.6%</div><div class="t">▲ 0.3%</div></div>
+        <div class="kpi"><div class="l">Pending</div><div class="v" id="k4">24</div><div class="t bad">● 2.1% impact</div></div>
+      </section>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Recent activity</h2>
+          <span class="badge" id="countBadge">Showing 8</span>
+        </div>
+        <div style="overflow:auto;">
+          <table class="table" id="tbl">
+            <thead>
+              <tr>
+                <th>Reference</th>
+                <th>Method</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th style="text-align:right;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- rows injected -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="footer-note">Tip: Use the search box to filter the list (front-end only).</div>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="mb">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+      <div class="modal-head">
+        <div class="ttl" id="mTitle">New payment (demo)</div>
+        <button class="btn" id="closeModal" style="padding:8px 10px;">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="formrow">
+          <div class="field">
+            <div class="label">Customer email</div>
+            <input id="mEmail" type="email" placeholder="ama@adom.shop" />
+          </div>
+          <div class="field">
+            <div class="label">Method</div>
+            <select id="mMethod">
+              <option value="mobile_money">Mobile money</option>
+              <option value="card">Card</option>
+              <option value="bank">Bank transfer</option>
+              <option value="ussd">USSD</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <div class="label">Amount</div>
+          <input id="mAmount" type="number" step="0.01" value="250.00" />
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="cancelBtn">Cancel</button>
+        <button class="btn primary" id="sendBtn">Send</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const topbar=document.getElementById('topbar');
+  addEventListener('scroll',()=>topbar.classList.toggle('stuck',scrollY>8),{passive:true});
+
+  const views={
+    overview:{title:'Overview',desc:'Real-time balances, settlements, payouts and reconciliation — for finance and ops teams.'},
+    transactions:{title:'Transactions',desc:'Track collections across rails. Filterable list (demo).'},
+    payouts:{title:'Payouts',desc:'Monitor disbursements to vendors and verify settlement progress.'},
+    settlements:{title:'Settlements',desc:'Reconcile daily settlements and investigate exceptions (demo).'}
+  };
+
+  document.querySelectorAll('[data-view]').forEach(a=>{
+    a.addEventListener('click',e=>{
+      e.preventDefault();
+      document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x===a));
+      const v=a.dataset.view;
+      document.getElementById('viewTitle').textContent=views[v].title;
+      document.getElementById('viewDesc').textContent=views[v].desc;
+    });
+  });
+
+  const fmt=n=>`₵ ${Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+  const seed=[
+    {ref:'cwr_8Kq2x',method:'MoMo · MTN',amt:250,status:'ok'},
+    {ref:'cwr_7Lp9w',method:'Card · Visa',amt:1820,status:'ok'},
+    {ref:'cwr_6Mn4v',method:'Payout · vendor',amt:-12000,status:'pend'},
+    {ref:'cwr_5Jh3t',method:'MoMo · Vodafone',amt:75,status:'ok'},
+    {ref:'cwr_4Qz1m',method:'Bank transfer',amt:4500,status:'ok'},
+    {ref:'cwr_3Lx9a',method:'USSD',amt:60,status:'ok'},
+    {ref:'cwr_2Hb8c',method:'Virtual card',amt:1290,status:'pend'},
+    {ref:'cwr_1Tr5p',method:'MoMo · AirtelTigo',amt:310,status:'ok'}
+  ];
+
+  const tblBody=document.querySelector('#tbl tbody');
+  const search=document.getElementById('q');
+
+  function row(r){
+    const amount=r.amt<0?`−${fmt(Math.abs(r.amt)).replace('₵ ','₵ ')}`:`+${fmt(r.amt)}`;
+    const tag=r.status==='ok'
+      ?`<span class="tag ok"><span class="dot"></span>success</span>`
+      :`<span class="tag pend"><span class="dot"></span>processing</span>`;
+    return `
+      <tr>
+        <td style="font-family:var(--mono);font-weight:700;font-size:12.5px;color:var(--ink-soft)">${r.ref}</td>
+        <td>${r.method}</td>
+        <td style="font-family:var(--mono);font-weight:800">${amount}</td>
+        <td>${tag}</td>
+        <td style="text-align:right;">
+          <button class="btn" data-ref="${r.ref}" style="padding:8px 10px;">View</button>
+        </td>
+      </tr>`;
+  }
+
+  let lastData=seed;
+  function render(list){
+    tblBody.innerHTML=list.map(row).join('');
+    document.getElementById('countBadge').textContent=`Showing ${list.length}`;
+
+    tblBody.querySelectorAll('button[data-ref]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const ref=btn.dataset.ref;
+        alert('Demo: would open details for '+ref);
+      });
+    });
+  }
+
+  function applyFilter(){
+    const q=(search.value||'').trim().toLowerCase();
+    const list=seed.filter(r=>
+      r.ref.toLowerCase().includes(q) || r.method.toLowerCase().includes(q) || String(r.amt).includes(q)
+    );
+    lastData=list;
+    render(list);
+  }
+
+  search.addEventListener('input',applyFilter);
+  render(seed);
+
+  document.getElementById('refreshBtn').addEventListener('click',()=>{
+    const now=new Date();
+    document.getElementById('statusBadge').textContent='Last refresh: '+now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    // light fake movement
+    document.getElementById('k1').textContent='₵ '+(88240 + Math.floor(Math.random()*1200)).toLocaleString('en-US');
+    document.getElementById('k2').textContent='₵ '+(61500 + Math.floor(Math.random()*900)).toLocaleString('en-US');
+  });
+
+  // modal
+  const mb=document.getElementById('mb');
+  const newBtn=document.getElementById('newBtn');
+  const closeModal=document.getElementById('closeModal');
+  const cancelBtn=document.getElementById('cancelBtn');
+  const sendBtn=document.getElementById('sendBtn');
+  function openModal(){mb.classList.add('open');}
+  function closeModalFn(){mb.classList.remove('open');}
+  newBtn.addEventListener('click',openModal);
+  closeModal.addEventListener('click',closeModalFn);
+  cancelBtn.addEventListener('click',closeModalFn);
+  mb.addEventListener('click',e=>{if(e.target===mb)closeModalFn();});
+
+  // Cross-page "admin log" (front-end only)
+  const LS_KEY='cowrie_admin_logs';
+  function safeParse(v){try{return JSON.parse(v)}catch{ return [] }}
+  function loadLogs(){
+    return safeParse(localStorage.getItem(LS_KEY)) || [];
+  }
+  function saveLogs(logs){
+    localStorage.setItem(LS_KEY, JSON.stringify(logs));
+  }
+  function pushLog(entry){
+    const logs=loadLogs();
+    logs.unshift(entry);
+    saveLogs(logs);
+    return logs;
+  }
+
+  // Log events from checkout/login via localStorage.
+  // Expected shape: {ts, source, action, payload}
+  function syncFromStorage(){
+    // keep existing table, but also show latest logs in view
+    // We'll just keep table as "seed" and attach a listener to re-render log drawer.
+    renderLogPreview();
+  }
+
+  // Render a compact “latest inputs” panel below the table
+  const logPanel=document.createElement('div');
+  logPanel.className='panel';
+  logPanel.style.marginTop='18px';
+  logPanel.innerHTML=`
+    <div class="panel-head">
+      <h2>Latest user inputs</h2>
+      <span class="badge" id="logCount">0</span>
+    </div>
+    <div style="overflow:auto;">
+      <table class="table" style="min-width:860px;">
+        <thead>
+          <tr>
+            <th style="min-width:170px;">Time</th>
+            <th>Source</th>
+            <th>Action</th>
+            <th style="width:360px;">Payload</th>
+            <th style="text-align:right;">Details</th>
+          </tr>
+        </thead>
+        <tbody id="logTbody"></tbody>
+      </table>
+    </div>`;
+  document.querySelector('.content').appendChild(logPanel);
+
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"<",">":">","\"":""","'":"&#039;"}[c]));
+  }
+
+  function renderLogPreview(){
+    const logs=loadLogs();
+    const tb=document.getElementById('logTbody');
+    const countEl=document.getElementById('logCount');
+    countEl.textContent=String(logs.length);
+
+    const rows=logs.slice(0,6).map(l=>{
+      const ts=new Date(l.ts).toLocaleString([], {year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+      const payloadPreview=l.payload?esc(JSON.stringify(l.payload).slice(0,120)+(JSON.stringify(l.payload).length>120?'…':'')):'{}';
+      const details=esc(JSON.stringify(l.payload||{},null,2));
+      return `
+        <tr>
+          <td style="font-family:var(--mono);font-size:12px;color:var(--ink-soft);">${esc(ts)}</td>
+          <td>${esc(l.source||'unknown')}</td>
+          <td style="font-family:var(--mono);font-size:12px;color:var(--ink-soft);">${esc(l.action||'-')}</td>
+          <td style="font-family:var(--mono);font-size:12px;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${payloadPreview}</td>
+          <td style="text-align:right;">
+            <button class="btn" data-details='${details}' style="padding:8px 10px;">Inspect</button>
+          </td>
+        </tr>`;
+    }).join('');
+
+    tb.innerHTML=rows;
+
+    tb.querySelectorAll('button[data-details]').forEach(b=>{
+      b.addEventListener('click',()=>{
+        const d=b.getAttribute('data-details');
+        alert('Payload:\n'+d);
+      });
+    });
+  }
+
+  window.addEventListener('storage',()=>{syncFromStorage();});
+  syncFromStorage();
+
+  sendBtn.addEventListener('click',()=>{
+    closeModalFn();
+    // log modal "send" as an admin-initiated action
+    pushLog({
+      ts:Date.now(),
+      source:'admin',
+      action:'new_payment',
+      payload:{
+        email:document.getElementById('mEmail').value || '',
+        method:document.getElementById('mMethod').value,
+        amount:Number(document.getElementById('mAmount').value)
+      }
+    });
+    syncFromStorage();
+    alert('Demo: payment request created ✅ (logged to admin)');
+  });
+})();
+</script>
+</body>
+</html>
+
