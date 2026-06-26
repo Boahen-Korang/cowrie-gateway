@@ -45,7 +45,7 @@ button{font-family:inherit;cursor:pointer}
 
 /* method tabs */
 .co-body{padding:18px 22px 22px}
-.methods{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:18px}
+.methods{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:18px}
 .mtab{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 4px;border:1.5px solid var(--line);border-radius:12px;background:var(--white);transition:.18s;font-size:11px;font-weight:600;color:var(--ink-soft)}
 .mtab:hover{border-color:var(--plum-tint)}
 .mtab.on{border-color:var(--plum);background:var(--plum-tint);color:var(--plum)}
@@ -166,7 +166,7 @@ const ICONS={
   momo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>',
   ussd:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3h14M5 21h14M7 3v18M17 3v18M9 8h6M9 12h6"/></svg>'
 };
-const METHODS=[['card','Card'],['momo','Mobile money'],['bank','Bank'],['ussd','USSD']];
+const METHODS=[['card','Card'],['momo','Mobile money']];
 
 function tabs(){
   return `<div class="methods">${METHODS.map(([id,lbl])=>`<button class="mtab ${S.method===id?'on':''}" data-m="${id}"><span class="mi">${ICONS[id]}</span>${lbl}</button>`).join('')}</div>`;
@@ -211,12 +211,6 @@ function formFor(m){
       <div class="err" id="phoneErr">Enter a valid 10-digit number</div></div>
     <div class="hint">${info}You will receive a prompt on your phone to approve this payment.</div>
     ${payBtn(payLabel)}`;
-  if(m==='bank') return `
-    <div class="hint">${info}A one-time virtual account will be generated for your transfer.</div>
-    ${payBtn('Continue')}`;
-  if(m==='ussd') return `
-    <div class="hint">${info}A USSD code will be generated. Dial it from your registered line.</div>
-    ${payBtn('Continue')}`;
 }
 
 function bindForm(){
@@ -262,10 +256,6 @@ function bindForm(){
       if(d.length<10){phone.classList.add('bad');$('#phoneErr').classList.add('show');return;}
       submitPay($('#pay'),'mobile_money',{phone:d,provider:S.provider});
     });
-  }else if(m==='bank'){
-    $('#pay').addEventListener('click',()=>submitPay($('#pay'),'bank',{}));
-  }else if(m==='ussd'){
-    $('#pay').addEventListener('click',()=>submitPay($('#pay'),'ussd',{}));
   }
 }
 
