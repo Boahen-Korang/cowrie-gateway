@@ -232,10 +232,10 @@ async function payWithPaystack(uiMethod){
     }
     pay.classList.remove('loading');
 
-    PaystackPop.newTransaction({
+    const handler=PaystackPop.setup({
       key: publicKey,
-      accessCode: accessCode,
-      onSuccess: async ()=>{
+      access_code: accessCode,
+      callback: async ()=>{
         go('verifying');
         try{
           const {charge}=await API.get(`/api/charges/${S.charge.reference}/verify`);
@@ -243,10 +243,11 @@ async function payWithPaystack(uiMethod){
           routeFromCharge();
         }catch{go('failed');}
       },
-      onCancel: ()=>{
+      onClose: ()=>{
         /* user closed popup without paying — stay on form */
       },
     });
+    handler.openIframe();
   }catch(err){
     pay.classList.remove('loading');
     alert(err.message);
