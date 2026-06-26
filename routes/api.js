@@ -177,6 +177,12 @@ router.get('/me', requireAuth, (req, res) => {
   res.json({ merchant: publicMerchant(req.merchant) });
 });
 
+/* Public config — tells the checkout whether we're in live or test mode */
+router.get('/info', (req, res) => {
+  const key = cfg.PAYSTACK_SECRET_KEY || '';
+  res.json({ testMode: !key || key.startsWith('sk_test_') });
+});
+
 router.put('/me/webhook', requireAuth, ah(async (req, res) => {
   const { url } = req.body || {};
   if (url) {
