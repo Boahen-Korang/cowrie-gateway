@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cowrie — Create account</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ivory:#F7F5F0; --ivory-2:#FBFAF6; --white:#FFFFFF;
+  --ink:#1B1330; --ink-soft:#564E68; --muted:#7A7388; --faint:#A39CB0;
+  --line:#E8E3DA;
+  --plum:#5B2C8F; --plum-deep:#3A1A60; --plum-br:#7B45B8; --plum-tint:#EFE6F7;
+  --gold:#E0A12E; --gold-deep:#B8801C; --gold-tint:#F8EFD9;
+  --mint:#1FA877; --mint-tint:#DCF1E9; --coral:#EF6A4C;
+  --darkbg:#1B1330; --darkbg-2:#241844;
+  --display:'Plus Jakarta Sans',sans-serif; --body:'Plus Jakarta Sans',sans-serif; --mono:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ivory);color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased;line-height:1.55;min-height:100vh}
+::selection{background:var(--plum);color:#fff}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+.shell{width:26px;height:26px;border-radius:50% 50% 48% 48%/60% 60% 40% 40%;background:linear-gradient(135deg,var(--gold),var(--plum-br));position:relative;box-shadow:inset 0 -2px 4px rgba(0,0,0,.2);flex-shrink:0}
+.shell::before{content:'';position:absolute;left:50%;top:18%;bottom:18%;width:2px;background:rgba(255,255,255,.6);transform:translateX(-50%);border-radius:2px}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:21px;letter-spacing:-.02em}
+
+.split{display:grid;grid-template-columns:1.05fr 1fr;min-height:100vh}
+@media(max-width:900px){.split{grid-template-columns:1fr}.brandside{display:none}}
+
+.brandside{position:relative;background:linear-gradient(165deg,#2A1A52,var(--darkbg) 60%);color:#fff;padding:46px 52px;display:flex;flex-direction:column;overflow:hidden}
+.brandside::before{content:'';position:absolute;right:-15%;top:-10%;width:60%;height:60%;background:radial-gradient(circle,rgba(224,161,46,.22),transparent 65%);filter:blur(10px)}
+.brandside::after{content:'';position:absolute;left:-20%;bottom:-15%;width:60%;height:60%;background:radial-gradient(circle,rgba(123,69,184,.4),transparent 65%);filter:blur(20px)}
+.brandside .logo{color:#fff;position:relative;z-index:2}
+.bs-mid{margin:auto 0;position:relative;z-index:2}
+.bs-mid h2{font-family:var(--display);font-weight:800;font-size:clamp(28px,3.4vw,42px);line-height:1.1;letter-spacing:-.025em;max-width:13ch}
+.bs-mid p{color:#B5ADC8;font-size:16px;margin-top:16px;max-width:36ch}
+.feats{margin-top:32px;display:flex;flex-direction:column;gap:14px}
+.feat{display:flex;align-items:center;gap:13px;font-size:14px;color:#C5BCDA;position:relative;z-index:2}
+.feat .ck{width:22px;height:22px;border-radius:6px;background:rgba(31,168,119,.25);border:1px solid rgba(31,168,119,.4);display:grid;place-items:center;flex-shrink:0;color:var(--mint)}
+.bs-bot{position:relative;z-index:2;display:flex;gap:20px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;color:#8F84B4;margin-top:38px}
+.bs-bot span{display:flex;align-items:center;gap:7px}.bs-bot .ck2{color:var(--gold)}
+
+.formside{display:flex;flex-direction:column;padding:clamp(24px,4vw,48px)}
+.fs-top{display:flex;align-items:center;justify-content:space-between}
+.fs-top .mob-logo{display:none}
+.fs-top .back{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-left:auto;display:inline-flex;align-items:center;gap:7px}
+.fs-top .back:hover{color:var(--plum)}
+@media(max-width:900px){.fs-top .mob-logo{display:flex}}
+.form-box{margin:auto;width:100%;max-width:392px;padding:36px 0}
+.form-box h1{font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:-.02em}
+.form-box .sub{color:var(--ink-soft);font-size:15px;margin-top:7px;margin-bottom:28px}
+
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:7px}
+.input-wrap{position:relative}
+.field input{width:100%;background:var(--white);border:1.5px solid var(--line);border-radius:11px;padding:13px 15px;color:var(--ink);font-family:var(--body);font-size:15px;transition:.18s;outline:none}
+.field input::placeholder{color:var(--faint)}
+.field input:focus{border-color:var(--plum);box-shadow:0 0 0 4px var(--plum-tint)}
+.field input.bad{border-color:var(--coral);box-shadow:0 0 0 4px rgba(239,106,76,.12)}
+.toggle-pw{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);font-family:var(--mono);font-size:11px;font-weight:600;padding:4px 6px}
+.toggle-pw:hover{color:var(--plum)}
+.err{color:var(--coral);font-size:12.5px;margin-top:6px;display:none}
+.err.show{display:block}
+
+.btn-submit{width:100%;background:var(--plum);color:#fff;border:none;border-radius:11px;padding:14px;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;gap:9px;transition:.22s;position:relative;margin-top:4px}
+.btn-submit:hover{background:var(--plum-deep)}
+.btn-submit.loading{color:transparent;pointer-events:none}
+.btn-submit .spin{position:absolute;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;display:none;animation:spin .7s linear infinite}
+.btn-submit.loading .spin{display:block}
+.btn-submit.done{background:var(--mint);pointer-events:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.signin{text-align:center;margin-top:26px;font-size:14px;color:var(--ink-soft)}
+.signin a{color:var(--plum);font-weight:700}.signin a:hover{text-decoration:underline}
+.secure{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:22px;font-family:var(--mono);font-size:11px;color:var(--faint)}
+.secure svg{width:13px;height:13px}
+.pw-hint{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:5px}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="split">
+
+  <div class="brandside">
+    <a href="/" class="logo"><span class="shell"></span>Cowrie</a>
+    <div class="bs-mid">
+      <h2>Start collecting payments today.</h2>
+      <p>Set up your merchant account in minutes and go live across Africa's top payment rails.</p>
+      <div class="feats">
+        <div class="feat"><span class="ck"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Mobile money, cards, bank transfer &amp; USSD</div>
+        <div class="feat"><span class="ck"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Real-time dashboard &amp; webhooks</div>
+        <div class="feat"><span class="ck"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>API keys ready instantly</div>
+        <div class="feat"><span class="ck"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>No hidden fees</div>
+      </div>
+    </div>
+    <div class="bs-bot">
+      <span><span class="ck2">✓</span> PCI-DSS Level 1</span>
+      <span><span class="ck2">✓</span> 256-bit encryption</span>
+      <span><span class="ck2">✓</span> Licensed &amp; regulated</span>
+    </div>
+  </div>
+
+  <div class="formside">
+    <div class="fs-top">
+      <a href="/" class="logo mob-logo"><span class="shell"></span>Cowrie</a>
+      <a href="/" class="back">← Back to cowrie.africa</a>
+    </div>
+    <div class="form-box">
+      <h1>Create account</h1>
+      <p class="sub">Get your merchant account and API keys in seconds.</p>
+
+      <form id="regForm" novalidate>
+        <div class="field">
+          <label for="bizName">Business name</label>
+          <input type="text" id="bizName" placeholder="Adɔm Stores" autocomplete="organization">
+          <div class="err" id="bizNameErr">Enter your business name</div>
+        </div>
+        <div class="field">
+          <label for="email">Work email</label>
+          <input type="email" id="email" placeholder="you@business.com" autocomplete="email">
+          <div class="err" id="emailErr">Enter a valid email address</div>
+        </div>
+        <div class="field">
+          <label for="pw">Password</label>
+          <div class="input-wrap">
+            <input type="password" id="pw" placeholder="Min. 8 characters" autocomplete="new-password">
+            <button type="button" class="toggle-pw" id="togglePw">SHOW</button>
+          </div>
+          <div class="pw-hint">At least 8 characters</div>
+          <div class="err" id="pwErr">Password must be at least 8 characters</div>
+        </div>
+        <div class="field">
+          <label for="pw2">Confirm password</label>
+          <div class="input-wrap">
+            <input type="password" id="pw2" placeholder="Repeat password" autocomplete="new-password">
+          </div>
+          <div class="err" id="pw2Err">Passwords do not match</div>
+        </div>
+
+        <div class="err" id="formErr" style="margin-top:8px;margin-bottom:12px;"></div>
+
+        <button type="submit" class="btn-submit" id="submitBtn">
+          <span class="lbl">Create account</span>
+          <span class="spin"></span>
+        </button>
+      </form>
+
+      <p class="signin">Already have an account? <a href="/login">Sign in</a></p>
+      <div class="secure">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        Protected by bank-grade encryption
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+const togglePw = document.getElementById('togglePw');
+const pw = document.getElementById('pw');
+togglePw.addEventListener('click', () => {
+  const show = pw.type === 'password';
+  pw.type = show ? 'text' : 'password';
+  togglePw.textContent = show ? 'HIDE' : 'SHOW';
+});
+
+const form = document.getElementById('regForm');
+const btn = document.getElementById('submitBtn');
+const bizName = document.getElementById('bizName');
+const email = document.getElementById('email');
+const pw2 = document.getElementById('pw2');
+const formErr = document.getElementById('formErr');
+
+function clearErr(el, errEl) {
+  el.classList.remove('bad');
+  errEl.classList.remove('show');
+}
+
+[bizName, email, pw, pw2].forEach(el => {
+  el.addEventListener('input', () => {
+    const errEl = document.getElementById(el.id + 'Err');
+    if (errEl) clearErr(el, errEl);
+  });
+});
+
+function validate() {
+  let ok = true;
+  if (!bizName.value.trim()) { bizName.classList.add('bad'); document.getElementById('bizNameErr').classList.add('show'); ok = false; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) { email.classList.add('bad'); document.getElementById('emailErr').classList.add('show'); ok = false; }
+  if (pw.value.length < 8) { pw.classList.add('bad'); document.getElementById('pwErr').classList.add('show'); ok = false; }
+  if (pw2.value !== pw.value) { pw2.classList.add('bad'); document.getElementById('pw2Err').classList.add('show'); ok = false; }
+  return ok;
+}
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  formErr.classList.remove('show');
+  if (!validate()) return;
+
+  btn.classList.add('loading');
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        businessName: bizName.value.trim(),
+        email: email.value.trim(),
+        password: pw.value,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Registration failed.');
+    localStorage.setItem('cowrie_token', data.token);
+    localStorage.setItem('cowrie_merchant', JSON.stringify(data.merchant));
+    btn.classList.remove('loading');
+    btn.classList.add('done');
+    btn.querySelector('.lbl').textContent = 'Account created ✓';
+    setTimeout(() => { location.href = '/dashboard'; }, 500);
+  } catch (err) {
+    btn.classList.remove('loading');
+    formErr.textContent = err.message;
+    formErr.classList.add('show');
+  }
+});
+</script>
+</body>
+</html>

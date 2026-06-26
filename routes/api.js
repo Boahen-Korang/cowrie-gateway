@@ -4,7 +4,7 @@ const store = require('../lib/store');
 const cfg = require('../lib/config');
 const payments = require('../lib/payments');
 const {
-  merchantId, apiKey, hashPassword, verifyPassword, signToken, verifyToken,
+  merchantId, apiKey, genId, hashPassword, verifyPassword, signToken, verifyToken,
 } = require('../lib/util');
 
 const router = express.Router();
@@ -174,6 +174,132 @@ router.get('/demo/public-key', (req, res, next) => {
   const demo = store.merchants.all().find((m) => m.demo);
   if (!demo) { const e = new Error('No demo merchant available.'); e.status = 404; return next(e); }
   res.json({ publicKey: demo.publicKey });
+});
+
+/* =========================== Admin (merchant-auth) =========================== */
+
+router.get('/admin/overview', requireAuth, (req, res) => {
+  const allCharges = store.charges.forMerchant(req.merchant.id);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayTs = today.getTime();
+
+  const successAll = allCharges.filter((c) => c.status === 'success');
+  const collectedToday = successAll
+    .filter((c) => c.createdAt >= todayTs)
+    .reduce((s, c) => s + c.amount, 0);
+
+  const allPayouts = store.payouts.forMerchant(req.merchant.id);
+  const paidOutToday = allPayouts
+    .filter((p) => p.createdAt >= todayTs && p.status === 'completed')
+    .reduce((s, p) => s + p.amount, 0);
+
+  const total = allCharges.length;
+  const successRate = total > 0 ? ((successAll.length / total) * 100).toFixed(1) : '100.0';
+  const pendingCount = allCharges.filter((c) => !['success', 'failed'].includes(c.status)).length;
+
+  // 7-day daily totals
+  const last7Days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
+    const start = d.getTime();
+    const end = start + 86_400_000;
+    const daySucc = successAll.filter((c) => c.createdAt >= start && c.createdAt < end);
+    last7Days.push({
+      date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      amount: daySucc.reduce((s, c) => s + c.amount, 0),
+      count: daySucc.length,
+    });
+  }
+
+  // Method breakdown (by amount)
+  const byMethod = {};
+  successAll.forEach((c) => {
+    const m = c.method || 'unknown';
+    byMethod[m] = (byMethod[m] || 0) + c.amount;
+  });
+
+  res.json({ overview: { collectedToday, paidOutToday, successRate, pendingCount, last7Days, byMethod } });
+});
+
+router.get('/admin/payouts', requireAuth, (req, res) => {
+  res.json({ payouts: store.payouts.forMerchant(req.merchant.id) });
+});
+
+router.post('/admin/payouts', requireAuth, (req, res, next) => {
+  try {
+    const { amount, currency, recipient, method, note } = req.body || {};
+    if (!amount || Number(amount) <= 0) {
+      const e = new Error('amount must be a positive number in minor units.'); e.status = 400; throw e;
+    }
+    if (!recipient || !String(recipient).trim()) {
+      const e = new Error('recipient is required.'); e.status = 400; throw e;
+    }
+    const payout = store.payouts.insert({
+      id: genId('pyt_'),
+      merchantId: req.merchant.id,
+      amount: Math.round(Number(amount)),
+      currency: currency || 'GHS',
+      recipient: String(recipient).trim(),
+      method: method || 'bank_transfer',
+      note: String(note || '').trim(),
+      status: 'processing',
+      createdAt: Date.now(),
+    });
+    res.status(201).json({ payout });
+  } catch (e) { next(e); }
+});
+
+router.post('/admin/payouts/:id/complete', requireAuth, (req, res, next) => {
+  try {
+    const payout = store.payouts.forMerchant(req.merchant.id).find((p) => p.id === req.params.id);
+    if (!payout) { const e = new Error('Payout not found.'); e.status = 404; throw e; }
+    if (payout.status === 'completed') { const e = new Error('Payout already completed.'); e.status = 409; throw e; }
+    payout.status = 'completed';
+    payout.completedAt = Date.now();
+    store.persist();
+    res.json({ payout });
+  } catch (e) { next(e); }
+});
+
+router.get('/admin/settlements', requireAuth, (req, res) => {
+  res.json({ settlements: store.settlements.forMerchant(req.merchant.id) });
+});
+
+router.post('/admin/settlements', requireAuth, (req, res, next) => {
+  try {
+    const charges = store.charges.forMerchant(req.merchant.id);
+    const unsettled = charges.filter((c) => c.status === 'success' && !c.settled);
+    if (unsettled.length === 0) {
+      const e = new Error('No unsettled successful transactions to settle.'); e.status = 400; throw e;
+    }
+    const amount = unsettled.reduce((s, c) => s + c.amount, 0);
+    unsettled.forEach((c) => { c.settled = true; });
+    store.persist();
+
+    const settlement = store.settlements.insert({
+      id: genId('stl_'),
+      merchantId: req.merchant.id,
+      amount,
+      currency: 'GHS',
+      chargeCount: unsettled.length,
+      status: 'completed',
+      createdAt: Date.now(),
+    });
+    res.status(201).json({ settlement });
+  } catch (e) { next(e); }
+});
+
+router.post('/admin/new-payment', requireAuth, (req, res, next) => {
+  try {
+    const { amount, currency, email } = req.body || {};
+    const charge = payments.createCharge(req.merchant, {
+      amount: Number(amount) || 0,
+      currency: currency || 'GHS',
+      email: String(email || '').trim(),
+    });
+    const checkoutUrl = `/checkout?reference=${charge.reference}`;
+    res.status(201).json({ charge, checkoutUrl });
+  } catch (e) { next(e); }
 });
 
 module.exports = router;

@@ -21,6 +21,7 @@ app.get('/', (_, res) => res.sendFile(path.join(pub, 'index.html')));
 app.get('/login', (_, res) => res.sendFile(path.join(pub, 'login.html')));
 app.get('/checkout', (_, res) => res.sendFile(path.join(pub, 'checkout.html')));
 app.get('/dashboard', (_, res) => res.sendFile(path.join(pub, 'dashboard.html')));
+app.get('/register', (_, res) => res.sendFile(path.join(pub, 'register.html')));
 app.get('/admin', (_, res) => res.sendFile(path.join(pub, 'admin.html')));
 
 /* ---- JSON 404 + error handler ---- */

@@ -9,409 +9,788 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ivory:#F7F5F0; --ivory-2:#FBFAF6; --white:#FFFFFF;
-  --ink:#1B1330; --ink-soft:#564E68; --muted:#7A7388; --faint:#A39CB0;
-  --line:#E8E3DA; --line-2:#EFEBE3;
-  --plum:#5B2C8F; --plum-deep:#3A1A60; --plum-tint:#EFE6F7;
-  --gold:#E0A12E; --gold-deep:#B8801C; --gold-tint:#F8EFD9;
-  --mint:#1FA877; --mint-tint:#DCF1E9;
-  --display:'Plus Jakarta Sans',sans-serif; --body:'Plus Jakarta Sans',sans-serif; --mono:'JetBrains Mono',monospace;
+  --ivory:#F7F5F0;--ivory-2:#FBFAF6;--white:#FFFFFF;
+  --ink:#1B1330;--ink-soft:#564E68;--muted:#7A7388;--faint:#A39CB0;
+  --line:#E8E3DA;--line-2:#EFEBE3;
+  --plum:#5B2C8F;--plum-deep:#3A1A60;--plum-br:#7B45B8;--plum-tint:#EFE6F7;
+  --gold:#E0A12E;--gold-deep:#B8801C;--gold-tint:#F8EFD9;
+  --mint:#1FA877;--mint-tint:#DCF1E9;--coral:#EF6A4C;--coral-tint:#FBE7E1;
+  --display:'Plus Jakarta Sans',sans-serif;--body:'Plus Jakarta Sans',sans-serif;--mono:'JetBrains Mono',monospace;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{background:var(--ivory);color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased;line-height:1.55;min-height:100vh}
 ::selection{background:var(--plum);color:#fff}
 a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit}
 
-.wrap{max-width:1100px;margin:0 auto;padding:0 18px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
 
-/* top bar */
-.topbar{position:sticky;top:0;z-index:40;background:rgba(247,245,240,.9);backdrop-filter:blur(12px);border-bottom:1px solid transparent}
+/* topbar */
+.topbar{position:sticky;top:0;z-index:40;background:rgba(247,245,240,.93);backdrop-filter:blur(14px);border-bottom:1px solid transparent}
 .topbar.stuck{border-color:var(--line)}
-.topbar-in{display:flex;align-items:center;gap:14px;padding:16px 0}
+.topbar-in{display:flex;align-items:center;gap:14px;padding:15px 0}
 .brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:-.02em}
 .shell{width:26px;height:26px;border-radius:50% 50% 48% 48%/60% 60% 40% 40%;background:linear-gradient(135deg,var(--gold),var(--plum));position:relative;box-shadow:inset 0 -2px 4px rgba(0,0,0,.2)}
 .shell::before{content:'';position:absolute;left:50%;top:18%;bottom:18%;width:2px;background:rgba(255,255,255,.6);transform:translateX(-50%);border-radius:2px}
-
-.search{margin-left:auto;display:flex;align-items:center;gap:10px}
-.search input{width:min(420px,45vw);background:var(--white);border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;outline:none;font-size:14px}
-.search input:focus{border-color:var(--plum);box-shadow:0 0 0 4px var(--plum-tint)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.merchant-tag{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--ivory-2);border:1px solid var(--line);padding:5px 10px;border-radius:8px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* layout */
-.grid{display:grid;grid-template-columns:240px 1fr;gap:18px;padding:18px 0 60px}
-@media(max-width:900px){.grid{grid-template-columns:1fr}.sidebar{display:none}}
+.grid{display:grid;grid-template-columns:214px 1fr;gap:18px;padding:18px 0 60px}
+@media(max-width:860px){.grid{grid-template-columns:1fr}.sidebar{display:none}}
 
-.sidebar{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:16px}
-.side-title{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
-.nav{display:flex;flex-direction:column;gap:6px}
-.nav a{padding:10px 12px;border-radius:12px;border:1px solid transparent;color:var(--ink-soft);font-weight:600;font-size:14px}
+.sidebar{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:14px;align-self:start;position:sticky;top:72px}
+.side-title{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);margin-bottom:8px;padding-left:10px}
+.nav{display:flex;flex-direction:column;gap:3px}
+.nav a{padding:9px 10px;border-radius:11px;border:1px solid transparent;color:var(--ink-soft);font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:8px;transition:.13s}
 .nav a:hover{background:var(--ivory-2);border-color:var(--line)}
-.nav a.active{background:var(--plum-tint);border-color:rgba(91,44,143,.25);color:var(--plum)}
+.nav a.active{background:var(--plum-tint);border-color:rgba(91,44,143,.2);color:var(--plum)}
+.nav a svg{flex-shrink:0;opacity:.55}
+.nav a.active svg{opacity:1}
+.nav-sep{height:1px;background:var(--line-2);margin:8px 0}
 
-.content{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:18px}
+.content{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:22px;min-height:520px}
 
-.hdr{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:16px}
-.hdr h1{font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:-.02em}
-.hdr p{color:var(--ink-soft);max-width:60ch;margin-top:6px}
+/* header */
+.hdr{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--line-2)}
+.hdr h1{font-family:var(--display);font-weight:800;font-size:25px;letter-spacing:-.02em}
+.hdr p{color:var(--ink-soft);max-width:60ch;margin-top:5px;font-size:13.5px}
+.hdr-actions{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:12px 0 18px}
-@media(max-width:900px){.kpis{grid-template-columns:1fr 1fr}}
-.kpi{border:1px solid var(--line);border-radius:16px;padding:14px 14px;background:var(--ivory-2)}
-.kpi .l{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
-.kpi .v{font-family:var(--display);font-weight:900;font-size:26px;margin-top:6px;letter-spacing:-.02em}
-.kpi .t{margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--mint);display:flex;align-items:center;gap:6px}
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+@media(max-width:860px){.kpis{grid-template-columns:1fr 1fr}}
+.kpi{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:var(--ivory-2);transition:.15s}
+.kpi .l{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+.kpi .v{font-family:var(--display);font-weight:900;font-size:23px;letter-spacing:-.02em}
+.kpi .t{margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--mint);display:flex;align-items:center;gap:5px}
 .kpi .t.bad{color:var(--gold-deep)}
+.kpi .t.ok{color:var(--mint)}
 
-.panel{border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-top:12px}
-.panel-head{display:flex;align-items:center;justify-content:space-between;padding:14px 14px;background:var(--ivory-2);border-bottom:1px solid var(--line)}
-.panel-head h2{font-family:var(--display);font-weight:800;font-size:16px}
-.badge{font-family:var(--mono);font-size:11px;color:var(--ink-soft);padding:6px 10px;border:1px solid var(--line);border-radius:999px}
+/* chart */
+.chart-wrap{border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:18px;background:var(--ivory-2)}
+.chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.chart-head h3{font-family:var(--display);font-weight:700;font-size:13.5px}
+.chart-inner{overflow:hidden}
 
+/* panel */
+.panel{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.panel+.panel,.panel+.chart-wrap{margin-top:14px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--ivory-2);border-bottom:1px solid var(--line)}
+.panel-head h2{font-family:var(--display);font-weight:800;font-size:14.5px}
+.badge{font-family:var(--mono);font-size:11px;color:var(--ink-soft);padding:4px 9px;border:1px solid var(--line);border-radius:999px;white-space:nowrap}
+
+/* table */
 .table{width:100%;border-collapse:collapse}
-.table th,.table td{padding:12px 14px;border-bottom:1px solid var(--line-2);font-size:14px;vertical-align:middle}
-.table th{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--ivory-2)}
+.table th,.table td{padding:11px 14px;border-bottom:1px solid var(--line-2);font-size:13.5px;vertical-align:middle}
+.table th{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--ivory-2);white-space:nowrap}
 .table tr:last-child td{border-bottom:none}
-.tag{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border-radius:999px;border:1px solid var(--line);font-family:var(--mono);font-size:11px}
-.dot{width:10px;height:10px;border-radius:50%}
-.tag.ok{border-color:rgba(31,168,119,.25);background:rgba(31,168,119,.08);color:var(--mint)}
-.tag.ok .dot{background:var(--mint)}
-.tag.pend{border-color:rgba(224,161,46,.25);background:rgba(224,161,46,.08);color:var(--gold-deep)}
-.tag.pend .dot{background:var(--gold-deep)}
+.table tbody tr:hover{background:var(--ivory-2)}
 
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:10px 12px;border:1.5px solid var(--line);background:var(--white);font-weight:700}
+/* tags */
+.tag{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);font-family:var(--mono);font-size:10.5px;white-space:nowrap;font-weight:600}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.tag.ok{border-color:rgba(31,168,119,.3);background:rgba(31,168,119,.1);color:#138050}
+.tag.ok .dot{background:var(--mint)}
+.tag.pend{border-color:rgba(224,161,46,.3);background:rgba(224,161,46,.1);color:var(--gold-deep)}
+.tag.pend .dot{background:var(--gold-deep)}
+.tag.fail{border-color:rgba(239,106,76,.3);background:rgba(239,106,76,.1);color:#c44;color:#bf4020}
+.tag.fail .dot{background:var(--coral)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border-radius:10px;padding:8px 13px;border:1.5px solid var(--line);background:var(--white);font-weight:700;font-size:13px;transition:.13s;cursor:pointer;color:var(--ink);white-space:nowrap}
 .btn:hover{border-color:var(--plum);color:var(--plum)}
+.btn:disabled{opacity:.45;pointer-events:none}
 .btn.primary{background:var(--plum);border-color:var(--plum);color:#fff}
 .btn.primary:hover{background:var(--plum-deep)}
+.btn.sm{padding:5px 9px;font-size:11.5px;border-radius:8px}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.btn.ghost:hover{background:var(--ivory-2);color:var(--ink);border-color:var(--line)}
 
-.footer-note{margin-top:14px;color:var(--muted);font-family:var(--mono);font-size:11.5px}
+/* search */
+.search-row{margin-bottom:14px}
+.search-row input{width:100%;background:var(--white);border:1.5px solid var(--line);border-radius:11px;padding:10px 13px;outline:none;font-size:13.5px;transition:.13s}
+.search-row input:focus{border-color:var(--plum);box-shadow:0 0 0 4px var(--plum-tint)}
 
-/* modal */
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:100}
+.section-actions{display:flex;justify-content:flex-end;gap:8px;margin-bottom:14px}
+
+/* states */
+.empty-state{padding:48px 20px;text-align:center;color:var(--muted);font-size:13.5px}
+.empty-state strong{display:block;font-family:var(--display);font-size:16px;color:var(--ink);margin-bottom:6px}
+.state-box{padding:40px 20px;text-align:center;color:var(--muted)}
+.spinbig{width:38px;height:38px;border:3px solid var(--line);border-top-color:var(--plum);border-radius:50%;margin:0 auto 14px;animation:spin .75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* new payment */
+.np-wrap{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:640px){.np-wrap{grid-template-columns:1fr}}
+.np-card{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.np-card-head{padding:13px 16px;background:var(--ivory-2);border-bottom:1px solid var(--line);font-family:var(--display);font-weight:800;font-size:14px}
+.np-card-body{padding:18px}
+.np-result{margin-top:16px;border:1px solid rgba(31,168,119,.35);background:var(--mint-tint);border-radius:12px;padding:14px 16px;display:none}
+.np-result .r-label{font-weight:700;color:#138050;margin-bottom:8px;font-size:13.5px}
+.np-result .r-ref{font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-bottom:10px}
+.link-row{display:flex;gap:7px;align-items:center}
+.link-row input{flex:1;border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;font-family:var(--mono);font-size:11.5px;outline:none;background:var(--white)}
+
+/* field */
+.field{margin-bottom:13px}
+.field .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.field input,.field select{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;outline:none;font-size:13.5px;background:var(--white);transition:.13s;color:var(--ink)}
+.field input:focus,.field select:focus{border-color:var(--plum);box-shadow:0 0 0 3px var(--plum-tint)}
+.formrow{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+@media(max-width:480px){.formrow{grid-template-columns:1fr}}
+
+/* method breakdown dots */
+.method-bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.method-item{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
+.method-dot{width:9px;height:9px;border-radius:50%}
+
+/* tx detail panel */
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:80;display:none}
+.detail-overlay.open{display:block}
+.detail-panel{position:fixed;top:0;right:0;height:100%;width:min(440px,96vw);background:var(--white);border-left:1px solid var(--line);box-shadow:-24px 0 60px rgba(0,0,0,.12);z-index:81;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease}
+.detail-panel.open{transform:translateX(0)}
+.dp-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line);flex-shrink:0}
+.dp-head h2{font-family:var(--display);font-weight:800;font-size:17px}
+.dp-body{flex:1;overflow-y:auto;padding:18px 20px}
+.dp-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line-2)}
+.dp-row:last-child{border-bottom:none}
+.dp-row .k{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:2px;flex-shrink:0;margin-right:12px}
+.dp-row .v{font-family:var(--mono);font-size:12.5px;font-weight:700;text-align:right;word-break:break-all}
+.dp-amt{padding:18px 20px;border-top:1px solid var(--line);flex-shrink:0;text-align:center}
+.dp-amt .val{font-family:var(--display);font-weight:900;font-size:32px;letter-spacing:-.03em}
+.dp-amt .sub{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:4px}
+
+/* modals */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.32);display:none;align-items:center;justify-content:center;z-index:100}
 .modal-backdrop.open{display:flex}
-.modal{width:min(560px,92vw);background:var(--white);border:1px solid var(--line);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.25);overflow:hidden}
+.modal{width:min(500px,93vw);background:var(--white);border:1px solid var(--line);border-radius:18px;box-shadow:0 28px 70px rgba(0,0,0,.22);overflow:hidden}
 .modal-head{padding:14px 16px;background:var(--ivory-2);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
-.modal-head .ttl{font-family:var(--display);font-weight:800}
-.modal-body{padding:16px}
-.formrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-@media(max-width:520px){.formrow{grid-template-columns:1fr}}
-.label{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-.field{margin-bottom:12px}
-.field input, .field select{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;outline:none}
-.field input:focus, .field select:focus{border-color:var(--plum);box-shadow:0 0 0 4px var(--plum-tint)}
-.modal-actions{display:flex;gap:10px;justify-content:flex-end;padding:14px 16px;border-top:1px solid var(--line)}
+.modal-head .ttl{font-family:var(--display);font-weight:800;font-size:15.5px}
+.modal-body{padding:18px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;padding:13px 16px;border-top:1px solid var(--line)}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
-  <div class="topbar" id="topbar">
-    <div class="wrap topbar-in">
-      <div class="brand"><span class="shell"></span>Cowrie Admin</div>
-      <div class="search">
-        <input id="q" type="text" placeholder="Search transactions… (demo)" />
-        <a href="index.html" class="btn" style="padding:10px 12px;">← Site</a>
-      </div>
+
+<div class="topbar" id="topbar">
+  <div class="wrap topbar-in">
+    <div class="brand"><span class="shell"></span>Cowrie Admin</div>
+    <div class="topbar-right">
+      <span class="merchant-tag" id="merchantTag">…</span>
+      <a href="/dashboard" class="btn sm">Dashboard</a>
+      <a href="/" class="btn sm">← Site</a>
+      <button class="btn sm" id="logoutBtn">Logout</button>
     </div>
   </div>
+</div>
 
-  <div class="wrap grid">
-    <aside class="sidebar">
-      <div class="side-title">Dashboard</div>
-      <nav class="nav">
-        <a class="active" href="#" data-view="overview">Overview</a>
-        <a href="#" data-view="transactions">Transactions</a>
-        <a href="#" data-view="payouts">Payouts</a>
-        <a href="#" data-view="settlements">Settlements</a>
-      </nav>
-      <div class="side-title" style="margin-top:16px;">Quick actions</div>
-      <button class="btn primary" id="newBtn" style="width:100%;">New payment</button>
-      <div class="footer-note">Demo UI only (no backend)</div>
-    </aside>
+<div class="wrap grid">
+  <aside class="sidebar">
+    <div class="side-title">Menu</div>
+    <nav class="nav">
+      <a class="active" href="#" data-view="overview">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Overview
+      </a>
+      <a href="#" data-view="transactions">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+        Transactions
+      </a>
+      <a href="#" data-view="payouts">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>
+        Payouts
+      </a>
+      <a href="#" data-view="settlements">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        Settlements
+      </a>
+      <div class="nav-sep"></div>
+      <a href="#" data-view="new-payment">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+        New payment
+      </a>
+    </nav>
+  </aside>
 
-    <main class="content">
-      <div class="hdr">
-        <div>
-          <h1 id="viewTitle">Overview</h1>
-          <p id="viewDesc">Real-time balances, settlements, payouts and reconciliation — for finance and ops teams.</p>
-        </div>
-        <div style="margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <span class="badge" id="statusBadge">Last refresh: just now</span>
-          <button class="btn" id="refreshBtn">Refresh</button>
-        </div>
+  <main class="content">
+    <div class="hdr">
+      <div>
+        <h1 id="viewTitle">Overview</h1>
+        <p id="viewDesc">Real-time balances, settlements, payouts and reconciliation.</p>
       </div>
-
-      <section class="kpis" id="kpis">
-        <div class="kpi"><div class="l">Collected today</div><div class="v" id="k1">₵ 88,240</div><div class="t">▲ 12.4%</div></div>
-        <div class="kpi"><div class="l">Paid out today</div><div class="v" id="k2">₵ 61,500</div><div class="t">▲ 4.1%</div></div>
-        <div class="kpi"><div class="l">Success rate</div><div class="v" id="k3">98.6%</div><div class="t">▲ 0.3%</div></div>
-        <div class="kpi"><div class="l">Pending</div><div class="v" id="k4">24</div><div class="t bad">● 2.1% impact</div></div>
-      </section>
-
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Recent activity</h2>
-          <span class="badge" id="countBadge">Showing 8</span>
-        </div>
-        <div style="overflow:auto;">
-          <table class="table" id="tbl">
-            <thead>
-              <tr>
-                <th>Reference</th>
-                <th>Method</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th style="text-align:right;">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- rows injected -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="footer-note">Tip: Use the search box to filter the list (front-end only).</div>
-    </main>
-  </div>
-
-  <div class="modal-backdrop" id="mb">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
-      <div class="modal-head">
-        <div class="ttl" id="mTitle">New payment (demo)</div>
-        <button class="btn" id="closeModal" style="padding:8px 10px;">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="formrow">
-          <div class="field">
-            <div class="label">Customer email</div>
-            <input id="mEmail" type="email" placeholder="ama@adom.shop" />
-          </div>
-          <div class="field">
-            <div class="label">Method</div>
-            <select id="mMethod">
-              <option value="mobile_money">Mobile money</option>
-              <option value="card">Card</option>
-              <option value="bank">Bank transfer</option>
-              <option value="ussd">USSD</option>
-            </select>
-          </div>
-        </div>
-        <div class="field" style="margin-top:10px;">
-          <div class="label">Amount</div>
-          <input id="mAmount" type="number" step="0.01" value="250.00" />
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn" id="cancelBtn">Cancel</button>
-        <button class="btn primary" id="sendBtn">Send</button>
+      <div class="hdr-actions">
+        <span class="badge" id="statusBadge">Loading…</span>
+        <button class="btn" id="refreshBtn">↻ Refresh</button>
       </div>
     </div>
+    <div id="viewContent">
+      <div class="state-box"><div class="spinbig"></div></div>
+    </div>
+  </main>
+</div>
+
+<!-- Transaction detail slide panel -->
+<div class="detail-overlay" id="detailOverlay"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="dp-head">
+    <h2>Transaction detail</h2>
+    <button class="btn sm ghost" id="closeDetail">✕ Close</button>
   </div>
+  <div class="dp-body" id="detailBody"></div>
+  <div class="dp-amt" id="detailAmt"></div>
+</div>
+
+<!-- Payout modal -->
+<div class="modal-backdrop" id="payoutModal">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <div class="ttl">Create payout</div>
+      <button class="btn sm ghost" id="closePayoutModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <div class="lbl">Recipient name or account</div>
+        <input id="pyRecipient" type="text" placeholder="e.g. Kwame Mensah or 0123456789">
+      </div>
+      <div class="formrow">
+        <div class="field">
+          <div class="lbl">Amount (GHS)</div>
+          <input id="pyAmount" type="number" step="0.01" min="1" placeholder="0.00">
+        </div>
+        <div class="field">
+          <div class="lbl">Method</div>
+          <select id="pyMethod">
+            <option value="bank_transfer">Bank transfer</option>
+            <option value="mobile_money">Mobile money</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <div class="lbl">Note (optional)</div>
+        <input id="pyNote" type="text" placeholder="e.g. Vendor payment — June 2026">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="cancelPayoutBtn">Cancel</button>
+      <button class="btn primary" id="submitPayoutBtn">Create payout</button>
+    </div>
+  </div>
+</div>
 
 <script>
-(function(){
-  const topbar=document.getElementById('topbar');
-  addEventListener('scroll',()=>topbar.classList.toggle('stuck',scrollY>8),{passive:true});
+'use strict';
 
-  const views={
-    overview:{title:'Overview',desc:'Real-time balances, settlements, payouts and reconciliation — for finance and ops teams.'},
-    transactions:{title:'Transactions',desc:'Track collections across rails. Filterable list (demo).'},
-    payouts:{title:'Payouts',desc:'Monitor disbursements to vendors and verify settlement progress.'},
-    settlements:{title:'Settlements',desc:'Reconcile daily settlements and investigate exceptions (demo).'}
-  };
+/* ---- auth guard ---- */
+const token = localStorage.getItem('cowrie_token');
+if (!token) { location.href = '/login'; throw 0; }
 
-  document.querySelectorAll('[data-view]').forEach(a=>{
-    a.addEventListener('click',e=>{
-      e.preventDefault();
-      document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x===a));
-      const v=a.dataset.view;
-      document.getElementById('viewTitle').textContent=views[v].title;
-      document.getElementById('viewDesc').textContent=views[v].desc;
+/* ---- helpers ---- */
+const SYMS = { GHS:'₵', NGN:'₦', KES:'KSh', ZAR:'R', USD:'$', EUR:'€', GBP:'£' };
+const fmt = (minor, ccy='GHS') =>
+  (SYMS[ccy]||ccy+' ')+' '+(minor/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+const fmtDate = ts => new Date(ts).toLocaleString([],{
+  year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'
+});
+
+const METHOD = {card:'Card',mobile_money:'Mobile money',bank_transfer:'Bank transfer',ussd:'USSD'};
+const methodLabel = m => METHOD[m] || m || '—';
+
+const statusTag = s => {
+  if(s==='success'||s==='completed') return `<span class="tag ok"><span class="dot"></span>${s}</span>`;
+  if(s==='failed') return `<span class="tag fail"><span class="dot"></span>failed</span>`;
+  return `<span class="tag pend"><span class="dot"></span>${s||'processing'}</span>`;
+};
+
+const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---- API ---- */
+const API = {
+  _h(){ return {authorization:'Bearer '+token}; },
+  async get(path){
+    const r = await fetch(path,{headers:this._h()});
+    const d = await r.json().catch(()=>({}));
+    if(r.status===401){localStorage.removeItem('cowrie_token');location.href='/login';throw 0;}
+    if(!r.ok) throw new Error(d.message||'Request failed');
+    return d;
+  },
+  async post(path,body){
+    const r = await fetch(path,{
+      method:'POST',
+      headers:{'content-type':'application/json',...this._h()},
+      body:JSON.stringify(body||{})
     });
-  });
-
-  const fmt=n=>`₵ ${Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
-  const seed=[
-    {ref:'cwr_8Kq2x',method:'MoMo · MTN',amt:250,status:'ok'},
-    {ref:'cwr_7Lp9w',method:'Card · Visa',amt:1820,status:'ok'},
-    {ref:'cwr_6Mn4v',method:'Payout · vendor',amt:-12000,status:'pend'},
-    {ref:'cwr_5Jh3t',method:'MoMo · Vodafone',amt:75,status:'ok'},
-    {ref:'cwr_4Qz1m',method:'Bank transfer',amt:4500,status:'ok'},
-    {ref:'cwr_3Lx9a',method:'USSD',amt:60,status:'ok'},
-    {ref:'cwr_2Hb8c',method:'Virtual card',amt:1290,status:'pend'},
-    {ref:'cwr_1Tr5p',method:'MoMo · AirtelTigo',amt:310,status:'ok'}
-  ];
-
-  const tblBody=document.querySelector('#tbl tbody');
-  const search=document.getElementById('q');
-
-  function row(r){
-    const amount=r.amt<0?`−${fmt(Math.abs(r.amt)).replace('₵ ','₵ ')}`:`+${fmt(r.amt)}`;
-    const tag=r.status==='ok'
-      ?`<span class="tag ok"><span class="dot"></span>success</span>`
-      :`<span class="tag pend"><span class="dot"></span>processing</span>`;
-    return `
-      <tr>
-        <td style="font-family:var(--mono);font-weight:700;font-size:12.5px;color:var(--ink-soft)">${r.ref}</td>
-        <td>${r.method}</td>
-        <td style="font-family:var(--mono);font-weight:800">${amount}</td>
-        <td>${tag}</td>
-        <td style="text-align:right;">
-          <button class="btn" data-ref="${r.ref}" style="padding:8px 10px;">View</button>
-        </td>
-      </tr>`;
+    const d = await r.json().catch(()=>({}));
+    if(r.status===401){localStorage.removeItem('cowrie_token');location.href='/login';throw 0;}
+    if(!r.ok) throw new Error(d.message||'Request failed');
+    return d;
   }
+};
 
-  let lastData=seed;
-  function render(list){
-    tblBody.innerHTML=list.map(row).join('');
-    document.getElementById('countBadge').textContent=`Showing ${list.length}`;
+const VIEWS = {
+  overview:     {title:'Overview',     desc:'Real-time balances, settlements, payouts and reconciliation.'},
+  transactions: {title:'Transactions', desc:'All payment collections across your payment rails.'},
+  payouts:      {title:'Payouts',      desc:'Track and manage disbursements to vendors and recipients.'},
+  settlements:  {title:'Settlements',  desc:'Reconcile and trigger settlements to your bank account.'},
+  'new-payment':{title:'New payment',  desc:'Create a hosted payment link and share it with a customer.'},
+};
 
-    tblBody.querySelectorAll('button[data-ref]').forEach(btn=>{
-      btn.addEventListener('click',()=>{
-        const ref=btn.dataset.ref;
-        alert('Demo: would open details for '+ref);
-      });
-    });
+let currentView = 'overview';
+let txCache = [];   // latest fetched transactions
+
+async function loadView(view){
+  currentView = view;
+  document.querySelectorAll('[data-view]').forEach(a=>a.classList.toggle('active',a.dataset.view===view));
+  const m = VIEWS[view];
+  document.getElementById('viewTitle').textContent = m.title;
+  document.getElementById('viewDesc').textContent  = m.desc;
+  document.getElementById('statusBadge').textContent = 'Loading…';
+  const el = document.getElementById('viewContent');
+  el.innerHTML = '<div class="state-box"><div class="spinbig"></div></div>';
+  try{
+    if(view==='overview')          await renderOverview(el);
+    else if(view==='transactions') await renderTransactions(el);
+    else if(view==='payouts')      await renderPayouts(el);
+    else if(view==='settlements')  await renderSettlements(el);
+    else if(view==='new-payment')  renderNewPayment(el);
+    document.getElementById('statusBadge').textContent =
+      'Updated '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  }catch(e){
+    if(e){
+      el.innerHTML=`<div class="state-box" style="color:var(--coral)"><p>${esc(e.message)}</p></div>`;
+      document.getElementById('statusBadge').textContent='Error';
+    }
   }
+}
 
-  function applyFilter(){
-    const q=(search.value||'').trim().toLowerCase();
-    const list=seed.filter(r=>
-      r.ref.toLowerCase().includes(q) || r.method.toLowerCase().includes(q) || String(r.amt).includes(q)
-    );
-    lastData=list;
-    render(list);
-  }
+/* ========================= Overview ========================= */
+async function renderOverview(el){
+  const [{overview},{transactions}] = await Promise.all([
+    API.get('/api/admin/overview'),
+    API.get('/api/transactions')
+  ]);
+  txCache = transactions;
 
-  search.addEventListener('input',applyFilter);
-  render(seed);
+  const rate = Number(overview.successRate);
+  const rateOk = rate>=95;
 
-  document.getElementById('refreshBtn').addEventListener('click',()=>{
-    const now=new Date();
-    document.getElementById('statusBadge').textContent='Last refresh: '+now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-    // light fake movement
-    document.getElementById('k1').textContent='₵ '+(88240 + Math.floor(Math.random()*1200)).toLocaleString('en-US');
-    document.getElementById('k2').textContent='₵ '+(61500 + Math.floor(Math.random()*900)).toLocaleString('en-US');
-  });
-
-  // modal
-  const mb=document.getElementById('mb');
-  const newBtn=document.getElementById('newBtn');
-  const closeModal=document.getElementById('closeModal');
-  const cancelBtn=document.getElementById('cancelBtn');
-  const sendBtn=document.getElementById('sendBtn');
-  function openModal(){mb.classList.add('open');}
-  function closeModalFn(){mb.classList.remove('open');}
-  newBtn.addEventListener('click',openModal);
-  closeModal.addEventListener('click',closeModalFn);
-  cancelBtn.addEventListener('click',closeModalFn);
-  mb.addEventListener('click',e=>{if(e.target===mb)closeModalFn();});
-
-  // Cross-page "admin log" (front-end only)
-  const LS_KEY='cowrie_admin_logs';
-  function safeParse(v){try{return JSON.parse(v)}catch{ return [] }}
-  function loadLogs(){
-    return safeParse(localStorage.getItem(LS_KEY)) || [];
-  }
-  function saveLogs(logs){
-    localStorage.setItem(LS_KEY, JSON.stringify(logs));
-  }
-  function pushLog(entry){
-    const logs=loadLogs();
-    logs.unshift(entry);
-    saveLogs(logs);
-    return logs;
-  }
-
-  // Log events from checkout/login via localStorage.
-  // Expected shape: {ts, source, action, payload}
-  function syncFromStorage(){
-    // keep existing table, but also show latest logs in view
-    // We'll just keep table as "seed" and attach a listener to re-render log drawer.
-    renderLogPreview();
-  }
-
-  // Render a compact “latest inputs” panel below the table
-  const logPanel=document.createElement('div');
-  logPanel.className='panel';
-  logPanel.style.marginTop='18px';
-  logPanel.innerHTML=`
-    <div class="panel-head">
-      <h2>Latest user inputs</h2>
-      <span class="badge" id="logCount">0</span>
+  el.innerHTML = `
+    <div class="kpis">
+      <div class="kpi">
+        <div class="l">Collected today</div>
+        <div class="v">${fmt(overview.collectedToday)}</div>
+        <div class="t ok">● Live</div>
+      </div>
+      <div class="kpi">
+        <div class="l">Paid out today</div>
+        <div class="v">${fmt(overview.paidOutToday)}</div>
+        <div class="t ok">● Live</div>
+      </div>
+      <div class="kpi">
+        <div class="l">Success rate</div>
+        <div class="v">${overview.successRate}%</div>
+        <div class="t ${rateOk?'ok':'bad'}">● All time</div>
+      </div>
+      <div class="kpi">
+        <div class="l">Pending</div>
+        <div class="v">${overview.pendingCount}</div>
+        <div class="t ${overview.pendingCount>0?'bad':'ok'}">● Active</div>
+      </div>
     </div>
-    <div style="overflow:auto;">
-      <table class="table" style="min-width:860px;">
-        <thead>
-          <tr>
-            <th style="min-width:170px;">Time</th>
-            <th>Source</th>
-            <th>Action</th>
-            <th style="width:360px;">Payload</th>
-            <th style="text-align:right;">Details</th>
-          </tr>
-        </thead>
-        <tbody id="logTbody"></tbody>
-      </table>
+
+    <div class="chart-wrap">
+      <div class="chart-head">
+        <h3>Collections — last 7 days</h3>
+        <span class="badge">${overview.last7Days.filter(d=>d.count>0).length} active days</span>
+      </div>
+      <div class="chart-inner">${barChart(overview.last7Days)}</div>
+      ${methodBreakdown(overview.byMethod)}
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Recent transactions</h2>
+        <span class="badge">Last ${Math.min(transactions.length,8)}</span>
+      </div>
+      <div style="overflow:auto;">${txTable(transactions.slice(0,8),true)}</div>
     </div>`;
-  document.querySelector('.content').appendChild(logPanel);
+}
 
-  function esc(s){
-    return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"<",">":">","\"":""","'":"&#039;"}[c]));
-  }
-
-  function renderLogPreview(){
-    const logs=loadLogs();
-    const tb=document.getElementById('logTbody');
-    const countEl=document.getElementById('logCount');
-    countEl.textContent=String(logs.length);
-
-    const rows=logs.slice(0,6).map(l=>{
-      const ts=new Date(l.ts).toLocaleString([], {year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-      const payloadPreview=l.payload?esc(JSON.stringify(l.payload).slice(0,120)+(JSON.stringify(l.payload).length>120?'…':'')):'{}';
-      const details=esc(JSON.stringify(l.payload||{},null,2));
-      return `
-        <tr>
-          <td style="font-family:var(--mono);font-size:12px;color:var(--ink-soft);">${esc(ts)}</td>
-          <td>${esc(l.source||'unknown')}</td>
-          <td style="font-family:var(--mono);font-size:12px;color:var(--ink-soft);">${esc(l.action||'-')}</td>
-          <td style="font-family:var(--mono);font-size:12px;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${payloadPreview}</td>
-          <td style="text-align:right;">
-            <button class="btn" data-details='${details}' style="padding:8px 10px;">Inspect</button>
-          </td>
-        </tr>`;
-    }).join('');
-
-    tb.innerHTML=rows;
-
-    tb.querySelectorAll('button[data-details]').forEach(b=>{
-      b.addEventListener('click',()=>{
-        const d=b.getAttribute('data-details');
-        alert('Payload:\n'+d);
-      });
-    });
-  }
-
-  window.addEventListener('storage',()=>{syncFromStorage();});
-  syncFromStorage();
-
-  sendBtn.addEventListener('click',()=>{
-    closeModalFn();
-    // log modal "send" as an admin-initiated action
-    pushLog({
-      ts:Date.now(),
-      source:'admin',
-      action:'new_payment',
-      payload:{
-        email:document.getElementById('mEmail').value || '',
-        method:document.getElementById('mMethod').value,
-        amount:Number(document.getElementById('mAmount').value)
-      }
-    });
-    syncFromStorage();
-    alert('Demo: payment request created ✅ (logged to admin)');
+function barChart(days){
+  if(!days||!days.length) return '';
+  const maxAmt = Math.max(...days.map(d=>d.amount),1);
+  const W=560, H=72, barW=50, gap=Math.floor((W-barW*7)/6);
+  let bars='', labels='', tooltips='';
+  days.forEach((d,i)=>{
+    const x = i*(barW+gap);
+    const h = Math.max(d.amount>0?4:1, Math.round((d.amount/maxAmt)*H));
+    const y = H-h;
+    const isToday = i===6;
+    bars += `<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="5"
+      fill="${isToday?'var(--plum)':'var(--plum-tint)'}"
+      stroke="${isToday?'var(--plum-deep)':'rgba(91,44,143,.25)'}" stroke-width="${isToday?1.5:1}"/>`;
+    labels += `<text x="${x+barW/2}" y="${H+18}" text-anchor="middle"
+      font-size="9.5" fill="${isToday?'var(--ink)':'var(--muted)'}" font-family="var(--mono)"
+      font-weight="${isToday?700:400}">${esc(d.date)}</text>`;
+    if(d.amount>0){
+      const displayAmt = (d.amount/100).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+      tooltips += `<text x="${x+barW/2}" y="${y-5}" text-anchor="middle"
+        font-size="9" fill="var(--ink-soft)" font-family="var(--mono)">₵${displayAmt}</text>`;
+    }
   });
+  return `<svg viewBox="0 0 ${W} ${H+26}" style="width:100%;max-width:${W}px;display:block">
+    ${bars}${labels}${tooltips}
+  </svg>`;
+}
+
+function methodBreakdown(byMethod){
+  if(!byMethod||!Object.keys(byMethod).length) return '';
+  const total = Object.values(byMethod).reduce((s,v)=>s+v,0);
+  const COLORS = {card:'var(--plum)',mobile_money:'var(--mint)',bank_transfer:'var(--gold)',ussd:'var(--coral)',unknown:'var(--faint)'};
+  const items = Object.entries(byMethod).sort((a,b)=>b[1]-a[1]).map(([m,amt])=>{
+    const pct = ((amt/total)*100).toFixed(0);
+    return `<span class="method-item"><span class="method-dot" style="background:${COLORS[m]||'var(--faint)'}"></span>${methodLabel(m)} ${pct}%</span>`;
+  }).join('');
+  return `<div class="method-bar" style="margin-top:12px;">${items}</div>`;
+}
+
+/* ========================= Transactions ========================= */
+async function renderTransactions(el){
+  const {transactions} = await API.get('/api/transactions');
+  txCache = transactions;
+
+  el.innerHTML = `
+    <div class="search-row">
+      <input id="txSearch" type="text" placeholder="Search by reference, email, method or status…">
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>All transactions</h2>
+        <span class="badge" id="txCount">Showing ${transactions.length}</span>
+      </div>
+      <div style="overflow:auto;" id="txWrap">${txTable(transactions,true)}</div>
+    </div>`;
+
+  document.getElementById('txSearch').addEventListener('input',e=>{
+    const q = e.target.value.toLowerCase().trim();
+    const filtered = q
+      ? transactions.filter(t=>
+          (t.reference||'').toLowerCase().includes(q)||
+          (t.customerEmail||'').toLowerCase().includes(q)||
+          (t.method||'').toLowerCase().includes(q)||
+          (t.status||'').toLowerCase().includes(q))
+      : transactions;
+    document.getElementById('txWrap').innerHTML = txTable(filtered,true);
+    document.getElementById('txCount').textContent = `Showing ${filtered.length}`;
+  });
+}
+
+function txTable(rows, viewable=false){
+  if(!rows.length) return `<div class="empty-state"><strong>No transactions yet</strong>Make a test payment on the <a href="/checkout" style="color:var(--plum)">checkout page</a>, then refresh.</div>`;
+  return `<table class="table">
+    <thead><tr>
+      <th>Reference</th><th>Email</th><th>Method</th><th>Amount</th><th>Status</th><th>Date</th>${viewable?'<th></th>':''}
+    </tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--ink-soft)">${esc(r.reference||'—')}</td>
+      <td style="font-size:13px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.customerEmail||'—')}</td>
+      <td style="font-size:13px">${methodLabel(r.method)}</td>
+      <td style="font-family:var(--mono);font-weight:800">${fmt(r.amount||0,r.currency)}</td>
+      <td>${statusTag(r.status)}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap">${fmtDate(r.createdAt)}</td>
+      ${viewable?`<td style="text-align:right"><button class="btn sm ghost" data-ref="${esc(r.reference||'')}">View</button></td>`:''}
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+/* ========================= Payouts ========================= */
+async function renderPayouts(el){
+  const {payouts} = await API.get('/api/admin/payouts');
+  const processing = payouts.filter(p=>p.status==='processing').length;
+  const completed  = payouts.filter(p=>p.status==='completed').length;
+
+  el.innerHTML = `
+    <div class="section-actions">
+      <span class="badge" style="margin-right:auto">${processing} processing · ${completed} completed</span>
+      <button class="btn primary" id="openPayoutModal">+ Create payout</button>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Payouts</h2><span class="badge">${payouts.length} total</span></div>
+      <div style="overflow:auto;">${payoutsTable(payouts)}</div>
+    </div>`;
+
+  document.getElementById('openPayoutModal').addEventListener('click',()=>{
+    document.getElementById('payoutModal').classList.add('open');
+  });
+
+  el.addEventListener('click', async e=>{
+    const btn = e.target.closest('button[data-complete]');
+    if(!btn) return;
+    btn.disabled=true; btn.textContent='…';
+    try{
+      await API.post(`/api/admin/payouts/${encodeURIComponent(btn.dataset.complete)}/complete`,{});
+      await renderPayouts(el);
+    }catch(err){
+      alert(err.message);
+      btn.disabled=false; btn.textContent='Mark done';
+    }
+  });
+}
+
+function payoutsTable(rows){
+  if(!rows.length) return `<div class="empty-state"><strong>No payouts yet</strong>Create your first payout using the button above.</div>`;
+  return `<table class="table">
+    <thead><tr>
+      <th>ID</th><th>Recipient</th><th>Method</th><th>Amount</th><th>Note</th><th>Status</th><th>Date</th><th></th>
+    </tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-soft)">${esc(r.id)}</td>
+      <td style="font-size:13px">${esc(r.recipient||'—')}</td>
+      <td style="font-size:13px">${methodLabel(r.method)}</td>
+      <td style="font-family:var(--mono);font-weight:800">${fmt(r.amount||0,r.currency)}</td>
+      <td style="font-size:12px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.note||'—')}</td>
+      <td>${statusTag(r.status)}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap">${fmtDate(r.createdAt)}</td>
+      <td style="text-align:right">${r.status==='processing'?`<button class="btn sm" data-complete="${esc(r.id)}">Mark done</button>`:'<span style="font-size:11px;color:var(--mint);font-family:var(--mono)">✓ done</span>'}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+/* ========================= Settlements ========================= */
+async function renderSettlements(el){
+  const {settlements} = await API.get('/api/admin/settlements');
+  const total = settlements.reduce((s,r)=>s+r.amount,0);
+
+  el.innerHTML = `
+    <div class="section-actions">
+      <span class="badge" style="margin-right:auto">Total settled: ${fmt(total)}</span>
+      <button class="btn primary" id="triggerBtn">Trigger settlement</button>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Settlements</h2><span class="badge">${settlements.length} total</span></div>
+      <div style="overflow:auto;">${settlementsTable(settlements)}</div>
+    </div>`;
+
+  document.getElementById('triggerBtn').addEventListener('click',async()=>{
+    const btn=document.getElementById('triggerBtn');
+    if(!confirm('Settle all unsettled successful transactions now?')) return;
+    btn.disabled=true; btn.textContent='Processing…';
+    try{
+      const {settlement}=await API.post('/api/admin/settlements',{});
+      alert(`Settlement complete: ${fmt(settlement.amount,settlement.currency)} across ${settlement.chargeCount} transaction${settlement.chargeCount!==1?'s':''}.`);
+      await renderSettlements(el);
+    }catch(e){
+      alert(e.message);
+      btn.disabled=false; btn.textContent='Trigger settlement';
+    }
+  });
+}
+
+function settlementsTable(rows){
+  if(!rows.length) return `<div class="empty-state"><strong>No settlements yet</strong>Complete some payments on the <a href="/checkout" style="color:var(--plum)">checkout page</a>, then trigger a settlement.</div>`;
+  return `<table class="table">
+    <thead><tr>
+      <th>ID</th><th>Transactions</th><th>Amount</th><th>Status</th><th>Date</th>
+    </tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td style="font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--ink-soft)">${esc(r.id)}</td>
+      <td style="font-family:var(--mono);font-size:13px">${r.chargeCount} charge${r.chargeCount!==1?'s':''}</td>
+      <td style="font-family:var(--mono);font-weight:800">${fmt(r.amount||0,r.currency)}</td>
+      <td>${statusTag(r.status)}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap">${fmtDate(r.createdAt)}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+/* ========================= New Payment ========================= */
+function renderNewPayment(el){
+  el.innerHTML = `
+    <div class="np-wrap">
+      <div class="np-card">
+        <div class="np-card-head">Create payment link</div>
+        <div class="np-card-body">
+          <div class="field">
+            <div class="lbl">Customer email</div>
+            <input id="npEmail" type="email" placeholder="customer@example.com">
+          </div>
+          <div class="formrow">
+            <div class="field">
+              <div class="lbl">Amount</div>
+              <input id="npAmount" type="number" step="0.01" min="1" placeholder="250.00">
+            </div>
+            <div class="field">
+              <div class="lbl">Currency</div>
+              <select id="npCurrency">
+                <option value="GHS">GHS — Ghana Cedi</option>
+                <option value="NGN">NGN — Nigerian Naira</option>
+                <option value="KES">KES — Kenyan Shilling</option>
+                <option value="USD">USD — US Dollar</option>
+                <option value="EUR">EUR — Euro</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn primary" id="npSubmit" style="width:100%">Generate link</button>
+          <div id="npResult" class="np-result"></div>
+        </div>
+      </div>
+
+      <div style="padding:2px 0">
+        <div style="font-family:var(--display);font-weight:800;font-size:15px;margin-bottom:10px">How it works</div>
+        <ol style="list-style:none;display:flex;flex-direction:column;gap:12px;padding:0">
+          ${['Enter the customer\'s email and the amount to collect.',
+             'Click <b>Generate link</b> — a payment reference is created instantly.',
+             'Copy the link and send it to your customer via email, WhatsApp or SMS.',
+             'The customer completes payment using card, mobile money, bank transfer or USSD.',
+             'The transaction appears in your <b>Transactions</b> tab once paid.']
+            .map((s,i)=>`<li style="display:flex;gap:12px;align-items:flex-start;font-size:13.5px;color:var(--ink-soft)"><span style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--plum-tint);color:var(--plum);font-family:var(--mono);font-size:11px;font-weight:800;display:grid;place-items:center">${i+1}</span><span>${s}</span></li>`).join('')}
+        </ol>
+      </div>
+    </div>`;
+
+  document.getElementById('npSubmit').addEventListener('click',async()=>{
+    const email  = document.getElementById('npEmail').value.trim();
+    const amount = parseFloat(document.getElementById('npAmount').value);
+    const currency=document.getElementById('npCurrency').value;
+    const btn    = document.getElementById('npSubmit');
+    const res    = document.getElementById('npResult');
+
+    if(!email||!amount||amount<=0){ alert('Please enter a valid email and amount.'); return; }
+
+    btn.disabled=true; btn.textContent='Creating…';
+    try{
+      const {charge,checkoutUrl}=await API.post('/api/admin/new-payment',{
+        email, amount:Math.round(amount*100), currency
+      });
+      const fullUrl = location.origin+checkoutUrl;
+      res.style.display='block';
+      res.innerHTML=`
+        <div class="r-label">✓ Payment link ready</div>
+        <div class="r-ref">Ref: ${esc(charge.reference)} · ${fmt(charge.amount,charge.currency)}</div>
+        <div class="link-row">
+          <input id="npLink" value="${esc(fullUrl)}" readonly>
+          <button class="btn sm" id="copyLink">Copy</button>
+          <a href="${esc(checkoutUrl)}" target="_blank" class="btn sm primary">Open ↗</a>
+        </div>`;
+      document.getElementById('copyLink').addEventListener('click',()=>{
+        navigator.clipboard?.writeText(fullUrl).catch(()=>{});
+        document.getElementById('copyLink').textContent='Copied!';
+        setTimeout(()=>{const el=document.getElementById('copyLink');if(el)el.textContent='Copy';},1500);
+      });
+    }catch(e){ alert(e.message); }
+    btn.disabled=false; btn.textContent='Generate link';
+  });
+}
+
+/* ========================= Transaction detail panel ========================= */
+function openDetail(ref){
+  const tx = txCache.find(t=>t.reference===ref);
+  if(!tx) return;
+
+  const body = document.getElementById('detailBody');
+  const rows = [
+    ['Reference',  tx.reference],
+    ['Status',     tx.status],
+    ['Method',     methodLabel(tx.method)],
+    ['Email',      tx.customerEmail||'—'],
+    ['Currency',   tx.currency||'GHS'],
+    ['Created',    fmtDate(tx.createdAt)],
+    ['Updated',    fmtDate(tx.updatedAt)],
+    tx.paidAt ? ['Paid at', fmtDate(tx.paidAt)] : null,
+    tx.auth?.last4 ? ['Card', `•••• ${tx.auth.last4} (${tx.auth.brand||''})`] : null,
+    tx.auth?.provider ? ['Provider', tx.auth.provider] : null,
+    tx.auth?.phone ? ['Phone', tx.auth.phone] : null,
+    tx.failure ? ['Failure', tx.failure.message] : null,
+    tx.settled ? ['Settled', 'Yes'] : null,
+  ].filter(Boolean);
+
+  body.innerHTML = rows.map(([k,v])=>`
+    <div class="dp-row">
+      <span class="k">${esc(k)}</span>
+      <span class="v">${k==='Status'?statusTag(v):esc(String(v))}</span>
+    </div>`).join('');
+
+  document.getElementById('detailAmt').innerHTML =
+    `<div class="val">${fmt(tx.amount||0,tx.currency)}</div>
+     <div class="sub">${esc(tx.reference)}</div>`;
+
+  document.getElementById('detailOverlay').classList.add('open');
+  document.getElementById('detailPanel').classList.add('open');
+}
+
+function closeDetail(){
+  document.getElementById('detailOverlay').classList.remove('open');
+  document.getElementById('detailPanel').classList.remove('open');
+}
+document.getElementById('closeDetail').addEventListener('click',closeDetail);
+document.getElementById('detailOverlay').addEventListener('click',closeDetail);
+
+/* click delegation for View buttons */
+document.getElementById('viewContent').addEventListener('click',e=>{
+  const btn = e.target.closest('button[data-ref]');
+  if(btn) openDetail(btn.dataset.ref);
+});
+
+/* ========================= Payout modal ========================= */
+function closePayoutModal(){
+  document.getElementById('payoutModal').classList.remove('open');
+  ['pyRecipient','pyAmount','pyNote'].forEach(id=>{document.getElementById(id).value='';});
+  const s=document.getElementById('submitPayoutBtn');
+  s.disabled=false; s.textContent='Create payout';
+}
+document.getElementById('closePayoutModal').addEventListener('click',closePayoutModal);
+document.getElementById('cancelPayoutBtn').addEventListener('click',closePayoutModal);
+document.getElementById('payoutModal').addEventListener('click',e=>{
+  if(e.target===document.getElementById('payoutModal'))closePayoutModal();
+});
+
+document.getElementById('submitPayoutBtn').addEventListener('click',async()=>{
+  const recipient=document.getElementById('pyRecipient').value.trim();
+  const amount=parseFloat(document.getElementById('pyAmount').value);
+  const method=document.getElementById('pyMethod').value;
+  const note=document.getElementById('pyNote').value.trim();
+  if(!recipient||!amount||amount<=0){alert('Please fill in recipient and amount.');return;}
+  const btn=document.getElementById('submitPayoutBtn');
+  btn.disabled=true; btn.textContent='Creating…';
+  try{
+    await API.post('/api/admin/payouts',{amount:Math.round(amount*100),currency:'GHS',recipient,method,note});
+    closePayoutModal();
+    await loadView('payouts');
+  }catch(e){
+    alert(e.message);
+    btn.disabled=false; btn.textContent='Create payout';
+  }
+});
+
+/* ========================= Wiring ========================= */
+document.querySelectorAll('[data-view]').forEach(a=>{
+  a.addEventListener('click',e=>{e.preventDefault();loadView(a.dataset.view);});
+});
+document.getElementById('refreshBtn').addEventListener('click',()=>loadView(currentView));
+document.getElementById('logoutBtn').addEventListener('click',()=>{
+  localStorage.removeItem('cowrie_token');
+  localStorage.removeItem('cowrie_merchant');
+  location.href='/login';
+});
+addEventListener('scroll',()=>{
+  document.getElementById('topbar').classList.toggle('stuck',scrollY>8);
+},{passive:true});
+
+/* ========================= Boot ========================= */
+(async()=>{
+  try{
+    const {merchant}=await API.get('/api/me');
+    document.getElementById('merchantTag').textContent=merchant.businessName;
+    await loadView('overview');
+  }catch{
+    location.href='/login';
+  }
 })();
 </script>
 </body>
 </html>
-
