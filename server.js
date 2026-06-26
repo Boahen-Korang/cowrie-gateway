@@ -6,6 +6,7 @@ const cfg = require('./lib/config');
 const api = require('./routes/api');
 const { migrate } = require('./lib/migrate');
 const { merchantId, apiKey, hashPassword } = require('./lib/util');
+const paystack = require('./lib/paystack');
 
 const app = express();
 app.set('trust proxy', true);
@@ -84,10 +85,19 @@ async function connectWithRetry(maxAttempts = 6, delayMs = 3000) {
   }
 }
 
+async function loadGatewaySettings() {
+  const gs = await store.settings.get('gateways');
+  if (gs && gs.paystack) {
+    paystack.configureKeys(gs.paystack);
+    console.log('  ✓ Gateway keys loaded from database');
+  }
+}
+
 async function start() {
   await connectWithRetry();
   await seedDemoMerchant();
   await migrateMerchantKeys();
+  await loadGatewaySettings();
   app.listen(cfg.PORT, async () => {
     const all = await store.merchants.all();
     const demo = all.find((m) => m.demo);

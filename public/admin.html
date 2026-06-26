@@ -343,6 +343,10 @@ input,select,textarea{font-family:inherit}
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.4 7.7 8 10 4.6-2.3 8-5 8-10V6z"/></svg>
           KYC Review
         </a>
+        <a href="#" data-view="gateways">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+          Payment Gateways
+        </a>
         <a href="#" data-view="new-payment">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
           New payment
@@ -498,7 +502,8 @@ const VIEWS = {
   payouts:      {title:'Payouts',      desc:'Review and process payout requests submitted by merchants.'},
   settlements:  {title:'Settlements',  desc:'Reconcile and trigger settlements to your bank account.'},
   'new-payment':{title:'New payment',  desc:'Create a hosted payment link and share it with a customer.'},
-  'kyc':        {title:'KYC Review',   desc:'Review and approve merchant identity verification submissions.'},
+  'kyc':        {title:'KYC Review',        desc:'Review and approve merchant identity verification submissions.'},
+  'gateways':   {title:'Payment Gateways',  desc:'Configure API keys for your payment processing providers.'},
 };
 
 let currentView = 'overview';
@@ -520,6 +525,7 @@ async function loadView(view){
     else if(view==='settlements')  await renderSettlements(el);
     else if(view==='new-payment')  renderNewPayment(el);
     else if(view==='kyc')          await renderKyc(el);
+    else if(view==='gateways')     await renderGateways(el);
     document.getElementById('statusBadge').textContent =
       'Updated '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     reveal3d(el);
@@ -1013,6 +1019,134 @@ async function renderKyc(el){
         await API.post(`/api/admin/kyc/${encodeURIComponent(rejectBtn.dataset.kycReject)}/reject`,{reason});
         await loadView('kyc');
       }catch(err){alert(err.message);rejectBtn.disabled=false;rejectBtn.textContent='Reject';}
+    }
+  });
+}
+
+/* ========================= Payment Gateways ========================= */
+async function renderGateways(el){
+  const {activeGateway, gateways}=await API.get('/api/admin/gateways');
+  document.getElementById('statusBadge').textContent='Active: '+(gateways.find(g=>g.active)||{name:'—'}).name;
+
+  const logos={
+    paystack:'<svg viewBox="0 0 40 40" width="32" height="32"><rect width="40" height="40" rx="8" fill="#00C3F7"/><text x="20" y="26" text-anchor="middle" font-size="16" font-weight="900" fill="#fff" font-family="sans-serif">P</text></svg>',
+    flutterwave:'<svg viewBox="0 0 40 40" width="32" height="32"><rect width="40" height="40" rx="8" fill="#F5A623"/><text x="20" y="26" text-anchor="middle" font-size="16" font-weight="900" fill="#fff" font-family="sans-serif">F</text></svg>',
+    stripe:'<svg viewBox="0 0 40 40" width="32" height="32"><rect width="40" height="40" rx="8" fill="#635BFF"/><text x="20" y="26" text-anchor="middle" font-size="16" font-weight="900" fill="#fff" font-family="sans-serif">S</text></svg>',
+    monnify:'<svg viewBox="0 0 40 40" width="32" height="32"><rect width="40" height="40" rx="8" fill="#0063F7"/><text x="20" y="26" text-anchor="middle" font-size="16" font-weight="900" fill="#fff" font-family="sans-serif">M</text></svg>',
+  };
+
+  el.innerHTML=gateways.map(g=>`
+    <div class="panel r3d" style="margin-bottom:20px" id="gw-panel-${esc(g.id)}">
+      <div class="panel-head" style="flex-wrap:wrap;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px">
+          ${logos[g.id]||''}
+          <div>
+            <h2 style="font-size:15px">${esc(g.name)}</h2>
+            <a href="${esc(g.website)}" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:11px;color:var(--muted);text-decoration:none">${esc(g.website.replace('https://',''))}</a>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap">
+          ${g.active?`<span class="badge" style="background:rgba(26,168,119,.18);color:#1FA877;border-color:rgba(26,168,119,.3)">Active</span>`
+            :g.configured?`<span class="badge" style="background:rgba(224,161,46,.12);color:#E0A12E;border-color:rgba(224,161,46,.25)">Configured</span>`
+            :`<span class="badge">Not configured</span>`}
+          ${g.status==='configurable'?`<span class="badge" style="background:rgba(91,44,143,.18);color:#C9AEFF;border-color:rgba(91,44,143,.3)">Integration available</span>`:''}
+          ${!g.active?`<button class="btn sm" data-activate="${esc(g.id)}">${g.status==='integrated'?'Set as active':'Set as active'}</button>`:''}
+        </div>
+      </div>
+
+      ${g.status==='configurable'?`<div style="padding:14px 18px 0;font-size:12.5px;color:rgba(255,255,255,.45);background:rgba(91,44,143,.07);border-bottom:1px solid rgba(255,255,255,.06)">
+        <strong style="color:#C9AEFF">Integration note:</strong> ${esc(g.name)} keys are saved here for future use. To fully activate ${esc(g.name)} payment processing, the gateway module needs to be installed. <a href="${esc(g.website)}" target="_blank" rel="noopener" style="color:#C9AEFF">Learn more →</a>
+      </div>`:''}
+
+      <div style="padding:18px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+          <div>
+            <div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px">Test keys</div>
+            <div class="field">
+              <div class="lbl">Public key</div>
+              <input class="gw-input" data-gw="${esc(g.id)}" data-field="testPublicKey" placeholder="${esc(g.fields.testPublicKey)}" value="${esc(g.keys.testPublicKey)}">
+            </div>
+            <div class="field">
+              <div class="lbl">Secret key</div>
+              <div style="position:relative">
+                <input class="gw-input" type="password" data-gw="${esc(g.id)}" data-field="testSecretKey" placeholder="${esc(g.fields.testSecretKey)}" value="${esc(g.keys.testSecretKey)}" style="padding-right:56px">
+                <button type="button" class="show-btn" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;font-family:var(--mono);font-size:10px;font-weight:700;color:rgba(255,255,255,.35);cursor:pointer;padding:4px 6px">SHOW</button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px">Live keys</div>
+            <div class="field">
+              <div class="lbl">Public key</div>
+              <input class="gw-input" data-gw="${esc(g.id)}" data-field="livePublicKey" placeholder="${esc(g.fields.livePublicKey)}" value="${esc(g.keys.livePublicKey)}">
+            </div>
+            <div class="field">
+              <div class="lbl">Secret key</div>
+              <div style="position:relative">
+                <input class="gw-input" type="password" data-gw="${esc(g.id)}" data-field="liveSecretKey" placeholder="${esc(g.fields.liveSecretKey)}" value="${esc(g.keys.liveSecretKey)}" style="padding-right:56px">
+                <button type="button" class="show-btn" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;font-family:var(--mono);font-size:10px;font-weight:700;color:rgba(255,255,255,.35);cursor:pointer;padding:4px 6px">SHOW</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+          <button class="btn sm primary" data-save="${esc(g.id)}">Save keys</button>
+          <span class="gw-fb" id="gw-fb-${esc(g.id)}" style="font-size:12.5px"></span>
+        </div>
+      </div>
+    </div>`).join('');
+
+  /* show/hide secret keys */
+  el.querySelectorAll('.show-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const inp=btn.previousElementSibling||btn.parentElement.querySelector('input');
+      if(!inp)return;
+      const show=inp.type==='password';
+      inp.type=show?'text':'password';
+      btn.textContent=show?'HIDE':'SHOW';
+    });
+  });
+
+  /* save keys */
+  el.addEventListener('click',async e=>{
+    const saveBtn=e.target.closest('[data-save]');
+    const activateBtn=e.target.closest('[data-activate]');
+
+    if(saveBtn){
+      const id=saveBtn.dataset.save;
+      const panel=document.getElementById(`gw-panel-${id}`);
+      const fb=document.getElementById(`gw-fb-${id}`);
+      const getVal=f=>panel.querySelector(`[data-field="${f}"]`).value.trim();
+      const body={
+        testPublicKey:getVal('testPublicKey'),
+        testSecretKey:getVal('testSecretKey'),
+        livePublicKey:getVal('livePublicKey'),
+        liveSecretKey:getVal('liveSecretKey'),
+      };
+      saveBtn.disabled=true; saveBtn.textContent='Saving…';
+      try{
+        await API.put(`/api/admin/gateways/${encodeURIComponent(id)}`,body);
+        fb.textContent='Keys saved.'; fb.style.color='#1FA877';
+        setTimeout(()=>{fb.textContent='';},3000);
+      }catch(err){
+        fb.textContent=err.message; fb.style.color='#EF6A4C';
+      }finally{
+        saveBtn.disabled=false; saveBtn.textContent='Save keys';
+      }
+    } else if(activateBtn){
+      const id=activateBtn.dataset.activate;
+      const meta=gateways.find(g=>g.id===id);
+      if(meta&&meta.status!=='integrated'){
+        if(!confirm(`${meta.name} does not have a full payment processing integration yet.\n\nSetting it as active will not route payments through it until the integration is installed.\n\nContinue?`))return;
+      }
+      activateBtn.disabled=true; activateBtn.textContent='Activating…';
+      try{
+        await API.put(`/api/admin/gateways/${encodeURIComponent(id)}/activate`,{});
+        await loadView('gateways');
+      }catch(err){
+        alert(err.message);
+        activateBtn.disabled=false; activateBtn.textContent='Set as active';
+      }
     }
   });
 }

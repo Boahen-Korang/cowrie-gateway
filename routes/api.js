@@ -679,4 +679,74 @@ router.post('/admin/kyc/:merchantId/reject', requireAdminAuth, ah(async (req, re
   res.json({ merchant: publicMerchant(merchant) });
 }));
 
+/* ==================== Gateway Settings (Admin) ==================== */
+
+const SUPPORTED_GATEWAYS = [
+  { id: 'paystack',    name: 'Paystack',    status: 'integrated', website: 'https://paystack.com',    fields: { testPublicKey: 'Test public key (pk_test_…)', testSecretKey: 'Test secret key (sk_test_…)', livePublicKey: 'Live public key (pk_live_…)', liveSecretKey: 'Live secret key (sk_live_…)' } },
+  { id: 'flutterwave', name: 'Flutterwave', status: 'configurable', website: 'https://flutterwave.com', fields: { testPublicKey: 'Test public key (FLWPUBK_TEST-…)', testSecretKey: 'Test secret key (FLWSECK_TEST-…)', livePublicKey: 'Live public key (FLWPUBK-…)', liveSecretKey: 'Live secret key (FLWSECK-…)' } },
+  { id: 'stripe',      name: 'Stripe',      status: 'configurable', website: 'https://stripe.com',      fields: { testPublicKey: 'Test public key (pk_test_…)', testSecretKey: 'Test secret key (sk_test_…)', livePublicKey: 'Live public key (pk_live_…)', liveSecretKey: 'Live secret key (sk_live_…)' } },
+  { id: 'monnify',     name: 'Monnify',     status: 'configurable', website: 'https://monnify.com',     fields: { testPublicKey: 'API key', testSecretKey: 'Secret key', livePublicKey: 'Live API key', liveSecretKey: 'Live secret key' } },
+];
+
+function maskSecret(val) {
+  if (!val || val.length < 8) return val || '';
+  return val.slice(0, 8) + '•'.repeat(Math.min(val.length - 8, 24));
+}
+
+router.get('/admin/gateways', requireAdminAuth, ah(async (req, res) => {
+  const gs = (await store.settings.get('gateways')) || { activeGateway: 'paystack', gateways: {} };
+  const result = SUPPORTED_GATEWAYS.map(meta => {
+    const keys = (gs.gateways && gs.gateways[meta.id]) || {};
+    return {
+      ...meta,
+      active: (gs.activeGateway || 'paystack') === meta.id,
+      configured: !!(keys.testSecretKey || keys.liveSecretKey),
+      keys: {
+        testPublicKey:  keys.testPublicKey  || '',
+        testSecretKey:  maskSecret(keys.testSecretKey),
+        livePublicKey:  keys.livePublicKey  || '',
+        liveSecretKey:  maskSecret(keys.liveSecretKey),
+      },
+    };
+  });
+  res.json({ activeGateway: gs.activeGateway || 'paystack', gateways: result });
+}));
+
+router.put('/admin/gateways/:id', requireAdminAuth, ah(async (req, res) => {
+  const { id } = req.params;
+  if (!SUPPORTED_GATEWAYS.find(g => g.id === id)) {
+    const e = new Error('Unknown gateway.'); e.status = 400; throw e;
+  }
+  const { testPublicKey = '', testSecretKey = '', livePublicKey = '', liveSecretKey = '' } = req.body || {};
+  const gs = (await store.settings.get('gateways')) || { activeGateway: 'paystack', gateways: {} };
+  const existing = (gs.gateways && gs.gateways[id]) || {};
+
+  gs.gateways = gs.gateways || {};
+  gs.gateways[id] = {
+    testPublicKey:  testPublicKey  || existing.testPublicKey  || '',
+    testSecretKey:  testSecretKey  && !testSecretKey.includes('•')  ? testSecretKey  : (existing.testSecretKey  || ''),
+    livePublicKey:  livePublicKey  || existing.livePublicKey  || '',
+    liveSecretKey:  liveSecretKey  && !liveSecretKey.includes('•')  ? liveSecretKey  : (existing.liveSecretKey  || ''),
+  };
+  await store.settings.set('gateways', gs);
+
+  if (id === 'paystack') paystack.configureKeys(gs.gateways.paystack);
+
+  res.json({ ok: true });
+}));
+
+router.put('/admin/gateways/:id/activate', requireAdminAuth, ah(async (req, res) => {
+  const { id } = req.params;
+  if (!SUPPORTED_GATEWAYS.find(g => g.id === id)) {
+    const e = new Error('Unknown gateway.'); e.status = 400; throw e;
+  }
+  const gs = (await store.settings.get('gateways')) || { activeGateway: 'paystack', gateways: {} };
+  gs.activeGateway = id;
+  await store.settings.set('gateways', gs);
+  if (id === 'paystack' && gs.gateways && gs.gateways.paystack) {
+    paystack.configureKeys(gs.gateways.paystack);
+  }
+  res.json({ ok: true, activeGateway: id });
+}));
+
 module.exports = router;
