@@ -5,181 +5,237 @@ const store = require('../lib/store');
 const cfg = require('../lib/config');
 const payments = require('../lib/payments');
 const paystack = require('../lib/paystack');
+const { sendOtp } = require('../lib/email');
 const {
   merchantId, apiKey, genId, hashPassword, verifyPassword, signToken, verifyToken,
 } = require('../lib/util');
 
 const router = express.Router();
 
-/* ---- tiny in-memory rate limiter ---- */
+/* ── rate limiter ── */
 function rateLimit({ windowMs, max }) {
   const hits = new Map();
   return (req, res, next) => {
-    const key = req.ip;
-    const now = Date.now();
+    const key = req.ip; const now = Date.now();
     const entry = hits.get(key) || { count: 0, reset: now + windowMs };
     if (now > entry.reset) { entry.count = 0; entry.reset = now + windowMs; }
-    entry.count += 1;
-    hits.set(key, entry);
+    entry.count += 1; hits.set(key, entry);
     if (entry.count > max) {
       const e = new Error('Too many requests, slow down.'); e.status = 429; return next(e);
     }
     next();
   };
 }
-const authLimiter = rateLimit({ windowMs: 60_000, max: 20 });
+const authLimiter   = rateLimit({ windowMs: 60_000, max: 20 });
 const chargeLimiter = rateLimit({ windowMs: 60_000, max: 120 });
 
-const asyncHandler = (fn) => (req, res, next) => fn(req, res, next).catch(next);
+const ah = (fn) => (req, res, next) => fn(req, res, next).catch(next);
 
 function publicMerchant(m) {
   const { passwordHash, ...rest } = m;
   return rest;
 }
 
-/* ---- merchant session auth (Bearer token from login/register) ---- */
-function requireAuth(req, res, next) {
-  const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
-  const payload = token && verifyToken(token);
-  const merchant = payload && store.merchants.byId(payload.sub);
-  if (!merchant) { const e = new Error('Unauthorized'); e.status = 401; return next(e); }
-  req.merchant = merchant;
-  next();
-}
-
-/* ---- API-key auth for charge creation (public or secret key) ---- */
-function resolveMerchantByKey(req, res, next) {
-  const header = req.headers.authorization || '';
-  const bearer = header.startsWith('Bearer ') ? header.slice(7) : null;
-  const key = req.headers['x-public-key'] || (req.body && req.body.public_key) || bearer;
-  const merchant = key && (store.merchants.byPublicKey(key) || store.merchants.bySecretKey(key));
-  if (!merchant) { const e = new Error('Invalid or missing API key'); e.status = 401; return next(e); }
-  req.merchant = merchant;
-  next();
-}
-
-function loadCharge(req, res, next) {
-  const charge = store.charges.byReference(req.params.reference);
-  if (!charge) { const e = new Error('Unknown charge reference.'); e.status = 404; return next(e); }
-  req.charge = charge;
-  next();
-}
-
-/* =========================== Auth (merchant) =========================== */
-
-router.post('/auth/register', authLimiter, (req, res, next) => {
+/* ── middleware ── */
+async function requireAuth(req, res, next) {
   try {
-    const { businessName, email, password } = req.body || {};
-    if (!businessName || !email || !password) {
-      const e = new Error('businessName, email and password are required.'); e.status = 400; throw e;
-    }
-    if (String(password).length < 8) {
-      const e = new Error('password must be at least 8 characters.'); e.status = 400; throw e;
-    }
-    if (store.merchants.byEmail(email)) {
-      const e = new Error('An account with this email already exists.'); e.status = 409; throw e;
-    }
-    const merchant = store.merchants.insert({
-      id: merchantId(),
-      businessName,
-      email,
-      passwordHash: hashPassword(password),
-      publicKey: apiKey('public'),
-      secretKey: apiKey('secret'),
-      webhookSecret: 'whsec_' + apiKey('secret').slice(8),
-      webhookUrl: null,
-      demo: false,
-      createdAt: Date.now(),
-    });
-    const token = signToken({ sub: merchant.id, exp: Date.now() + cfg.TOKEN_TTL_MS });
-    res.status(201).json({ token, merchant: publicMerchant(merchant) });
+    const header = req.headers.authorization || '';
+    const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+    const payload = token && verifyToken(token);
+    const merchant = payload && await store.merchants.byId(payload.sub);
+    if (!merchant) { const e = new Error('Unauthorized'); e.status = 401; return next(e); }
+    req.merchant = merchant; next();
   } catch (e) { next(e); }
-});
+}
 
-router.post('/auth/login', authLimiter, (req, res, next) => {
+async function resolveMerchantByKey(req, res, next) {
   try {
-    const { email, password } = req.body || {};
-    const merchant = email && store.merchants.byEmail(email);
-    if (!merchant || !verifyPassword(password || '', merchant.passwordHash)) {
-      const e = new Error('Invalid email or password.'); e.status = 401; throw e;
-    }
-    const token = signToken({ sub: merchant.id, exp: Date.now() + cfg.TOKEN_TTL_MS });
-    res.json({ token, merchant: publicMerchant(merchant) });
+    const header = req.headers.authorization || '';
+    const bearer = header.startsWith('Bearer ') ? header.slice(7) : null;
+    const key = req.headers['x-public-key'] || (req.body && req.body.public_key) || bearer;
+    const merchant = key && (await store.merchants.byPublicKey(key) || await store.merchants.bySecretKey(key));
+    if (!merchant) { const e = new Error('Invalid or missing API key'); e.status = 401; return next(e); }
+    req.merchant = merchant; next();
   } catch (e) { next(e); }
-});
+}
+
+async function loadCharge(req, res, next) {
+  try {
+    const charge = await store.charges.byReference(req.params.reference);
+    if (!charge) { const e = new Error('Unknown charge reference.'); e.status = 404; return next(e); }
+    req.charge = charge; next();
+  } catch (e) { next(e); }
+}
+
+/* ====================== Auth (merchant) ====================== */
+
+/* Step 1 — send OTP */
+router.post('/auth/register', authLimiter, ah(async (req, res) => {
+  const { businessName, email, password } = req.body || {};
+  if (!businessName || !email || !password) {
+    const e = new Error('businessName, email and password are required.'); e.status = 400; throw e;
+  }
+  if (String(password).length < 8) {
+    const e = new Error('password must be at least 8 characters.'); e.status = 400; throw e;
+  }
+  if (await store.merchants.byEmail(email)) {
+    const e = new Error('An account with this email already exists.'); e.status = 409; throw e;
+  }
+
+  const otp = String(Math.floor(100000 + Math.random() * 900000));
+  const expiresAt = Date.now() + 15 * 60 * 1000;
+
+  await store.verifications.set(email, otp, {
+    businessName,
+    email,
+    passwordHash: hashPassword(password),
+    publicKey: apiKey('public'),
+    secretKey: apiKey('secret'),
+    webhookSecret: 'whsec_' + apiKey('secret').slice(8),
+  }, expiresAt);
+
+  await sendOtp(email, otp, businessName);
+
+  res.status(202).json({
+    status: 'verify_email',
+    email,
+    message: 'Check your email for a 6-digit verification code.',
+  });
+}));
+
+/* Step 2 — verify OTP and create account */
+router.post('/auth/verify-email', authLimiter, ah(async (req, res) => {
+  const { email, otp } = req.body || {};
+  if (!email || !otp) {
+    const e = new Error('email and otp are required.'); e.status = 400; throw e;
+  }
+
+  const pending = await store.verifications.get(email);
+  if (!pending) {
+    const e = new Error('No pending verification for this email. Please register again.'); e.status = 404; throw e;
+  }
+  if (Date.now() > pending.expires_at) {
+    await store.verifications.del(email);
+    const e = new Error('Verification code expired. Please register again.'); e.status = 410; throw e;
+  }
+  if (pending.otp !== String(otp).replace(/\D/g, '')) {
+    const e = new Error('Incorrect verification code.'); e.status = 400; throw e;
+  }
+  if (await store.merchants.byEmail(email)) {
+    await store.verifications.del(email);
+    const e = new Error('An account with this email already exists.'); e.status = 409; throw e;
+  }
+
+  const pd = pending.data;
+  const merchant = await store.merchants.insert({
+    id: merchantId(),
+    businessName: pd.businessName,
+    email: pd.email,
+    passwordHash: pd.passwordHash,
+    publicKey: pd.publicKey,
+    secretKey: pd.secretKey,
+    webhookSecret: pd.webhookSecret,
+    webhookUrl: null,
+    demo: false,
+    createdAt: Date.now(),
+  });
+  await store.verifications.del(email);
+
+  const token = signToken({ sub: merchant.id, exp: Date.now() + cfg.TOKEN_TTL_MS });
+  res.status(201).json({ token, merchant: publicMerchant(merchant) });
+}));
+
+/* Resend OTP */
+router.post('/auth/resend-otp', authLimiter, ah(async (req, res) => {
+  const { email } = req.body || {};
+  if (!email) { const e = new Error('email is required.'); e.status = 400; throw e; }
+
+  const pending = await store.verifications.get(email);
+  if (!pending) { const e = new Error('No pending verification found. Please register again.'); e.status = 404; throw e; }
+
+  const otp = String(Math.floor(100000 + Math.random() * 900000));
+  const expiresAt = Date.now() + 15 * 60 * 1000;
+  await store.verifications.set(email, otp, pending.data, expiresAt);
+  await sendOtp(email, otp, pending.data.businessName);
+
+  res.json({ status: 'verify_email', email, message: 'A new code has been sent to your email.' });
+}));
+
+/* Login */
+router.post('/auth/login', authLimiter, ah(async (req, res) => {
+  const { email, password } = req.body || {};
+  const merchant = email && await store.merchants.byEmail(email);
+  if (!merchant || !verifyPassword(password || '', merchant.passwordHash)) {
+    const e = new Error('Invalid email or password.'); e.status = 401; throw e;
+  }
+  const token = signToken({ sub: merchant.id, exp: Date.now() + cfg.TOKEN_TTL_MS });
+  res.json({ token, merchant: publicMerchant(merchant) });
+}));
 
 router.get('/me', requireAuth, (req, res) => {
   res.json({ merchant: publicMerchant(req.merchant) });
 });
 
-router.put('/me/webhook', requireAuth, (req, res, next) => {
-  try {
-    const { url } = req.body || {};
-    if (url) {
-      try { new URL(url); } catch { const e = new Error('url must be a valid absolute URL.'); e.status = 400; throw e; }
-    }
-    req.merchant.webhookUrl = url || null;
-    store.merchants.update(req.merchant);
-    res.json({ merchant: publicMerchant(req.merchant) });
-  } catch (e) { next(e); }
-});
+router.put('/me/webhook', requireAuth, ah(async (req, res) => {
+  const { url } = req.body || {};
+  if (url) {
+    try { new URL(url); } catch { const e = new Error('url must be a valid absolute URL.'); e.status = 400; throw e; }
+  }
+  req.merchant.webhookUrl = url || null;
+  await store.merchants.update(req.merchant);
+  res.json({ merchant: publicMerchant(req.merchant) });
+}));
 
-router.get('/transactions', requireAuth, (req, res) => {
-  res.json({ transactions: store.charges.forMerchant(req.merchant.id) });
-});
+router.get('/transactions', requireAuth, ah(async (req, res) => {
+  res.json({ transactions: await store.charges.forMerchant(req.merchant.id) });
+}));
 
-router.get('/events', requireAuth, (req, res) => {
-  res.json({ events: store.events.forMerchant(req.merchant.id) });
-});
+router.get('/events', requireAuth, ah(async (req, res) => {
+  res.json({ events: await store.events.forMerchant(req.merchant.id) });
+}));
 
-/* =============================== Charges =============================== */
+/* ========================= Charges ========================= */
 
-router.post('/charges', chargeLimiter, resolveMerchantByKey, (req, res, next) => {
-  try {
-    const idemKey = req.headers['idempotency-key'];
-    if (idemKey) {
-      const existing = store.charges.forMerchant(req.merchant.id).find((c) => c.idempotencyKey === idemKey);
-      if (existing) return res.status(200).json({ charge: existing });
-    }
-    const charge = payments.createCharge(req.merchant, req.body || {});
-    if (idemKey) { charge.idempotencyKey = idemKey; store.charges.update(charge); }
-    res.status(201).json({ charge });
-  } catch (e) { next(e); }
-});
+router.post('/charges', chargeLimiter, resolveMerchantByKey, ah(async (req, res) => {
+  const idemKey = req.headers['idempotency-key'];
+  if (idemKey) {
+    const existing = (await store.charges.forMerchant(req.merchant.id)).find((c) => c.idempotencyKey === idemKey);
+    if (existing) return res.status(200).json({ charge: existing });
+  }
+  const charge = await payments.createCharge(req.merchant, req.body || {});
+  if (idemKey) { charge.idempotencyKey = idemKey; await store.charges.update(charge); }
+  res.status(201).json({ charge });
+}));
 
-router.get('/charges/:reference', loadCharge, (req, res) => {
-  const merchant = store.merchants.byId(req.charge.merchantId);
+router.get('/charges/:reference', loadCharge, ah(async (req, res) => {
+  const merchant = await store.merchants.byId(req.charge.merchantId);
   res.json({ charge: { ...req.charge, merchantName: merchant ? merchant.businessName : 'Cowrie' } });
-});
+}));
 
-router.post('/charges/:reference/method', loadCharge, (req, res, next) => {
-  try {
-    const { method, details } = req.body || {};
-    const charge = payments.submitMethod(req.charge, method, details || {});
-    res.json({ charge });
-  } catch (e) { next(e); }
-});
+router.post('/charges/:reference/method', loadCharge, ah(async (req, res) => {
+  const { method, details } = req.body || {};
+  const charge = await payments.submitMethod(req.charge, method, details || {});
+  res.json({ charge });
+}));
 
-router.post('/charges/:reference/authorize', loadCharge, asyncHandler(async (req, res) => {
+router.post('/charges/:reference/authorize', loadCharge, ah(async (req, res) => {
   const charge = await payments.authorizeOtp(req.charge, (req.body || {}).otp);
   res.json({ charge });
 }));
 
-router.post('/charges/:reference/confirm', loadCharge, asyncHandler(async (req, res) => {
+router.post('/charges/:reference/confirm', loadCharge, ah(async (req, res) => {
   const charge = await payments.confirmExternal(req.charge);
   res.json({ charge });
 }));
 
-/* Test-mode convenience: lets the hosted checkout page start a charge client-side
-   the same way a real publishable key would, without exposing the secret key. */
-router.get('/demo/public-key', (req, res, next) => {
-  const demo = store.merchants.all().find((m) => m.demo);
-  if (!demo) { const e = new Error('No demo merchant available.'); e.status = 404; return next(e); }
+router.get('/demo/public-key', ah(async (req, res) => {
+  const all = await store.merchants.all();
+  const demo = all.find((m) => m.demo);
+  if (!demo) { const e = new Error('No demo merchant available.'); e.status = 404; throw e; }
   res.json({ publicKey: demo.publicKey });
-});
+}));
 
-/* =========================== Admin (admin-auth, all-merchant data) =========================== */
+/* ========================= Admin ========================= */
 
 function requireAdminAuth(req, res, next) {
   const header = req.headers.authorization || '';
@@ -206,14 +262,14 @@ router.get('/admin/auth/me', requireAdminAuth, (req, res) => {
   res.json({ admin: { email: cfg.ADMIN_EMAIL, role: 'admin' } });
 });
 
-router.get('/admin/overview', requireAdminAuth, (req, res) => {
-  const allCharges = store.charges.all();
+router.get('/admin/overview', requireAdminAuth, ah(async (req, res) => {
+  const allCharges = await store.charges.all();
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const todayTs = today.getTime();
 
   const successAll = allCharges.filter((c) => c.status === 'success');
   const collectedToday = successAll.filter((c) => c.createdAt >= todayTs).reduce((s, c) => s + c.amount, 0);
-  const allPayouts = store.payouts.all();
+  const allPayouts = await store.payouts.all();
   const paidOutToday = allPayouts.filter((p) => p.createdAt >= todayTs && p.status === 'completed').reduce((s, p) => s + p.amount, 0);
   const total = allCharges.length;
   const successRate = total > 0 ? ((successAll.length / total) * 100).toFixed(1) : '100.0';
@@ -231,121 +287,110 @@ router.get('/admin/overview', requireAdminAuth, (req, res) => {
   successAll.forEach((c) => { const m = c.method || 'unknown'; byMethod[m] = (byMethod[m] || 0) + c.amount; });
 
   res.json({ overview: { collectedToday, paidOutToday, successRate, pendingCount, last7Days, byMethod } });
-});
+}));
 
-router.get('/admin/transactions', requireAdminAuth, (req, res) => {
+router.get('/admin/transactions', requireAdminAuth, ah(async (req, res) => {
+  const all = await store.merchants.all();
   const merchantMap = {};
-  store.merchants.all().forEach((m) => { merchantMap[m.id] = m.businessName; });
-  const transactions = store.charges.all()
-    .sort((a, b) => b.createdAt - a.createdAt)
+  all.forEach((m) => { merchantMap[m.id] = m.businessName; });
+  const transactions = (await store.charges.all())
     .map((c) => ({ ...c, merchantName: merchantMap[c.merchantId] || 'Unknown' }));
   res.json({ transactions });
-});
+}));
 
-router.get('/admin/payouts', requireAdminAuth, (req, res) => {
+router.get('/admin/payouts', requireAdminAuth, ah(async (req, res) => {
+  const all = await store.merchants.all();
   const merchantMap = {};
-  store.merchants.all().forEach((m) => { merchantMap[m.id] = m.businessName; });
-  const payouts = store.payouts.all()
-    .sort((a, b) => b.createdAt - a.createdAt)
+  all.forEach((m) => { merchantMap[m.id] = m.businessName; });
+  const payouts = (await store.payouts.all())
     .map((p) => ({ ...p, merchantName: merchantMap[p.merchantId] || 'Unknown' }));
   res.json({ payouts });
-});
+}));
 
-router.post('/admin/payouts', requireAdminAuth, (req, res, next) => {
-  try {
-    const { amount, currency, recipient, method, note } = req.body || {};
-    if (!amount || Number(amount) <= 0) { const e = new Error('amount must be a positive number in minor units.'); e.status = 400; throw e; }
-    if (!recipient || !String(recipient).trim()) { const e = new Error('recipient is required.'); e.status = 400; throw e; }
-    const merchant = store.merchants.all().find((m) => m.demo) || store.merchants.all()[0];
-    if (!merchant) { const e = new Error('No merchant available.'); e.status = 400; throw e; }
-    const payout = store.payouts.insert({
-      id: genId('pyt_'), merchantId: merchant.id, amount: Math.round(Number(amount)),
-      currency: currency || 'GHS', recipient: String(recipient).trim(),
-      method: method || 'bank_transfer', note: String(note || '').trim(),
-      status: 'processing', createdAt: Date.now(),
-    });
-    res.status(201).json({ payout });
-  } catch (e) { next(e); }
-});
+router.post('/admin/payouts', requireAdminAuth, ah(async (req, res) => {
+  const { amount, currency, recipient, method, note } = req.body || {};
+  if (!amount || Number(amount) <= 0) { const e = new Error('amount must be a positive number in minor units.'); e.status = 400; throw e; }
+  if (!recipient || !String(recipient).trim()) { const e = new Error('recipient is required.'); e.status = 400; throw e; }
+  const all = await store.merchants.all();
+  const merchant = all.find((m) => m.demo) || all[0];
+  if (!merchant) { const e = new Error('No merchant available.'); e.status = 400; throw e; }
+  const payout = await store.payouts.insert({
+    id: genId('pyt_'), merchantId: merchant.id, amount: Math.round(Number(amount)),
+    currency: currency || 'GHS', recipient: String(recipient).trim(),
+    method: method || 'bank_transfer', note: String(note || '').trim(),
+    status: 'processing', createdAt: Date.now(),
+  });
+  res.status(201).json({ payout });
+}));
 
-router.post('/admin/payouts/:id/complete', requireAdminAuth, (req, res, next) => {
-  try {
-    const payout = store.payouts.all().find((p) => p.id === req.params.id);
-    if (!payout) { const e = new Error('Payout not found.'); e.status = 404; throw e; }
-    if (payout.status === 'completed') { const e = new Error('Payout already completed.'); e.status = 409; throw e; }
-    payout.status = 'completed'; payout.completedAt = Date.now(); store.persist();
-    res.json({ payout });
-  } catch (e) { next(e); }
-});
+router.post('/admin/payouts/:id/complete', requireAdminAuth, ah(async (req, res) => {
+  const payout = await store.payouts.byId(req.params.id);
+  if (!payout) { const e = new Error('Payout not found.'); e.status = 404; throw e; }
+  if (payout.status === 'completed') { const e = new Error('Payout already completed.'); e.status = 409; throw e; }
+  payout.status = 'completed'; payout.completedAt = Date.now();
+  await store.payouts.update(payout);
+  res.json({ payout });
+}));
 
-/* ---- Merchant payout requests ---- */
-router.get('/payouts', requireAuth, (req, res) => {
-  const payouts = store.payouts.forMerchant(req.merchant.id)
-    .sort((a, b) => b.createdAt - a.createdAt);
-  res.json({ payouts });
-});
+/* ── merchant payout requests ── */
+router.get('/payouts', requireAuth, ah(async (req, res) => {
+  res.json({ payouts: await store.payouts.forMerchant(req.merchant.id) });
+}));
 
-router.post('/payouts', requireAuth, (req, res, next) => {
-  try {
-    const { amount, method, bank, accountNumber, accountName, mobileProvider, mobileNumber, note } = req.body || {};
-    const amt = Math.round(Number(amount));
-    if (!amt || amt <= 0) { const e = new Error('Enter a valid amount.'); e.status = 400; throw e; }
-    if (method === 'bank' && (!String(accountNumber || '').trim() || !String(accountName || '').trim())) {
-      const e = new Error('Account number and account name are required for bank payouts.'); e.status = 400; throw e;
-    }
-    if (method === 'mobile_money' && !String(mobileNumber || '').trim()) {
-      const e = new Error('Mobile money number is required.'); e.status = 400; throw e;
-    }
-    const payout = store.payouts.insert({
-      id: genId('pyt_'), merchantId: req.merchant.id,
-      amount: amt, currency: 'GHS',
-      method: method || 'bank',
-      bank: String(bank || '').trim(),
-      accountNumber: String(accountNumber || '').trim(),
-      accountName: String(accountName || '').trim(),
-      mobileProvider: String(mobileProvider || '').trim(),
-      mobileNumber: String(mobileNumber || '').trim(),
-      note: String(note || '').trim(),
-      status: 'pending', createdAt: Date.now(),
-    });
-    res.status(201).json({ payout });
-  } catch (e) { next(e); }
-});
+router.post('/payouts', requireAuth, ah(async (req, res) => {
+  const { amount, method, bank, accountNumber, accountName, mobileProvider, mobileNumber, note } = req.body || {};
+  const amt = Math.round(Number(amount));
+  if (!amt || amt <= 0) { const e = new Error('Enter a valid amount.'); e.status = 400; throw e; }
+  if (method === 'bank' && (!String(accountNumber || '').trim() || !String(accountName || '').trim())) {
+    const e = new Error('Account number and account name are required for bank payouts.'); e.status = 400; throw e;
+  }
+  if (method === 'mobile_money' && !String(mobileNumber || '').trim()) {
+    const e = new Error('Mobile money number is required.'); e.status = 400; throw e;
+  }
+  const payout = await store.payouts.insert({
+    id: genId('pyt_'), merchantId: req.merchant.id,
+    amount: amt, currency: 'GHS',
+    method: method || 'bank',
+    bank: String(bank || '').trim(),
+    accountNumber: String(accountNumber || '').trim(),
+    accountName: String(accountName || '').trim(),
+    mobileProvider: String(mobileProvider || '').trim(),
+    mobileNumber: String(mobileNumber || '').trim(),
+    note: String(note || '').trim(),
+    status: 'pending', createdAt: Date.now(),
+  });
+  res.status(201).json({ payout });
+}));
 
-router.get('/admin/settlements', requireAdminAuth, (req, res) => {
-  res.json({ settlements: store.settlements.all().sort((a, b) => b.createdAt - a.createdAt) });
-});
+router.get('/admin/settlements', requireAdminAuth, ah(async (req, res) => {
+  res.json({ settlements: await store.settlements.all() });
+}));
 
-router.post('/admin/settlements', requireAdminAuth, (req, res, next) => {
-  try {
-    const unsettled = store.charges.all().filter((c) => c.status === 'success' && !c.settled);
-    if (!unsettled.length) { const e = new Error('No unsettled successful transactions to settle.'); e.status = 400; throw e; }
-    const amount = unsettled.reduce((s, c) => s + c.amount, 0);
-    unsettled.forEach((c) => { c.settled = true; });
-    store.persist();
-    const settlement = store.settlements.insert({
-      id: genId('stl_'), merchantId: 'admin', amount, currency: 'GHS',
-      chargeCount: unsettled.length, status: 'completed', createdAt: Date.now(),
-    });
-    res.status(201).json({ settlement });
-  } catch (e) { next(e); }
-});
+router.post('/admin/settlements', requireAdminAuth, ah(async (req, res) => {
+  const unsettled = (await store.charges.all()).filter((c) => c.status === 'success' && !c.settled);
+  if (!unsettled.length) { const e = new Error('No unsettled successful transactions to settle.'); e.status = 400; throw e; }
+  const amount = unsettled.reduce((s, c) => s + c.amount, 0);
+  await Promise.all(unsettled.map((c) => { c.settled = true; return store.charges.update(c); }));
+  const settlement = await store.settlements.insert({
+    id: genId('stl_'), merchantId: 'admin', amount, currency: 'GHS',
+    chargeCount: unsettled.length, status: 'completed', createdAt: Date.now(),
+  });
+  res.status(201).json({ settlement });
+}));
 
-router.post('/admin/new-payment', requireAdminAuth, (req, res, next) => {
-  try {
-    const { amount, currency, email } = req.body || {};
-    const merchant = store.merchants.all().find((m) => m.demo) || store.merchants.all()[0];
-    if (!merchant) { const e = new Error('No merchant available.'); e.status = 400; throw e; }
-    const charge = payments.createCharge(merchant, {
-      amount: Number(amount) || 0, currency: currency || 'GHS', email: String(email || '').trim(),
-    });
-    res.status(201).json({ charge, checkoutUrl: `/checkout?reference=${charge.reference}` });
-  } catch (e) { next(e); }
-});
+router.post('/admin/new-payment', requireAdminAuth, ah(async (req, res) => {
+  const { amount, currency, email } = req.body || {};
+  const all = await store.merchants.all();
+  const merchant = all.find((m) => m.demo) || all[0];
+  if (!merchant) { const e = new Error('No merchant available.'); e.status = 400; throw e; }
+  const charge = await payments.createCharge(merchant, {
+    amount: Number(amount) || 0, currency: currency || 'GHS', email: String(email || '').trim(),
+  });
+  res.status(201).json({ charge, checkoutUrl: `/checkout?reference=${charge.reference}` });
+}));
 
-/* =========================== Paystack integration =========================== */
+/* ========================= Paystack integration ========================= */
 
-// Normalize Ghana phone: "0241234567" → "233241234567"
 function normalizePhone(raw) {
   const d = String(raw || '').replace(/\D/g, '');
   if (d.startsWith('233') && d.length >= 12) return d;
@@ -353,7 +398,6 @@ function normalizePhone(raw) {
   return d;
 }
 
-// Map Paystack status → next step
 function resolvePaystackStatus(charge, tx) {
   if (!tx) return { next: 'pending' };
   const CHAN = { mobile_money: 'mobile_money', bank_transfer: 'bank_transfer', ussd: 'ussd' };
@@ -375,190 +419,129 @@ function resolvePaystackStatus(charge, tx) {
   }
 }
 
-// Direct charge — no Paystack popup, purely server-side
-router.post('/charges/:reference/pay', loadCharge, async (req, res, next) => {
-  try {
-    const charge = req.charge;
-    if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge, next: charge.status });
+router.post('/charges/:reference/pay', loadCharge, ah(async (req, res) => {
+  const charge = req.charge;
+  if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge, next: charge.status });
 
-    const { method, email: bodyEmail, phone, provider, number, cvv, expiry_month, expiry_year } = req.body || {};
-    const email = (bodyEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bodyEmail) ? bodyEmail : null)
-      || charge.customerEmail || 'customer@cowrie.africa';
-    const paystackRef = `cwr_${charge.reference}_${Date.now()}`;
+  const { method, email: bodyEmail, phone, provider, number, cvv, expiry_month, expiry_year } = req.body || {};
+  const email = (bodyEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bodyEmail) ? bodyEmail : null)
+    || charge.customerEmail || 'customer@cowrie.africa';
+  const paystackRef = `cwr_${charge.reference}_${Date.now()}`;
 
-    const body = { email, amount: charge.amount, currency: charge.currency || 'GHS', reference: paystackRef, metadata: { cowrie_reference: charge.reference } };
+  const body = { email, amount: charge.amount, currency: charge.currency || 'GHS', reference: paystackRef, metadata: { cowrie_reference: charge.reference } };
 
-    if (method === 'card') {
-      body.card = { number: String(number || '').replace(/\s/g, ''), cvv: String(cvv || ''), expiry_month: String(expiry_month || ''), expiry_year: String(expiry_year || '') };
-    } else if (method === 'mobile_money') {
-      const PROV = { MTN: 'mtn', Vodafone: 'vod', AirtelTigo: 'atl' };
-      body.mobile_money = { phone: normalizePhone(phone), provider: PROV[provider] || 'mtn' };
-    } else if (method === 'bank') {
-      body.bank_transfer = { account_expires_at: new Date(Date.now() + 3_600_000).toISOString() };
-    } else if (method === 'ussd') {
-      body.ussd = { type: '737' }; // 737 is USSD for Ghana/Nigeria on Paystack — update per your bank list
-    }
+  if (method === 'card') {
+    body.card = { number: String(number || '').replace(/\s/g, ''), cvv: String(cvv || ''), expiry_month: String(expiry_month || ''), expiry_year: String(expiry_year || '') };
+  } else if (method === 'mobile_money') {
+    const PROV = { MTN: 'mtn', Vodafone: 'vod', AirtelTigo: 'atl' };
+    body.mobile_money = { phone: normalizePhone(phone), provider: PROV[provider] || 'mtn' };
+  } else if (method === 'bank') {
+    body.bank_transfer = { account_expires_at: new Date(Date.now() + 3_600_000).toISOString() };
+  } else if (method === 'ussd') {
+    body.ussd = { type: '737' };
+  }
 
-    const data = await paystack.charge(body);
-    // Log the full Paystack response so it appears in Render logs
-    console.log('[Paystack /charge]', JSON.stringify({
-      method,
-      status: data.status,
-      message: data.message,
-      data_status: data.data && data.data.status,
-      gateway_response: data.data && data.data.gateway_response,
-    }));
-    if (!data.status) throw Object.assign(new Error(data.message || 'Charge failed'), { status: 400 });
+  const data = await paystack.charge(body);
+  console.log('[Paystack /charge]', JSON.stringify({ method, status: data.status, message: data.message, data_status: data.data && data.data.status, gateway_response: data.data && data.data.gateway_response }));
+  if (!data.status) throw Object.assign(new Error(data.message || 'Charge failed'), { status: 400 });
 
-    charge.paystackRef = paystackRef;
-    const result = resolvePaystackStatus(charge, data.data);
-    store.charges.update(charge); store.persist();
-    res.json({ charge, next: result.next, detail: result.detail });
-  } catch (e) { next(e); }
-});
+  charge.paystackRef = paystackRef;
+  const result = resolvePaystackStatus(charge, data.data);
+  await store.charges.update(charge);
+  res.json({ charge, next: result.next, detail: result.detail });
+}));
 
-router.post('/charges/:reference/submit-otp', loadCharge, async (req, res, next) => {
-  try {
-    const { otp } = req.body || {};
-    if (!req.charge.paystackRef) throw Object.assign(new Error('No pending transaction.'), { status: 400 });
-    const data = await paystack.submitOtp(req.charge.paystackRef, String(otp || ''));
-    if (!data.status) throw new Error(data.message || 'OTP failed');
-    const result = resolvePaystackStatus(req.charge, data.data);
-    store.charges.update(req.charge); store.persist();
-    res.json({ charge: req.charge, next: result.next, detail: result.detail });
-  } catch (e) { next(e); }
-});
+router.post('/charges/:reference/submit-otp', loadCharge, ah(async (req, res) => {
+  const { otp } = req.body || {};
+  if (!req.charge.paystackRef) throw Object.assign(new Error('No pending transaction.'), { status: 400 });
+  const data = await paystack.submitOtp(req.charge.paystackRef, String(otp || ''));
+  if (!data.status) throw new Error(data.message || 'OTP failed');
+  const result = resolvePaystackStatus(req.charge, data.data);
+  await store.charges.update(req.charge);
+  res.json({ charge: req.charge, next: result.next, detail: result.detail });
+}));
 
-router.post('/charges/:reference/submit-pin', loadCharge, async (req, res, next) => {
-  try {
-    const { pin } = req.body || {};
-    if (!req.charge.paystackRef) throw Object.assign(new Error('No pending transaction.'), { status: 400 });
-    const data = await paystack.submitPin(req.charge.paystackRef, String(pin || ''));
-    if (!data.status) throw new Error(data.message || 'PIN failed');
-    const result = resolvePaystackStatus(req.charge, data.data);
-    store.charges.update(req.charge); store.persist();
-    res.json({ charge: req.charge, next: result.next, detail: result.detail });
-  } catch (e) { next(e); }
-});
+router.post('/charges/:reference/submit-pin', loadCharge, ah(async (req, res) => {
+  const { pin } = req.body || {};
+  if (!req.charge.paystackRef) throw Object.assign(new Error('No pending transaction.'), { status: 400 });
+  const data = await paystack.submitPin(req.charge.paystackRef, String(pin || ''));
+  if (!data.status) throw new Error(data.message || 'PIN failed');
+  const result = resolvePaystackStatus(req.charge, data.data);
+  await store.charges.update(req.charge);
+  res.json({ charge: req.charge, next: result.next, detail: result.detail });
+}));
 
-router.get('/charges/:reference/poll', loadCharge, async (req, res, next) => {
-  try {
-    const charge = req.charge;
-    if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge, next: charge.status });
-    if (!charge.paystackRef) return res.json({ charge, next: 'pending' });
-    const data = await paystack.getCharge(charge.paystackRef);
-    if (!data.status || !data.data) return res.json({ charge, next: 'pending' });
-    const result = resolvePaystackStatus(charge, data.data);
-    store.charges.update(charge); store.persist();
-    res.json({ charge, next: result.next, detail: result.detail });
-  } catch (e) { next(e); }
-});
+router.get('/charges/:reference/poll', loadCharge, ah(async (req, res) => {
+  const charge = req.charge;
+  if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge, next: charge.status });
+  if (!charge.paystackRef) return res.json({ charge, next: 'pending' });
+  const data = await paystack.getCharge(charge.paystackRef);
+  if (!data.status || !data.data) return res.json({ charge, next: 'pending' });
+  const result = resolvePaystackStatus(charge, data.data);
+  await store.charges.update(charge);
+  res.json({ charge, next: result.next, detail: result.detail });
+}));
 
-// Initialize a Paystack transaction — returns access_code for the inline popup
-router.post('/charges/:reference/paystack-init', loadCharge, async (req, res, next) => {
-  try {
-    if (!cfg.PAYSTACK_SECRET_KEY) {
-      const e = new Error('Paystack is not configured. Set PAYSTACK_SECRET_KEY in environment variables.'); e.status = 503; throw e;
-    }
-    const charge = req.charge;
-    if (charge.status === 'success' || charge.status === 'failed') {
-      return res.json({ charge, alreadyComplete: true });
-    }
-    const email = (req.body.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(req.body.email) ? req.body.email : null)
-      || charge.customerEmail
-      || `customer@cowrie.africa`;
-    const channels = Array.isArray(req.body && req.body.channels) ? req.body.channels : undefined;
-    const paystackRef = `cwr_${charge.reference}_${Date.now()}`;
+router.post('/charges/:reference/paystack-init', loadCharge, ah(async (req, res) => {
+  if (!cfg.PAYSTACK_SECRET_KEY) {
+    const e = new Error('Paystack is not configured. Set PAYSTACK_SECRET_KEY in environment variables.'); e.status = 503; throw e;
+  }
+  const charge = req.charge;
+  if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge, alreadyComplete: true });
+  const email = (req.body.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(req.body.email) ? req.body.email : null)
+    || charge.customerEmail || 'customer@cowrie.africa';
+  const channels = Array.isArray(req.body && req.body.channels) ? req.body.channels : undefined;
+  const paystackRef = `cwr_${charge.reference}_${Date.now()}`;
+  const data = await paystack.initialize({ email, amount: charge.amount, currency: charge.currency || 'GHS', reference: paystackRef, channels, metadata: { cowrie_reference: charge.reference, merchantId: charge.merchantId } });
+  charge.paystackRef = paystackRef;
+  await store.charges.update(charge);
+  res.json({ accessCode: data.access_code, publicKey: cfg.PAYSTACK_PUBLIC_KEY, paystackRef });
+}));
 
-    const data = await paystack.initialize({
-      email,
-      amount: charge.amount,
-      currency: charge.currency || 'GHS',
-      reference: paystackRef,
-      channels,
-      metadata: { cowrie_reference: charge.reference, merchantId: charge.merchantId },
-    });
+router.get('/charges/:reference/verify', loadCharge, ah(async (req, res) => {
+  const charge = req.charge;
+  if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge });
+  if (!charge.paystackRef) return res.json({ charge });
+  const data = await paystack.verify(charge.paystackRef);
+  if (!data.status) throw new Error(data.message || 'Paystack verification failed');
+  const tx = data.data;
+  const CHANNEL_MAP = { mobile_money: 'mobile_money', bank_transfer: 'bank_transfer', ussd: 'ussd' };
+  if (tx.status === 'success') {
+    charge.status = 'success'; charge.paidAt = Date.now();
+    charge.method = CHANNEL_MAP[tx.channel] || 'card';
+    charge.auth = { provider: 'paystack', channel: tx.channel, last4: tx.authorization && tx.authorization.last4, brand: tx.authorization && tx.authorization.card_type, bank: tx.authorization && tx.authorization.bank, phone: tx.customer && tx.customer.phone };
+    await store.charges.update(charge);
+  } else if (tx.status === 'failed') {
+    charge.status = 'failed';
+    charge.failure = { message: tx.gateway_response || 'Payment failed' };
+    await store.charges.update(charge);
+  }
+  res.json({ charge });
+}));
 
-    charge.paystackRef = paystackRef;
-    store.charges.update(charge);
-    store.persist();
-
-    res.json({ accessCode: data.access_code, publicKey: cfg.PAYSTACK_PUBLIC_KEY, paystackRef });
-  } catch (e) { next(e); }
-});
-
-// Poll this after Paystack popup callback to confirm charge status
-router.get('/charges/:reference/verify', loadCharge, async (req, res, next) => {
-  try {
-    const charge = req.charge;
-    if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge });
-    if (!charge.paystackRef) return res.json({ charge });
-
-    const data = await paystack.verify(charge.paystackRef);
-    if (!data.status) throw new Error(data.message || 'Paystack verification failed');
-
-    const tx = data.data;
-    const CHANNEL_MAP = { mobile_money: 'mobile_money', bank_transfer: 'bank_transfer', ussd: 'ussd' };
-
-    if (tx.status === 'success') {
-      charge.status = 'success';
-      charge.paidAt = Date.now();
-      charge.method = CHANNEL_MAP[tx.channel] || 'card';
-      charge.auth = {
-        provider: 'paystack',
-        channel: tx.channel,
-        last4: tx.authorization && tx.authorization.last4,
-        brand: tx.authorization && tx.authorization.card_type,
-        bank: tx.authorization && tx.authorization.bank,
-        phone: tx.customer && tx.customer.phone,
-      };
-      store.charges.update(charge);
-      store.persist();
-    } else if (tx.status === 'failed') {
-      charge.status = 'failed';
-      charge.failure = { message: tx.gateway_response || 'Payment failed' };
-      store.charges.update(charge);
-      store.persist();
-    }
-
-    res.json({ charge });
-  } catch (e) { next(e); }
-});
-
-// Paystack webhook — verifies HMAC signature against raw body, then updates charge
 router.post('/webhooks/paystack', (req, res, next) => {
-  try {
+  (async () => {
     const sig = req.headers['x-paystack-signature'];
     const raw = req.rawBody;
     if (!sig || !raw) return res.status(400).json({ error: 'missing_signature' });
-
     const expected = crypto.createHmac('sha512', cfg.PAYSTACK_SECRET_KEY).update(raw).digest('hex');
     if (sig !== expected) return res.status(400).json({ error: 'invalid_signature' });
-
     const event = JSON.parse(raw.toString());
     if (event.event === 'charge.success') {
       const cowrieRef = event.data && event.data.metadata && event.data.metadata.cowrie_reference;
       if (cowrieRef) {
-        const charge = store.charges.byReference(cowrieRef);
+        const charge = await store.charges.byReference(cowrieRef);
         if (charge && charge.status !== 'success') {
           const CHANNEL_MAP = { mobile_money: 'mobile_money', bank_transfer: 'bank_transfer', ussd: 'ussd' };
-          charge.status = 'success';
-          charge.paidAt = Date.now();
+          charge.status = 'success'; charge.paidAt = Date.now();
           charge.method = CHANNEL_MAP[event.data.channel] || 'card';
-          charge.auth = {
-            provider: 'paystack',
-            channel: event.data.channel,
-            last4: event.data.authorization && event.data.authorization.last4,
-            brand: event.data.authorization && event.data.authorization.card_type,
-            bank: event.data.authorization && event.data.authorization.bank,
-          };
-          store.charges.update(charge);
-          store.persist();
+          charge.auth = { provider: 'paystack', channel: event.data.channel, last4: event.data.authorization && event.data.authorization.last4, brand: event.data.authorization && event.data.authorization.card_type, bank: event.data.authorization && event.data.authorization.bank };
+          await store.charges.update(charge);
         }
       }
     }
     res.json({ received: true });
-  } catch (e) { next(e); }
+  })().catch(next);
 });
 
 module.exports = router;

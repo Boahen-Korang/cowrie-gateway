@@ -101,6 +101,19 @@ button{font-family:inherit;cursor:pointer}
 .secure-badge{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:20px;font-family:var(--mono);font-size:11px;color:var(--text-muted)}
 .secure-badge svg{width:12px;height:12px}
 
+/* OTP step */
+.otp-step{display:none}
+.otp-email{font-family:var(--mono);font-size:13px;color:var(--gold-light);background:rgba(200,134,10,.1);border:1px solid rgba(200,134,10,.25);border-radius:8px;padding:8px 12px;margin-bottom:24px;text-align:center;word-break:break-all}
+.otp-boxes{display:flex;gap:10px;justify-content:center;margin:24px 0 8px}
+.otp-boxes input{width:44px;height:54px;text-align:center;font-family:var(--mono);font-weight:700;font-size:24px;background:rgba(255,255,255,.07);border:1.5px solid var(--border);border-radius:11px;color:#fff;outline:none;transition:border-color .15s,box-shadow .15s}
+.otp-boxes input:focus{border-color:var(--border-focus);box-shadow:0 0 0 3px rgba(91,44,143,.2)}
+.resend-row{text-align:center;margin-top:16px;font-family:var(--mono);font-size:12px;color:var(--text-muted)}
+.resend-row button{background:none;border:none;color:var(--gold-light);font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;padding:0}
+.resend-row button:hover{color:#F5C464}
+.resend-row button:disabled{color:var(--text-muted);cursor:default}
+.back-link{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--text-muted);font-family:var(--mono);font-size:12px;cursor:pointer;margin-bottom:20px;transition:color .15s}
+.back-link:hover{color:rgba(255,255,255,.65)}
+
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -152,43 +165,69 @@ button{font-family:inherit;cursor:pointer}
       <h1>Create your account.</h1>
       <p class="sub">Get your merchant account and API keys in under two minutes.</p>
 
-      <form id="regForm" novalidate>
-        <div class="field">
-          <label for="bizName">Business name</label>
-          <input type="text" id="bizName" placeholder="Your company name" autocomplete="organization">
-          <div class="err" id="bizNameErr">Enter your business name</div>
-        </div>
-        <div class="field">
-          <label for="email">Work email</label>
-          <input type="email" id="email" placeholder="you@company.com" autocomplete="email">
-          <div class="err" id="emailErr">Enter a valid email address</div>
-        </div>
-        <div class="field">
-          <label for="pw">Password</label>
-          <div class="input-wrap">
-            <input type="password" id="pw" placeholder="Min. 8 characters" autocomplete="new-password">
-            <button type="button" class="toggle-pw" id="togglePw">SHOW</button>
+      <!-- Step 1: Registration form -->
+      <div id="regStep">
+        <form id="regForm" novalidate>
+          <div class="field">
+            <label for="bizName">Business name</label>
+            <input type="text" id="bizName" placeholder="Your company name" autocomplete="organization">
+            <div class="err" id="bizNameErr">Enter your business name</div>
           </div>
-          <div class="pw-hint">At least 8 characters</div>
-          <div class="err" id="pwErr">Password must be at least 8 characters</div>
-        </div>
-        <div class="field">
-          <label for="pw2">Confirm password</label>
-          <div class="input-wrap">
-            <input type="password" id="pw2" placeholder="Repeat password" autocomplete="new-password">
+          <div class="field">
+            <label for="email">Work email</label>
+            <input type="email" id="email" placeholder="you@company.com" autocomplete="email">
+            <div class="err" id="emailErr">Enter a valid email address</div>
           </div>
-          <div class="err" id="pw2Err">Passwords do not match</div>
+          <div class="field">
+            <label for="pw">Password</label>
+            <div class="input-wrap">
+              <input type="password" id="pw" placeholder="Min. 8 characters" autocomplete="new-password">
+              <button type="button" class="toggle-pw" id="togglePw">SHOW</button>
+            </div>
+            <div class="pw-hint">At least 8 characters</div>
+            <div class="err" id="pwErr">Password must be at least 8 characters</div>
+          </div>
+          <div class="field">
+            <label for="pw2">Confirm password</label>
+            <div class="input-wrap">
+              <input type="password" id="pw2" placeholder="Repeat password" autocomplete="new-password">
+            </div>
+            <div class="err" id="pw2Err">Passwords do not match</div>
+          </div>
+          <div class="err" id="formErr" style="margin-top:8px;margin-bottom:12px"></div>
+          <button type="submit" class="btn-primary" id="submitBtn">
+            <span class="lbl">Create account</span><span class="spin"></span>
+          </button>
+        </form>
+        <p class="form-footer">Already have an account? <a href="/login">Sign in</a></p>
+        <div class="secure-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          Protected by bank-grade encryption
         </div>
-        <div class="err" id="formErr" style="margin-top:8px;margin-bottom:12px"></div>
-        <button type="submit" class="btn-primary" id="submitBtn">
-          <span class="lbl">Create account</span><span class="spin"></span>
-        </button>
-      </form>
+      </div>
 
-      <p class="form-footer">Already have an account? <a href="/login">Sign in</a></p>
-      <div class="secure-badge">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-        Protected by bank-grade encryption
+      <!-- Step 2: OTP verification -->
+      <div id="otpStep" class="otp-step">
+        <button class="back-link" id="backToReg">← Back</button>
+        <h1 style="font-size:28px;margin-bottom:10px">Check your email.</h1>
+        <p class="sub" style="margin-bottom:16px">We sent a 6-digit code to:</p>
+        <div class="otp-email" id="otpEmailDisplay"></div>
+        <p style="font-size:13.5px;color:var(--text-soft);margin-bottom:4px">Enter the code below to verify your email and activate your account.</p>
+        <div class="otp-boxes" id="otpBoxes">
+          <input inputmode="numeric" maxlength="1" data-i="0">
+          <input inputmode="numeric" maxlength="1" data-i="1">
+          <input inputmode="numeric" maxlength="1" data-i="2">
+          <input inputmode="numeric" maxlength="1" data-i="3">
+          <input inputmode="numeric" maxlength="1" data-i="4">
+          <input inputmode="numeric" maxlength="1" data-i="5">
+        </div>
+        <div class="err" id="otpErr" style="text-align:center;margin-bottom:8px"></div>
+        <button class="btn-primary" id="verifyBtn" disabled>
+          <span class="lbl">Verify &amp; create account</span><span class="spin"></span>
+        </button>
+        <div class="resend-row">
+          Didn't get a code? <button id="resendBtn">Resend</button>
+        </div>
       </div>
     </div>
   </div>
@@ -196,17 +235,22 @@ button{font-family:inherit;cursor:pointer}
 </div>
 <script>
 'use strict';
+/* ── password show/hide ── */
 const togglePw=document.getElementById('togglePw');
 const pw=document.getElementById('pw');
 togglePw.addEventListener('click',()=>{const s=pw.type==='password';pw.type=s?'text':'password';togglePw.textContent=s?'HIDE':'SHOW';});
+
+/* ── registration form ── */
 const form=document.getElementById('regForm');
 const btn=document.getElementById('submitBtn');
 const bizName=document.getElementById('bizName');
 const email=document.getElementById('email');
 const pw2=document.getElementById('pw2');
 const formErr=document.getElementById('formErr');
+
 function clearErr(el,errEl){el.classList.remove('bad');errEl.classList.remove('show');}
 [bizName,email,pw,pw2].forEach(el=>{el.addEventListener('input',()=>{const errEl=document.getElementById(el.id+'Err');if(errEl)clearErr(el,errEl);});});
+
 function validate(){
   let ok=true;
   if(!bizName.value.trim()){bizName.classList.add('bad');document.getElementById('bizNameErr').classList.add('show');ok=false;}
@@ -215,6 +259,9 @@ function validate(){
   if(pw2.value!==pw.value){pw2.classList.add('bad');document.getElementById('pw2Err').classList.add('show');ok=false;}
   return ok;
 }
+
+let pendingEmail='';
+
 form.addEventListener('submit',async e=>{
   e.preventDefault();
   formErr.classList.remove('show');
@@ -224,13 +271,97 @@ form.addEventListener('submit',async e=>{
     const res=await fetch('/api/auth/register',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({businessName:bizName.value.trim(),email:email.value.trim(),password:pw.value})});
     const data=await res.json();
     if(!res.ok)throw new Error(data.message||'Registration failed.');
-    localStorage.setItem('cowrie_token',data.token);
-    localStorage.setItem('cowrie_merchant',JSON.stringify(data.merchant));
-    btn.classList.remove('loading');btn.classList.add('done');btn.querySelector('.lbl').textContent='Account created ✓';
-    const next=new URLSearchParams(location.search).get('next')||'/dashboard';
-    setTimeout(()=>{location.href=next;},500);
+    btn.classList.remove('loading');
+    if(data.status==='verify_email'){
+      pendingEmail=data.email;
+      showOtpStep(data.email);
+    } else {
+      /* fallback: if server returns token directly */
+      localStorage.setItem('cowrie_token',data.token);
+      btn.classList.add('done');btn.querySelector('.lbl').textContent='Account created ✓';
+      setTimeout(()=>{location.href=new URLSearchParams(location.search).get('next')||'/dashboard';},500);
+    }
   }catch(err){
     btn.classList.remove('loading');formErr.textContent=err.message;formErr.classList.add('show');
+  }
+});
+
+/* ── OTP step ── */
+function showOtpStep(emailAddr){
+  document.getElementById('regStep').style.display='none';
+  document.getElementById('otpStep').style.display='block';
+  document.getElementById('otpEmailDisplay').textContent=emailAddr;
+  setTimeout(()=>otpBoxes[0].focus(),50);
+}
+
+document.getElementById('backToReg').addEventListener('click',()=>{
+  document.getElementById('otpStep').style.display='none';
+  document.getElementById('regStep').style.display='block';
+  otpBoxes.forEach(b=>b.value='');
+  document.getElementById('otpErr').classList.remove('show');
+  updateVerifyBtn();
+});
+
+const otpBoxes=[...document.getElementById('otpBoxes').querySelectorAll('input')];
+function otpValue(){return otpBoxes.map(b=>b.value).join('');}
+function updateVerifyBtn(){document.getElementById('verifyBtn').disabled=otpValue().length<6;}
+
+otpBoxes.forEach((box,i)=>{
+  box.addEventListener('input',()=>{
+    box.value=box.value.replace(/\D/g,'').slice(0,1);
+    if(box.value&&i<5)otpBoxes[i+1].focus();
+    updateVerifyBtn();
+    document.getElementById('otpErr').classList.remove('show');
+  });
+  box.addEventListener('keydown',e=>{
+    if(e.key==='Backspace'&&!box.value&&i>0)otpBoxes[i-1].focus();
+  });
+  box.addEventListener('paste',e=>{
+    e.preventDefault();
+    const text=(e.clipboardData||window.clipboardData).getData('text').replace(/\D/g,'').slice(0,6);
+    text.split('').forEach((ch,j)=>{if(otpBoxes[i+j])otpBoxes[i+j].value=ch;});
+    const next=Math.min(i+text.length,5);
+    otpBoxes[next].focus();
+    updateVerifyBtn();
+  });
+});
+
+document.getElementById('verifyBtn').addEventListener('click',async()=>{
+  const vBtn=document.getElementById('verifyBtn');
+  const otpErr=document.getElementById('otpErr');
+  otpErr.classList.remove('show');
+  vBtn.classList.add('loading');
+  try{
+    const res=await fetch('/api/auth/verify-email',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:pendingEmail,otp:otpValue()})});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.message||'Verification failed.');
+    localStorage.setItem('cowrie_token',data.token);
+    localStorage.setItem('cowrie_merchant',JSON.stringify(data.merchant));
+    vBtn.classList.remove('loading');vBtn.classList.add('done');vBtn.querySelector('.lbl').textContent='Verified ✓';
+    setTimeout(()=>{location.href=new URLSearchParams(location.search).get('next')||'/dashboard';},500);
+  }catch(err){
+    vBtn.classList.remove('loading');
+    otpErr.textContent=err.message;otpErr.classList.add('show');
+  }
+});
+
+/* ── Resend ── */
+const resendBtn=document.getElementById('resendBtn');
+let resendCooldown=0;
+resendBtn.addEventListener('click',async()=>{
+  if(Date.now()<resendCooldown)return;
+  resendBtn.disabled=true;
+  try{
+    await fetch('/api/auth/resend-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:pendingEmail})});
+    otpBoxes.forEach(b=>b.value='');otpBoxes[0].focus();updateVerifyBtn();
+    resendCooldown=Date.now()+60000;
+    let s=60;
+    const t=setInterval(()=>{
+      s--;resendBtn.textContent=`Resend (${s}s)`;
+      if(s<=0){clearInterval(t);resendBtn.textContent='Resend';resendBtn.disabled=false;}
+    },1000);
+  }catch{
+    resendBtn.disabled=false;
   }
 });
 </script>

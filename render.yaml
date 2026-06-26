@@ -1,3 +1,9 @@
+databases:
+  - name: cowrie-db
+    plan: free
+    databaseName: cowrie
+    user: cowrie
+
 services:
   - type: web
     name: cowrie
@@ -6,6 +12,10 @@ services:
     buildCommand: npm install
     startCommand: node server.js
     envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cowrie-db
+          property: connectionString
       - key: COWRIE_SECRET
         generateValue: true
       - key: ADMIN_EMAIL
@@ -14,3 +24,7 @@ services:
         value: admin2026
       - key: NODE_ENV
         value: production
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: Cowrie <noreply@cowrie.africa>
