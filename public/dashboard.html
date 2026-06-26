@@ -9,307 +9,503 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ivory:#F7F5F0; --ivory-2:#FBFAF6; --white:#FFFFFF;
-  --ink:#1B1330; --ink-soft:#564E68; --muted:#7A7388; --faint:#A39CB0;
-  --line:#E8E3DA; --line-2:#EFEBE3;
-  --plum:#5B2C8F; --plum-deep:#3A1A60; --plum-tint:#EFE6F7;
-  --gold:#E0A12E; --gold-deep:#B8801C; --gold-tint:#F8EFD9;
-  --mint:#1FA877; --mint-tint:#DCF1E9; --coral:#EF6A4C; --coral-tint:#FBE7E1;
-  --display:'Plus Jakarta Sans',sans-serif; --body:'Plus Jakarta Sans',sans-serif; --mono:'JetBrains Mono',monospace;
+  --ivory:#F7F5F0;--ivory-2:#FBFAF6;--white:#FFFFFF;
+  --ink:#1B1330;--ink-soft:#564E68;--muted:#7A7388;--faint:#A39CB0;
+  --line:#E8E3DA;--line-2:#EFEBE3;
+  --plum:#5B2C8F;--plum-deep:#3A1A60;--plum-br:#7B45B8;--plum-tint:#EFE6F7;
+  --gold:#E0A12E;--gold-deep:#B8801C;--gold-tint:#F8EFD9;
+  --mint:#1FA877;--mint-tint:#DCF1E9;--coral:#EF6A4C;--coral-tint:#FBE7E1;
+  --display:'Plus Jakarta Sans',sans-serif;--body:'Plus Jakarta Sans',sans-serif;--mono:'JetBrains Mono',monospace;
 }
 *{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
 body{background:var(--ivory);color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased;line-height:1.55;min-height:100vh}
-a{color:inherit;text-decoration:none} button{font-family:inherit;cursor:pointer}
-.wrap{max-width:1100px;margin:0 auto;padding:0 18px}
-.topbar{position:sticky;top:0;z-index:40;background:rgba(247,245,240,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
-.topbar-in{display:flex;align-items:center;gap:14px;padding:16px 0}
+::selection{background:var(--plum);color:#fff}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit}
+
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+
+/* topbar */
+.topbar{position:sticky;top:0;z-index:40;background:rgba(247,245,240,.93);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.topbar-in{display:flex;align-items:center;gap:14px;padding:15px 0}
 .brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:-.02em}
 .shell{width:26px;height:26px;border-radius:50% 50% 48% 48%/60% 60% 40% 40%;background:linear-gradient(135deg,var(--gold),var(--plum));position:relative;box-shadow:inset 0 -2px 4px rgba(0,0,0,.2)}
 .shell::before{content:'';position:absolute;left:50%;top:18%;bottom:18%;width:2px;background:rgba(255,255,255,.6);transform:translateX(-50%);border-radius:2px}
-.nav-r{margin-left:auto;display:flex;gap:10px;align-items:center}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:11px;padding:9px 13px;border:1.5px solid var(--line);background:var(--white);font-weight:700;font-size:13.5px}
-.btn:hover{border-color:var(--plum);color:var(--plum)}
-.btn.primary{background:var(--plum);border-color:var(--plum);color:#fff}.btn.primary:hover{background:var(--plum-deep);color:#fff}
-.content{padding:24px 0 60px}
-.hdr{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:18px}
-.hdr h1{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.02em}
-.hdr p{color:var(--ink-soft);font-size:14px;margin-top:4px}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
-@media(max-width:900px){.kpis{grid-template-columns:1fr 1fr}}
-.kpi{border:1px solid var(--line);border-radius:16px;padding:14px 14px;background:var(--white)}
-.kpi .l{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
-.kpi .v{font-family:var(--display);font-weight:900;font-size:24px;margin-top:6px;letter-spacing:-.02em}
-.panel{background:var(--white);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:18px}
-.panel-head{display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--ivory-2);border-bottom:1px solid var(--line)}
-.panel-head h2{font-family:var(--display);font-weight:800;font-size:15px}
-.panel-body{padding:14px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.merchant-tag{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--ivory-2);border:1px solid var(--line);padding:5px 10px;border-radius:8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* layout */
+.grid{display:grid;grid-template-columns:220px 1fr;gap:18px;padding:18px 0 60px}
+@media(max-width:860px){.grid{grid-template-columns:1fr}.sidebar{display:none}}
+
+.sidebar{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:14px;align-self:start;position:sticky;top:72px}
+.side-sect{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);margin-bottom:8px;padding-left:10px}
+.nav{display:flex;flex-direction:column;gap:3px}
+.nav a{padding:9px 10px;border-radius:11px;border:1px solid transparent;color:var(--ink-soft);font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:9px;transition:.13s}
+.nav a:hover{background:var(--ivory-2);border-color:var(--line)}
+.nav a.active{background:var(--plum-tint);border-color:rgba(91,44,143,.2);color:var(--plum)}
+.nav a svg{flex-shrink:0;opacity:.55}
+.nav a.active svg{opacity:1}
+.nav-sep{height:1px;background:var(--line-2);margin:8px 0}
+
+.content{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:22px;min-height:520px}
+
+/* view header */
+.vhdr{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--line-2)}
+.vhdr h1{font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-.02em}
+.vhdr p{color:var(--ink-soft);margin-top:5px;font-size:13.5px}
+.vhdr-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+/* panel */
+.panel{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:14px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--ivory-2);border-bottom:1px solid var(--line)}
+.panel-head h2{font-family:var(--display);font-weight:800;font-size:14px}
+.badge{font-family:var(--mono);font-size:11px;color:var(--ink-soft);padding:4px 9px;border:1px solid var(--line);border-radius:999px;white-space:nowrap}
+
+/* table */
 .table{width:100%;border-collapse:collapse}
-.table th,.table td{padding:11px 14px;border-bottom:1px solid var(--line-2);font-size:13.5px;text-align:left}
-.table th{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--ivory-2)}
+.table th,.table td{padding:11px 14px;border-bottom:1px solid var(--line-2);font-size:13.5px;vertical-align:middle}
+.table th{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--ivory-2);white-space:nowrap}
 .table tr:last-child td{border-bottom:none}
-.empty{padding:28px;text-align:center;color:var(--muted);font-size:13.5px}
-.tag{display:inline-flex;align-items:center;gap:7px;padding:5px 9px;border-radius:999px;border:1px solid var(--line);font-family:var(--mono);font-size:10.5px}
-.dot{width:8px;height:8px;border-radius:50%}
-.tag.ok{border-color:rgba(31,168,119,.25);background:rgba(31,168,119,.08);color:var(--mint)}.tag.ok .dot{background:var(--mint)}
-.tag.pend{border-color:rgba(224,161,46,.25);background:rgba(224,161,46,.08);color:var(--gold-deep)}.tag.pend .dot{background:var(--gold-deep)}
-.tag.bad{border-color:rgba(239,106,76,.25);background:rgba(239,106,76,.08);color:var(--coral)}.tag.bad .dot{background:var(--coral)}
-.field{margin-bottom:12px}
-.field label{display:block;font-size:12px;font-weight:600;margin-bottom:6px;color:var(--ink-soft)}
-.field input{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:13px;outline:none}
-.field input:focus{border-color:var(--plum);box-shadow:0 0 0 4px var(--plum-tint)}
-.keyrow{display:flex;align-items:center;gap:8px}
-.keyrow input{flex:1}
-.muted-note{font-size:12px;color:var(--muted);margin-top:6px}
-.save-msg{font-size:12.5px;margin-top:8px;display:none}
-.save-msg.ok{color:var(--mint);display:block}
-.save-msg.bad{color:var(--coral);display:block}
-.loading-state{padding:60px 0;text-align:center;color:var(--muted)}
+.table tbody tr:hover{background:var(--ivory-2)}
+
+/* tags */
+.tag{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);font-family:var(--mono);font-size:10.5px;white-space:nowrap;font-weight:600}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.tag.ok{border-color:rgba(31,168,119,.3);background:rgba(31,168,119,.1);color:#138050}.tag.ok .dot{background:var(--mint)}
+.tag.pend{border-color:rgba(224,161,46,.3);background:rgba(224,161,46,.1);color:var(--gold-deep)}.tag.pend .dot{background:var(--gold-deep)}
+.tag.fail{border-color:rgba(239,106,76,.3);background:rgba(239,106,76,.1);color:#bf4020}.tag.fail .dot{background:var(--coral)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border-radius:10px;padding:8px 13px;border:1.5px solid var(--line);background:var(--white);font-weight:700;font-size:13px;transition:.13s;cursor:pointer;color:var(--ink);white-space:nowrap}
+.btn:hover{border-color:var(--plum);color:var(--plum)}
+.btn:disabled{opacity:.45;pointer-events:none}
+.btn.primary{background:var(--plum);border-color:var(--plum);color:#fff}
+.btn.primary:hover{background:var(--plum-deep)}
+.btn.sm{padding:5px 9px;font-size:11.5px;border-radius:8px}
+
+/* fields */
+.field{margin-bottom:13px}
+.field .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.field input,.field select{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;outline:none;font-size:13.5px;background:var(--white);transition:.13s;color:var(--ink)}
+.field input:focus,.field select:focus{border-color:var(--plum);box-shadow:0 0 0 3px var(--plum-tint)}
+.formrow{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+@media(max-width:520px){.formrow{grid-template-columns:1fr}}
+
+/* method toggle tabs */
+.method-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.method-tab{border:1.5px solid var(--line);background:var(--white);border-radius:10px;padding:10px;font-weight:700;font-size:13px;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;gap:8px;transition:.13s}
+.method-tab.on{border-color:var(--plum);background:var(--plum-tint);color:var(--plum)}
+
+/* key row */
+.keyrow{display:flex;gap:8px;align-items:center}
+.keyrow input{flex:1;font-family:var(--mono);font-size:12px}
+.mono-note{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:5px}
+
+/* feedback */
+.fb{font-size:13px;margin-top:10px;display:none}
+.fb.ok{color:var(--mint);display:block}
+.fb.bad{color:var(--coral);display:block}
+
+/* empty / spinner */
+.empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13.5px}
+.empty strong{display:block;color:var(--ink);font-size:15px;margin-bottom:6px}
+.spinbox{padding:48px 20px;text-align:center}
+.spin{width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--plum);border-radius:50%;margin:0 auto 12px;animation:sp .75s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* search */
+.search-row{margin-bottom:14px}
+.search-row input{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:10px 13px;outline:none;font-size:13.5px;transition:.13s}
+.search-row input:focus{border-color:var(--plum);box-shadow:0 0 0 3px var(--plum-tint)}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
-  <div class="topbar"><div class="wrap topbar-in">
-    <div class="brand"><span class="shell"></span>Cowrie</div>
-    <div class="nav-r">
-      <span id="merchName" style="font-size:13.5px;color:var(--ink-soft);font-weight:600;"></span>
-      <a href="/checkout" class="btn">Checkout demo</a>
-      <button class="btn" id="logoutBtn">Sign out</button>
-    </div>
-  </div></div>
 
-  <div class="wrap content" id="app">
-    <div class="loading-state">Loading dashboard…</div>
+<div class="topbar">
+  <div class="wrap topbar-in">
+    <div class="brand"><span class="shell"></span>Cowrie</div>
+    <div class="topbar-right">
+      <span class="merchant-tag" id="merchantTag">…</span>
+      <a href="/checkout" class="btn sm">Checkout demo</a>
+      <button class="btn sm" id="logoutBtn">Sign out</button>
+    </div>
   </div>
+</div>
+
+<div class="wrap grid">
+  <aside class="sidebar">
+    <div class="side-sect">Menu</div>
+    <nav class="nav">
+      <a class="active" href="#" data-view="transactions">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+        Transactions
+      </a>
+      <a href="#" data-view="request-payout">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>
+        Request Payout
+      </a>
+      <a href="#" data-view="payout-history">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        My Payout Requests
+      </a>
+      <div class="nav-sep"></div>
+      <a href="#" data-view="webhooks">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 16.98h-5.99c-1.1 0-1.95.94-2.48 1.9A4 4 0 0 1 2 17c.01-.7.2-1.4.57-2"/><path d="m6 17 3.13-5.78c.53-.97.1-2.18-.5-3.1a4 4 0 1 1 6.89-4.06"/><path d="m12 6 3.13 5.73C15.66 12.7 16.9 13 18 13a4 4 0 0 1 0 8"/></svg>
+        Webhook Deliveries
+      </a>
+      <a href="#" data-view="api-keys">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        API Keys &amp; Webhook
+      </a>
+    </nav>
+  </aside>
+
+  <main class="content" id="main">
+    <div class="spinbox"><div class="spin"></div></div>
+  </main>
+</div>
 
 <script>
+'use strict';
 const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+const SYMS={GHS:'₵',NGN:'₦',KES:'KSh',ZAR:'R',USD:'$',EUR:'€',GBP:'£'};
+const fmt=(n,c='GHS')=>(SYMS[c]||c+' ')+' '+(n/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtDate=ts=>new Date(ts).toLocaleString([],{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+const ML={card:'Card',mobile_money:'Mobile money',bank_transfer:'Bank transfer',ussd:'USSD'};
+
 const token=localStorage.getItem('cowrie_token');
 if(!token) location.href='/login';
 
 const API={
-  async get(path){const r=await fetch(path,{headers:{authorization:'Bearer '+token}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed.');return d;},
-  async put(path,body){const r=await fetch(path,{method:'PUT',headers:{'content-type':'application/json',authorization:'Bearer '+token},body:JSON.stringify(body||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed.');return d;},
-  async post(path,body){const r=await fetch(path,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+token},body:JSON.stringify(body||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed.');return d;}
+  async get(p){const r=await fetch(p,{headers:{authorization:'Bearer '+token}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed');return d;},
+  async post(p,b){const r=await fetch(p,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+token},body:JSON.stringify(b||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed');return d;},
+  async put(p,b){const r=await fetch(p,{method:'PUT',headers:{'content-type':'application/json',authorization:'Bearer '+token},body:JSON.stringify(b||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed');return d;},
 };
 
-const SYMS={GHS:'₵',NGN:'₦',KES:'KSh',ZAR:'R',USD:'$',EUR:'€',GBP:'£'};
-const fmt=(minor,c)=>(SYMS[c]||(c+' '))+' '+(minor/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
-
-document.getElementById('logoutBtn').addEventListener('click',()=>{
-  localStorage.removeItem('cowrie_token');localStorage.removeItem('cowrie_merchant');location.href='/login';
-});
-
-function statusTag(status){
-  if(status==='success')return `<span class="tag ok"><span class="dot"></span>success</span>`;
-  if(status==='failed')return `<span class="tag bad"><span class="dot"></span>failed</span>`;
-  return `<span class="tag pend"><span class="dot"></span>${esc(status)}</span>`;
-}
-const METHOD_LABEL={card:'Card',mobile_money:'Mobile money',bank_transfer:'Bank transfer',ussd:'USSD'};
-
-async function boot(){
-  let merchant, transactions, events, payouts;
-  try{
-    [{merchant},{transactions},{events},{payouts}]=await Promise.all([
-      API.get('/api/me'),API.get('/api/transactions'),API.get('/api/events'),API.get('/api/payouts')
-    ]);
-  }catch(err){
-    if(/unauthorized/i.test(err.message)){ localStorage.removeItem('cowrie_token'); location.href='/login'; return; }
-    $('#app').innerHTML=`<div class="empty">Couldn't load dashboard: ${esc(err.message)}</div>`;
-    return;
-  }
-  document.getElementById('merchName').textContent=merchant.businessName;
-  render(merchant, transactions, events, payouts);
+function statusTag(s){
+  if(s==='success')return`<span class="tag ok"><span class="dot"></span>success</span>`;
+  if(s==='failed')return`<span class="tag fail"><span class="dot"></span>failed</span>`;
+  if(s==='completed')return`<span class="tag ok"><span class="dot"></span>completed</span>`;
+  return`<span class="tag pend"><span class="dot"></span>${esc(s)}</span>`;
 }
 
-function render(merchant, transactions, events, payouts){
-  const success=transactions.filter(t=>t.status==='success');
-  const failed=transactions.filter(t=>t.status==='failed');
-  const pending=transactions.length-success.length-failed.length;
-  const ccy=(success[0]||transactions[0]||{}).currency||'GHS';
-  const collected=success.reduce((s,t)=>s+t.amount,0);
-  const rate=transactions.length?Math.round((success.length/transactions.length)*1000)/10:0;
+let M=null; // cached merchant
 
-  $('#app').innerHTML=`
-    <div class="hdr"><div>
-      <h1>Welcome back, ${esc(merchant.businessName)}</h1>
-      <p>Live data from your charges — pay through <a href="/checkout" style="color:var(--plum);font-weight:600;">/checkout</a> to see it land here.</p>
-    </div></div>
+/* ========================= Views ========================= */
+const VIEWS={
+  'transactions':   {title:'Transactions',       desc:'All payments collected through your checkout.'},
+  'request-payout': {title:'Request Payout',     desc:'Submit a request to withdraw your collected funds.'},
+  'payout-history': {title:'My Payout Requests', desc:'Track the status of your payout requests.'},
+  'webhooks':       {title:'Webhook Deliveries',  desc:'Events delivered to your webhook endpoint.'},
+  'api-keys':       {title:'API Keys & Webhook',  desc:'Manage your API keys and configure your webhook.'},
+};
 
-    <section class="kpis">
-      <div class="kpi"><div class="l">Collected</div><div class="v">${fmt(collected,ccy)}</div></div>
-      <div class="kpi"><div class="l">Successful</div><div class="v">${success.length}</div></div>
-      <div class="kpi"><div class="l">Success rate</div><div class="v">${rate}%</div></div>
-      <div class="kpi"><div class="l">Pending</div><div class="v">${pending}</div></div>
-    </section>
-
-    <div class="panel">
-      <div class="panel-head"><h2>Transactions</h2><span class="muted-note">${transactions.length} total</span></div>
-      ${transactions.length?`<div style="overflow:auto;"><table class="table"><thead><tr>
-        <th>Reference</th><th>Method</th><th>Amount</th><th>Status</th><th>Created</th>
-      </tr></thead><tbody>
-        ${transactions.map(t=>`<tr>
-          <td style="font-family:var(--mono);font-size:12px;">${esc(t.reference)}</td>
-          <td>${esc(METHOD_LABEL[t.method]||t.method||'—')}</td>
-          <td style="font-family:var(--mono);font-weight:700;">${fmt(t.amount,t.currency)}</td>
-          <td>${statusTag(t.status)}</td>
-          <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted);">${new Date(t.createdAt).toLocaleString([], {month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
-        </tr>`).join('')}
-      </tbody></table></div>`:`<div class="empty">No transactions yet. Open <a href="/checkout" style="color:var(--plum);font-weight:600;">/checkout</a> and pay with the test card to see one appear.</div>`}
+async function loadView(view){
+  const main=$('#main');
+  const info=VIEWS[view]||VIEWS['transactions'];
+  main.innerHTML=`
+    <div class="vhdr">
+      <div><h1>${esc(info.title)}</h1><p>${esc(info.desc)}</p></div>
+      <div class="vhdr-actions"><button class="btn sm" id="refreshBtn">↻ Refresh</button></div>
     </div>
+    <div id="vc"><div class="spinbox"><div class="spin"></div></div></div>`;
+  $('#refreshBtn').addEventListener('click',()=>loadView(view));
 
+  const vc=$('#vc');
+  try{
+    if(view==='transactions')    await renderTransactions(vc);
+    else if(view==='request-payout') renderRequestPayout(vc);
+    else if(view==='payout-history') await renderPayoutHistory(vc);
+    else if(view==='webhooks')   await renderWebhooks(vc);
+    else if(view==='api-keys')   await renderApiKeys(vc);
+  }catch(err){
+    if(/unauthorized/i.test(err.message)){localStorage.removeItem('cowrie_token');location.href='/login';return;}
+    vc.innerHTML=`<div class="empty"><strong>Error</strong>${esc(err.message)}</div>`;
+  }
+}
+
+/* ---------- Transactions ---------- */
+async function renderTransactions(el){
+  const {transactions}=await API.get('/api/transactions');
+  if(!transactions.length){el.innerHTML=`<div class="empty"><strong>No transactions yet</strong>Open <a href="/checkout" style="color:var(--plum);font-weight:600">/checkout</a> and complete a test payment to see it here.</div>`;return;}
+  el.innerHTML=`
+    <div class="search-row"><input id="txSearch" placeholder="Search reference, method, status…"></div>
+    <div class="panel"><div style="overflow:auto;"><table class="table" id="txTable">
+      <thead><tr><th>Reference</th><th>Method</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+      <tbody>${txRows(transactions)}</tbody>
+    </table></div></div>`;
+  $('#txSearch').addEventListener('input',function(){
+    const q=this.value.toLowerCase();
+    const rows=transactions.filter(t=>
+      t.reference.toLowerCase().includes(q)||
+      (t.method||'').toLowerCase().includes(q)||
+      t.status.toLowerCase().includes(q)
+    );
+    $('#txTable').querySelector('tbody').innerHTML=txRows(rows);
+  });
+}
+function txRows(list){
+  if(!list.length)return`<tr><td colspan="5"><div class="empty">No results</div></td></tr>`;
+  return list.map(t=>`<tr>
+    <td style="font-family:var(--mono);font-size:12px">${esc(t.reference)}</td>
+    <td>${esc(ML[t.method]||t.method||'—')}</td>
+    <td style="font-family:var(--mono);font-weight:700">${fmt(t.amount,t.currency)}</td>
+    <td>${statusTag(t.status)}</td>
+    <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap">${fmtDate(t.createdAt)}</td>
+  </tr>`).join('');
+}
+
+/* ---------- Request Payout ---------- */
+function renderRequestPayout(el){
+  el.innerHTML=`
     <div class="panel">
-      <div class="panel-head"><h2>Request Payout</h2></div>
-      <div class="panel-body" id="payoutForm">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-          <button class="btn primary" id="pyMethodBank" data-m="bank">🏦 Bank transfer</button>
-          <button class="btn" id="pyMethodMomo" data-m="mobile_money">📱 Mobile money</button>
+      <div class="panel-head"><h2>Payout details</h2></div>
+      <div style="padding:18px">
+        <div class="method-tabs">
+          <button class="method-tab on" id="tabBank">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg>
+            Bank transfer
+          </button>
+          <button class="method-tab" id="tabMomo">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>
+            Mobile money
+          </button>
         </div>
         <input type="hidden" id="pyMethod" value="bank">
-        <div id="pyBankFields">
-          <div class="field"><label>Bank name</label><input id="pyBank" placeholder="e.g. GCB Bank"></div>
-          <div class="field"><label>Account number</label><input id="pyAccountNumber" class="mono" placeholder="e.g. 1234567890"></div>
-          <div class="field"><label>Account name</label><input id="pyAccountName" placeholder="Full name on account"></div>
-        </div>
-        <div id="pyMomoFields" style="display:none">
-          <div class="field"><label>Provider</label>
-            <select id="pyMobileProvider" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:13px;outline:none;background:var(--white)">
-              <option value="MTN">MTN Mobile Money</option>
-              <option value="Vodafone">Vodafone Cash</option>
-              <option value="AirtelTigo">AirtelTigo Money</option>
-            </select>
+
+        <div id="bankFields">
+          <div class="formrow">
+            <div class="field"><div class="lbl">Bank name</div><input id="pyBank" placeholder="e.g. GCB Bank"></div>
+            <div class="field"><div class="lbl">Account number</div><input id="pyAccNum" class="mono" placeholder="e.g. 1234567890"></div>
           </div>
-          <div class="field"><label>Mobile money number</label><input id="pyMobileNumber" class="mono" placeholder="024 123 4567"></div>
+          <div class="field"><div class="lbl">Account name</div><input id="pyAccName" placeholder="Full name on the account"></div>
         </div>
-        <div class="field"><label>Amount (GHS)</label><input id="pyAmount" type="number" min="1" step="0.01" placeholder="e.g. 500.00"></div>
-        <div class="field"><label>Note <span style="font-weight:400;color:var(--muted)">(optional)</span></label><input id="pyNote" placeholder="e.g. Weekly earnings withdrawal"></div>
-        <button class="btn primary" id="submitPayout" style="width:100%;margin-top:4px">Submit payout request</button>
-        <div class="save-msg" id="payoutMsg"></div>
-      </div>
-    </div>
 
-    <div class="panel">
-      <div class="panel-head"><h2>My payout requests</h2><span class="muted-note">${payouts.length} total</span></div>
-      ${payouts.length?`<div style="overflow:auto;"><table class="table"><thead><tr>
-        <th>Date</th><th>Method</th><th>Destination</th><th>Amount</th><th>Status</th>
-      </tr></thead><tbody>
-        ${payouts.map(p=>{
-          const dest=p.method==='mobile_money'
-            ?`${esc(p.mobileProvider||'')} ${esc(p.mobileNumber||'')}`
-            :`${esc(p.bank||'')} · ${esc(p.accountNumber||'')} (${esc(p.accountName||'')})`;
-          const stTag=p.status==='completed'?statusTag('success'):p.status==='processing'?statusTag('pending'):statusTag('pending');
-          const stLabel=p.status==='completed'?'completed':p.status==='processing'?'processing':'pending';
-          return `<tr>
-            <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">${new Date(p.createdAt).toLocaleString([],{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
-            <td>${p.method==='mobile_money'?'Mobile money':'Bank transfer'}</td>
-            <td style="font-size:12.5px">${dest}</td>
-            <td style="font-family:var(--mono);font-weight:700">${fmt(p.amount,'GHS')}</td>
-            <td>${stTag.replace(/(success|pending)/g,stLabel)}</td>
-          </tr>`;
-        }).join('')}
-      </tbody></table></div>`:`<div class="empty">No payout requests yet.</div>`}
-    </div>
-
-    <div class="panel">
-      <div class="panel-head"><h2>Webhook deliveries</h2><span class="muted-note">${events.length} total</span></div>
-      ${events.length?`<div style="overflow:auto;"><table class="table"><thead><tr>
-        <th>Event</th><th>Charge</th><th>Status</th><th>Response</th><th>Time</th>
-      </tr></thead><tbody>
-        ${events.map(e=>`<tr>
-          <td style="font-family:var(--mono);font-size:12px;">${esc(e.type)}</td>
-          <td style="font-family:var(--mono);font-size:12px;">${esc(e.chargeReference)}</td>
-          <td>${e.status==='delivered'?statusTag('success'):e.status==='skipped'?`<span class="tag pend"><span class="dot"></span>skipped</span>`:statusTag('failed')}</td>
-          <td style="font-family:var(--mono);font-size:12px;">${e.responseCode||'—'}</td>
-          <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted);">${new Date(e.createdAt).toLocaleString([], {month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
-        </tr>`).join('')}
-      </tbody></table></div>`:`<div class="empty">No webhook events yet.</div>`}
-    </div>
-
-    <div class="panel">
-      <div class="panel-head"><h2>API keys &amp; webhook</h2></div>
-      <div class="panel-body">
-        <div class="field"><label>Public key</label><div class="keyrow">
-          <input id="pubKey" readonly value="${esc(merchant.publicKey)}">
-          <button class="btn" data-copy="${esc(merchant.publicKey)}">Copy</button>
-        </div></div>
-        <div class="field"><label>Secret key</label><div class="keyrow">
-          <input id="secKey" type="password" readonly value="${esc(merchant.secretKey)}">
-          <button class="btn" id="revealSec">Show</button>
-          <button class="btn" data-copy="${esc(merchant.secretKey)}">Copy</button>
-        </div></div>
-        <div class="field"><label>Webhook URL</label><div class="keyrow">
-          <input id="webhookUrl" placeholder="https://yourapp.example.com/webhooks/cowrie" value="${merchant.webhookUrl?esc(merchant.webhookUrl):''}">
-          <button class="btn primary" id="saveWebhook">Save</button>
+        <div id="momoFields" style="display:none">
+          <div class="formrow">
+            <div class="field"><div class="lbl">Provider</div>
+              <select id="pyProvider">
+                <option value="MTN">MTN Mobile Money</option>
+                <option value="Vodafone">Vodafone Cash</option>
+                <option value="AirtelTigo">AirtelTigo Money</option>
+              </select>
+            </div>
+            <div class="field"><div class="lbl">Mobile money number</div><input id="pyPhone" class="mono" placeholder="024 123 4567"></div>
+          </div>
         </div>
-        <div class="muted-note">Signed with header <code>cowrie-signature</code> using webhook secret <span style="font-family:var(--mono)">${esc(merchant.webhookSecret)}</span>.</div>
-        <div class="save-msg" id="webhookMsg"></div></div>
-      </div>
-    </div>
-  `;
 
-  document.getElementById('revealSec').addEventListener('click',()=>{
-    const i=document.getElementById('secKey');
-    const showing=i.type==='text';
-    i.type=showing?'password':'text';
-    document.getElementById('revealSec').textContent=showing?'Show':'Hide';
-  });
-  document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',()=>{
-    navigator.clipboard&&navigator.clipboard.writeText(b.dataset.copy).catch(()=>{});
-    const t=b.textContent;b.textContent='Copied';setTimeout(()=>b.textContent=t,1100);
-  }));
-  /* payout method toggle */
-  function setPyMethod(m){
+        <div class="formrow">
+          <div class="field"><div class="lbl">Amount (GHS)</div><input id="pyAmount" type="number" min="1" step="0.01" placeholder="e.g. 500.00"></div>
+          <div class="field"><div class="lbl">Note <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div><input id="pyNote" placeholder="e.g. Weekly withdrawal"></div>
+        </div>
+
+        <button class="btn primary" id="submitPayout" style="width:100%;padding:12px">Submit request</button>
+        <div class="fb" id="pyFb"></div>
+      </div>
+    </div>`;
+
+  function setTab(m){
     document.getElementById('pyMethod').value=m;
     const isBank=m==='bank';
-    document.getElementById('pyBankFields').style.display=isBank?'':'none';
-    document.getElementById('pyMomoFields').style.display=isBank?'none':'';
-    document.getElementById('pyMethodBank').className='btn'+(isBank?' primary':'');
-    document.getElementById('pyMethodMomo').className='btn'+(isBank?'':' primary');
+    document.getElementById('bankFields').style.display=isBank?'':'none';
+    document.getElementById('momoFields').style.display=isBank?'none':'';
+    document.getElementById('tabBank').className='method-tab'+(isBank?' on':'');
+    document.getElementById('tabMomo').className='method-tab'+(isBank?'':' on');
   }
-  document.getElementById('pyMethodBank').addEventListener('click',()=>setPyMethod('bank'));
-  document.getElementById('pyMethodMomo').addEventListener('click',()=>setPyMethod('mobile_money'));
+  document.getElementById('tabBank').addEventListener('click',()=>setTab('bank'));
+  document.getElementById('tabMomo').addEventListener('click',()=>setTab('mobile_money'));
 
   document.getElementById('submitPayout').addEventListener('click',async()=>{
-    const msg=document.getElementById('payoutMsg');
-    msg.className='save-msg';
+    const fb=document.getElementById('pyFb');
+    fb.className='fb';
     const method=document.getElementById('pyMethod').value;
     const amount=parseFloat(document.getElementById('pyAmount').value)||0;
+    if(!amount||amount<=0){fb.textContent='Please enter a valid amount.';fb.className='fb bad';return;}
     const body={
-      method, amount:Math.round(amount*100),
+      method,
+      amount:Math.round(amount*100),
       bank:document.getElementById('pyBank').value.trim(),
-      accountNumber:document.getElementById('pyAccountNumber').value.trim(),
-      accountName:document.getElementById('pyAccountName').value.trim(),
-      mobileProvider:document.getElementById('pyMobileProvider').value,
-      mobileNumber:document.getElementById('pyMobileNumber').value.trim(),
+      accountNumber:document.getElementById('pyAccNum').value.trim(),
+      accountName:document.getElementById('pyAccName').value.trim(),
+      mobileProvider:document.getElementById('pyProvider').value,
+      mobileNumber:document.getElementById('pyPhone').value.trim(),
       note:document.getElementById('pyNote').value.trim(),
     };
     const btn=document.getElementById('submitPayout');
     btn.disabled=true;btn.textContent='Submitting…';
     try{
       await API.post('/api/payouts',body);
-      msg.textContent='Payout request submitted. The admin will process it shortly.';
-      msg.classList.add('ok');
-      ['pyBank','pyAccountNumber','pyAccountName','pyMobileNumber','pyAmount','pyNote'].forEach(id=>document.getElementById(id).value='');
-      // refresh payout list
-      const {payouts:fresh}=await API.get('/api/payouts');
-      boot();
+      fb.textContent='Payout request submitted! The admin will review and send your funds.';
+      fb.className='fb ok';
+      ['pyBank','pyAccNum','pyAccName','pyPhone','pyAmount','pyNote'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     }catch(err){
-      msg.textContent=err.message;msg.classList.add('bad');
+      fb.textContent=err.message;fb.className='fb bad';
     }finally{
-      btn.disabled=false;btn.textContent='Submit payout request';
-    }
-  });
-
-  document.getElementById('saveWebhook').addEventListener('click',async ()=>{
-    const msg=document.getElementById('webhookMsg');
-    msg.className='save-msg';
-    try{
-      await API.put('/api/me/webhook',{url:document.getElementById('webhookUrl').value.trim()});
-      msg.textContent='Saved.';msg.classList.add('ok');
-    }catch(err){
-      msg.textContent=err.message;msg.classList.add('bad');
+      btn.disabled=false;btn.textContent='Submit request';
     }
   });
 }
+
+/* ---------- Payout History ---------- */
+async function renderPayoutHistory(el){
+  const {payouts}=await API.get('/api/payouts');
+  if(!payouts.length){
+    el.innerHTML=`<div class="empty"><strong>No payout requests yet</strong>Go to "Request Payout" to submit your first withdrawal.</div>`;
+    return;
+  }
+  el.innerHTML=`<div class="panel"><div style="overflow:auto;"><table class="table">
+    <thead><tr><th>Date</th><th>Method</th><th>Destination</th><th>Amount</th><th>Note</th><th>Status</th></tr></thead>
+    <tbody>${payouts.map(p=>{
+      const dest=p.method==='mobile_money'
+        ?`${esc(p.mobileProvider||'')} · <span style="font-family:var(--mono)">${esc(p.mobileNumber||'')}</span>`
+        :`${esc(p.bank||'—')} · <span style="font-family:var(--mono)">${esc(p.accountNumber||'')} (${esc(p.accountName||'')})</span>`;
+      return`<tr>
+        <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap">${fmtDate(p.createdAt)}</td>
+        <td>${p.method==='mobile_money'?'Mobile money':'Bank transfer'}</td>
+        <td style="font-size:12.5px">${dest}</td>
+        <td style="font-family:var(--mono);font-weight:700">${fmt(p.amount,'GHS')}</td>
+        <td style="font-size:12px;color:var(--muted)">${esc(p.note||'—')}</td>
+        <td>${statusTag(p.status)}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div></div>`;
+}
+
+/* ---------- Webhook Deliveries ---------- */
+async function renderWebhooks(el){
+  const {events}=await API.get('/api/events');
+  if(!events.length){el.innerHTML=`<div class="empty"><strong>No webhook events yet</strong>Events appear here once a payment completes and Cowrie delivers it to your endpoint.</div>`;return;}
+  el.innerHTML=`<div class="panel"><div style="overflow:auto;"><table class="table">
+    <thead><tr><th>Event</th><th>Charge</th><th>Status</th><th>Response</th><th>Time</th></tr></thead>
+    <tbody>${events.map(e=>`<tr>
+      <td style="font-family:var(--mono);font-size:12px">${esc(e.type)}</td>
+      <td style="font-family:var(--mono);font-size:12px">${esc(e.chargeReference)}</td>
+      <td>${e.status==='delivered'?statusTag('success'):e.status==='skipped'?`<span class="tag pend"><span class="dot"></span>skipped</span>`:statusTag('failed')}</td>
+      <td style="font-family:var(--mono);font-size:12px">${esc(e.responseCode||'—')}</td>
+      <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap">${fmtDate(e.createdAt)}</td>
+    </tr>`).join('')}</tbody>
+  </table></div></div>`;
+}
+
+/* ---------- API Keys & Webhook ---------- */
+async function renderApiKeys(el){
+  if(!M) M=(await API.get('/api/me')).merchant;
+  el.innerHTML=`
+    <div class="panel">
+      <div class="panel-head"><h2>API keys</h2></div>
+      <div style="padding:18px">
+        <div class="field">
+          <div class="lbl">Public key</div>
+          <div class="keyrow">
+            <input readonly value="${esc(M.publicKey)}">
+            <button class="btn sm" data-copy="${esc(M.publicKey)}">Copy</button>
+          </div>
+          <div class="mono-note">Use this in your frontend or client-side code.</div>
+        </div>
+        <div class="field">
+          <div class="lbl">Secret key</div>
+          <div class="keyrow">
+            <input id="secKey" type="password" readonly value="${esc(M.secretKey)}">
+            <button class="btn sm" id="revealSec">Show</button>
+            <button class="btn sm" data-copy="${esc(M.secretKey)}">Copy</button>
+          </div>
+          <div class="mono-note">Keep this private — never expose it in client-side code.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Webhook</h2></div>
+      <div style="padding:18px">
+        <div class="field">
+          <div class="lbl">Webhook URL</div>
+          <div class="keyrow">
+            <input id="webhookUrl" placeholder="https://yourapp.com/webhooks/cowrie" value="${M.webhookUrl?esc(M.webhookUrl):''}">
+            <button class="btn primary sm" id="saveWebhook">Save</button>
+          </div>
+          <div class="mono-note">Cowrie will POST signed events to this URL when a payment completes.</div>
+        </div>
+        <div class="field">
+          <div class="lbl">Webhook secret</div>
+          <div class="keyrow">
+            <input readonly value="${esc(M.webhookSecret)}" style="font-family:var(--mono);font-size:12px">
+            <button class="btn sm" data-copy="${esc(M.webhookSecret)}">Copy</button>
+          </div>
+          <div class="mono-note">Verify incoming webhooks using the <code>cowrie-signature</code> header.</div>
+        </div>
+        <div class="fb" id="webhookFb"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>How to create a charge</h2></div>
+      <div style="padding:18px">
+        <div class="mono-note" style="margin-bottom:10px">POST your checkout request from your server:</div>
+        <pre style="background:var(--ivory-2);border:1px solid var(--line);border-radius:10px;padding:14px;font-family:var(--mono);font-size:11.5px;overflow:auto;line-height:1.7">POST https://cowrie-gateway.onrender.com/api/charges
+x-public-key: ${esc(M.publicKey)}
+
+{
+  "amount": 50000,
+  "currency": "GHS",
+  "customerEmail": "buyer@email.com",
+  "description": "Order #1234"
+}</pre>
+        <div class="mono-note" style="margin-top:10px">Then redirect the customer to:<br><code style="color:var(--plum)">https://cowrie-gateway.onrender.com/checkout?reference={reference}</code></div>
+      </div>
+    </div>`;
+
+  document.getElementById('revealSec').addEventListener('click',function(){
+    const i=document.getElementById('secKey');
+    const show=i.type==='text';
+    i.type=show?'password':'text';
+    this.textContent=show?'Show':'Hide';
+  });
+  document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',()=>{
+    navigator.clipboard&&navigator.clipboard.writeText(b.dataset.copy).catch(()=>{});
+    const t=b.textContent;b.textContent='Copied!';setTimeout(()=>b.textContent=t,1200);
+  }));
+  document.getElementById('saveWebhook').addEventListener('click',async()=>{
+    const fb=document.getElementById('webhookFb');fb.className='fb';
+    try{
+      const url=document.getElementById('webhookUrl').value.trim();
+      await API.put('/api/me/webhook',{url});
+      M.webhookUrl=url;
+      fb.textContent='Webhook URL saved.';fb.className='fb ok';
+    }catch(err){fb.textContent=err.message;fb.className='fb bad';}
+  });
+}
+
+/* ========================= Boot & nav ========================= */
+async function boot(){
+  try{
+    const {merchant}=await API.get('/api/me');
+    M=merchant;
+    document.getElementById('merchantTag').textContent=merchant.businessName;
+  }catch(err){
+    if(/unauthorized/i.test(err.message)){localStorage.removeItem('cowrie_token');location.href='/login';return;}
+  }
+  loadView('transactions');
+}
+
+document.querySelectorAll('.nav a[data-view]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    e.preventDefault();
+    document.querySelectorAll('.nav a').forEach(x=>x.classList.remove('active'));
+    a.classList.add('active');
+    loadView(a.dataset.view);
+  });
+});
+
+document.getElementById('logoutBtn').addEventListener('click',()=>{
+  localStorage.removeItem('cowrie_token');
+  location.href='/login';
+});
 
 boot();
 </script>
