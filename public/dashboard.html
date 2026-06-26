@@ -40,7 +40,7 @@ input,select,textarea{font-family:inherit}
 .grid{display:grid;grid-template-columns:220px 1fr;gap:18px;padding:18px 0 60px}
 @media(max-width:860px){.grid{grid-template-columns:1fr}.sidebar{display:none}}
 
-.sidebar{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:14px;align-self:start;position:sticky;top:72px}
+.sidebar{background:var(--white);border:none;border-radius:18px;padding:14px;align-self:start;position:sticky;top:72px;box-shadow:0 2px 16px rgba(27,19,48,.07),0 8px 40px rgba(27,19,48,.05)}
 .side-sect{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);margin-bottom:8px;padding-left:10px}
 .nav{display:flex;flex-direction:column;gap:3px}
 .nav a{padding:9px 10px;border-radius:11px;border:1px solid transparent;color:var(--ink-soft);font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:9px;transition:.13s}
@@ -50,7 +50,7 @@ input,select,textarea{font-family:inherit}
 .nav a.active svg{opacity:1}
 .nav-sep{height:1px;background:var(--line-2);margin:8px 0}
 
-.content{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:22px;min-height:520px}
+.content{background:var(--white);border:none;border-radius:18px;padding:22px;min-height:520px;box-shadow:0 2px 16px rgba(27,19,48,.07),0 8px 40px rgba(27,19,48,.05)}
 
 /* view header */
 .vhdr{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--line-2)}
@@ -59,8 +59,8 @@ input,select,textarea{font-family:inherit}
 .vhdr-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
 
 /* panel */
-.panel{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:14px}
-.panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--ivory-2);border-bottom:1px solid var(--line)}
+.panel{border:none;border-radius:16px;overflow:hidden;margin-bottom:16px;background:var(--white);box-shadow:0 2px 12px rgba(27,19,48,.07),0 6px 28px rgba(27,19,48,.04)}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--ivory-2);border-bottom:1px solid var(--line-2)}
 .panel-head h2{font-family:var(--display);font-weight:800;font-size:14px}
 .badge{font-family:var(--mono);font-size:11px;color:var(--ink-soft);padding:4px 9px;border:1px solid var(--line);border-radius:999px;white-space:nowrap}
 
