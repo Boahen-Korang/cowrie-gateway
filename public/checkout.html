@@ -235,13 +235,11 @@ async function payWithPaystack(uiMethod){
     const handler=PaystackPop.setup({
       key: publicKey,
       access_code: accessCode,
-      callback: async ()=>{
+      callback: function(){
         go('verifying');
-        try{
-          const {charge}=await API.get(`/api/charges/${S.charge.reference}/verify`);
-          S.charge=charge;
-          routeFromCharge();
-        }catch{go('failed');}
+        API.get(`/api/charges/${S.charge.reference}/verify`)
+          .then(function(d){S.charge=d.charge;routeFromCharge();})
+          .catch(function(){go('failed');});
       },
       onClose: ()=>{
         /* user closed popup without paying — stay on form */
