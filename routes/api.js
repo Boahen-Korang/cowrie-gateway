@@ -5,6 +5,7 @@ const store = require('../lib/store');
 const cfg = require('../lib/config');
 const payments = require('../lib/payments');
 const paystack = require('../lib/paystack');
+const webhooks = require('../lib/webhooks');
 const { sendOtp } = require('../lib/email');
 const {
   merchantId, apiKey, genId, hashPassword, verifyPassword, signToken, verifyToken,
@@ -398,6 +399,14 @@ router.post('/admin/new-payment', requireAdminAuth, ah(async (req, res) => {
 
 /* ========================= Paystack integration ========================= */
 
+async function emitWebhookIfTerminal(charge) {
+  if (charge.status !== 'success' && charge.status !== 'failed') return;
+  const merchant = await store.merchants.byId(charge.merchantId);
+  if (!merchant) return;
+  const type = charge.status === 'success' ? 'charge.success' : 'charge.failed';
+  webhooks.emit(merchant, type, charge).catch(() => {});
+}
+
 function normalizePhone(raw) {
   const d = String(raw || '').replace(/\D/g, '');
   if (d.startsWith('233') && d.length >= 12) return d;
@@ -455,6 +464,7 @@ router.post('/charges/:reference/pay', loadCharge, ah(async (req, res) => {
   charge.paystackRef = paystackRef;
   const result = resolvePaystackStatus(charge, data.data);
   await store.charges.update(charge);
+  await emitWebhookIfTerminal(charge);
   res.json({ charge, next: result.next, detail: result.detail });
 }));
 
@@ -465,6 +475,7 @@ router.post('/charges/:reference/submit-otp', loadCharge, ah(async (req, res) =>
   if (!data.status) throw new Error(data.message || 'OTP failed');
   const result = resolvePaystackStatus(req.charge, data.data);
   await store.charges.update(req.charge);
+  await emitWebhookIfTerminal(req.charge);
   res.json({ charge: req.charge, next: result.next, detail: result.detail });
 }));
 
@@ -475,6 +486,7 @@ router.post('/charges/:reference/submit-pin', loadCharge, ah(async (req, res) =>
   if (!data.status) throw new Error(data.message || 'PIN failed');
   const result = resolvePaystackStatus(req.charge, data.data);
   await store.charges.update(req.charge);
+  await emitWebhookIfTerminal(req.charge);
   res.json({ charge: req.charge, next: result.next, detail: result.detail });
 }));
 
@@ -486,6 +498,7 @@ router.get('/charges/:reference/poll', loadCharge, ah(async (req, res) => {
   if (!data.status || !data.data) return res.json({ charge, next: 'pending' });
   const result = resolvePaystackStatus(charge, data.data);
   await store.charges.update(charge);
+  await emitWebhookIfTerminal(charge);
   res.json({ charge, next: result.next, detail: result.detail });
 }));
 
@@ -518,10 +531,12 @@ router.get('/charges/:reference/verify', loadCharge, ah(async (req, res) => {
     charge.method = CHANNEL_MAP[tx.channel] || 'card';
     charge.auth = { provider: 'paystack', channel: tx.channel, last4: tx.authorization && tx.authorization.last4, brand: tx.authorization && tx.authorization.card_type, bank: tx.authorization && tx.authorization.bank, phone: tx.customer && tx.customer.phone };
     await store.charges.update(charge);
+    await emitWebhookIfTerminal(charge);
   } else if (tx.status === 'failed') {
     charge.status = 'failed';
     charge.failure = { message: tx.gateway_response || 'Payment failed' };
     await store.charges.update(charge);
+    await emitWebhookIfTerminal(charge);
   }
   res.json({ charge });
 }));
@@ -544,6 +559,7 @@ router.post('/webhooks/paystack', (req, res, next) => {
           charge.method = CHANNEL_MAP[event.data.channel] || 'card';
           charge.auth = { provider: 'paystack', channel: event.data.channel, last4: event.data.authorization && event.data.authorization.last4, brand: event.data.authorization && event.data.authorization.card_type, bank: event.data.authorization && event.data.authorization.bank };
           await store.charges.update(charge);
+          await emitWebhookIfTerminal(charge);
         }
       }
     }
