@@ -219,7 +219,11 @@ input,select,textarea{font-family:inherit}
       <div class="brand"><span class="shell"></span>Cowrie</div>
       <div class="topbar-right">
         <span class="merchant-tag" id="merchantTag">…</span>
-        <a href="/checkout" class="btn sm">Checkout demo</a>
+        <!-- Test / Live toggle -->
+        <div id="modeToggle" style="display:flex;align-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:2px;gap:2px;cursor:pointer;user-select:none">
+          <span id="btnTest" style="padding:4px 11px;border-radius:6px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;transition:.15s">TEST</span>
+          <span id="btnLive" style="padding:4px 11px;border-radius:6px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;transition:.15s">LIVE</span>
+        </div>
         <button class="btn sm" id="logoutBtn">Sign out</button>
       </div>
     </div>
@@ -305,10 +309,14 @@ const ML={card:'Card',mobile_money:'Mobile money',bank_transfer:'Bank transfer',
 const token=localStorage.getItem('cowrie_token');
 if(!token) location.href='/login';
 
+/* ── Mode (test / live) ── */
+let MODE=localStorage.getItem('cowrie_mode')||'test';
+function modeHeaders(){return{'authorization':'Bearer '+token,'x-cowrie-mode':MODE};}
+
 const API={
-  async get(p){const r=await fetch(p,{headers:{authorization:'Bearer '+token}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed');return d;},
-  async post(p,b){const r=await fetch(p,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+token},body:JSON.stringify(b||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed');return d;},
-  async put(p,b){const r=await fetch(p,{method:'PUT',headers:{'content-type':'application/json',authorization:'Bearer '+token},body:JSON.stringify(b||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed');return d;},
+  async get(p){const r=await fetch(p,{headers:modeHeaders()});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed');return d;},
+  async post(p,b){const r=await fetch(p,{method:'POST',headers:{...modeHeaders(),'content-type':'application/json'},body:JSON.stringify(b||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed');return d;},
+  async put(p,b){const r=await fetch(p,{method:'PUT',headers:{...modeHeaders(),'content-type':'application/json'},body:JSON.stringify(b||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed');return d;},
 };
 
 function statusTag(s){
@@ -397,7 +405,14 @@ async function renderOverview(el){
       Account verified
     </div>`:'';
 
+  const modeBanner=MODE==='test'?`
+    <div style="background:rgba(224,161,46,.1);border:1px solid rgba(224,161,46,.22);border-radius:12px;padding:12px 18px;margin-bottom:14px;font-size:13px;color:#E0A12E;display:flex;align-items:center;gap:10px">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span><strong>Test mode</strong> — Transactions here are simulated and no real money moves. Switch to <strong>Live</strong> in the top bar to process real payments.</span>
+    </div>`:'';
+
   el.innerHTML=`
+    ${modeBanner}
     ${kycBanner}
     <div class="kpis">
       <div class="kpi-tile r3d">
@@ -599,24 +614,34 @@ async function renderWebhooks(el){
 /* ─── API Keys & Webhook ─── */
 async function renderApiKeys(el){
   if(!M) M=(await API.get('/api/me')).merchant;
+  const isLive=MODE==='live';
+  const pk=isLive?(M.livePublicKey||'—'):M.publicKey;
+  const sk=isLive?(M.liveSecretKey||'—'):M.secretKey;
+  const modeLabel=isLive?'Live':'Test';
+  const modeBannerColor=isLive?'rgba(26,168,119,.12)':'rgba(224,161,46,.1)';
+  const modeBorderColor=isLive?'rgba(26,168,119,.25)':'rgba(224,161,46,.25)';
+  const modeTxtColor=isLive?'#1FA877':'#E0A12E';
   el.innerHTML=`
+    <div style="background:${modeBannerColor};border:1px solid ${modeBorderColor};border-radius:12px;padding:12px 18px;margin-bottom:18px;font-size:13px;color:${modeTxtColor};display:flex;align-items:center;gap:10px">
+      <strong>${modeLabel} mode keys</strong> — ${isLive?'These keys process real payments.':'These keys are for testing. No real money moves.'}
+    </div>
     <div class="panel r3d">
-      <div class="panel-head"><h2>API keys</h2></div>
+      <div class="panel-head"><h2>API keys <span style="font-size:11px;font-family:var(--mono);opacity:.5;margin-left:6px">${modeLabel}</span></h2></div>
       <div style="padding:18px">
         <div class="field">
           <div class="lbl">Public key</div>
           <div class="keyrow">
-            <input readonly value="${esc(M.publicKey)}">
-            <button class="btn sm" data-copy="${esc(M.publicKey)}">Copy</button>
+            <input readonly value="${esc(pk)}" style="font-family:var(--mono);font-size:12px">
+            <button class="btn sm" data-copy="${esc(pk)}">Copy</button>
           </div>
           <div class="mono-note">Use this in your frontend or client-side code.</div>
         </div>
         <div class="field">
           <div class="lbl">Secret key</div>
           <div class="keyrow">
-            <input id="secKey" type="password" readonly value="${esc(M.secretKey)}">
+            <input id="secKey" type="password" readonly value="${esc(sk)}" style="font-family:var(--mono);font-size:12px">
             <button class="btn sm" id="revealSec">Show</button>
-            <button class="btn sm" data-copy="${esc(M.secretKey)}">Copy</button>
+            <button class="btn sm" data-copy="${esc(sk)}">Copy</button>
           </div>
           <div class="mono-note">Keep this private — never expose it in client-side code.</div>
         </div>
@@ -911,8 +936,32 @@ window.addEventListener('scroll',()=>{
   });
 },{passive:true});
 
+/* ========================= Mode toggle ========================= */
+function applyMode(){
+  const isLive=MODE==='live';
+  const btnTest=document.getElementById('btnTest');
+  const btnLive=document.getElementById('btnLive');
+  if(btnTest&&btnLive){
+    btnTest.style.background=isLive?'':'rgba(224,161,46,.25)';
+    btnTest.style.color=isLive?'rgba(255,255,255,.4)':'#E0A12E';
+    btnLive.style.background=isLive?'rgba(26,168,119,.25)':'';
+    btnLive.style.color=isLive?'#1FA877':'rgba(255,255,255,.4)';
+  }
+}
+
+document.getElementById('modeToggle').addEventListener('click',()=>{
+  MODE=MODE==='live'?'test':'live';
+  localStorage.setItem('cowrie_mode',MODE);
+  applyMode();
+  /* reload current view with new mode */
+  const current=document.querySelector('.nav a.active')||document.querySelector('[data-view].active');
+  const view=current?current.dataset.view:'overview';
+  loadView(view);
+});
+
 /* ========================= Boot & Nav ========================= */
 async function boot(){
+  applyMode();
   try{
     const {merchant}=await API.get('/api/me');
     M=merchant;

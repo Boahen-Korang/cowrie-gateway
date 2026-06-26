@@ -45,7 +45,9 @@ async function requireAuth(req, res, next) {
     const payload = token && verifyToken(token);
     const merchant = payload && await store.merchants.byId(payload.sub);
     if (!merchant) { const e = new Error('Unauthorized'); e.status = 401; return next(e); }
-    req.merchant = merchant; next();
+    req.merchant = merchant;
+    req.mode = (req.headers['x-cowrie-mode'] === 'live') ? 'live' : 'test';
+    next();
   } catch (e) { next(e); }
 }
 
@@ -54,9 +56,19 @@ async function resolveMerchantByKey(req, res, next) {
     const header = req.headers.authorization || '';
     const bearer = header.startsWith('Bearer ') ? header.slice(7) : null;
     const key = req.headers['x-public-key'] || (req.body && req.body.public_key) || bearer;
-    const merchant = key && (await store.merchants.byPublicKey(key) || await store.merchants.bySecretKey(key));
+    if (!key) { const e = new Error('Invalid or missing API key'); e.status = 401; return next(e); }
+
+    const isLive = key.includes('_live_');
+    let merchant;
+    if (isLive) {
+      merchant = await store.merchants.byLivePublicKey(key) || await store.merchants.byLiveSecretKey(key);
+    } else {
+      merchant = await store.merchants.byPublicKey(key) || await store.merchants.bySecretKey(key);
+    }
     if (!merchant) { const e = new Error('Invalid or missing API key'); e.status = 401; return next(e); }
-    req.merchant = merchant; next();
+    req.merchant = merchant;
+    req.mode = isLive ? 'live' : 'test';
+    next();
   } catch (e) { next(e); }
 }
 
@@ -90,9 +102,11 @@ router.post('/auth/register', authLimiter, ah(async (req, res) => {
     businessName,
     email,
     passwordHash: hashPassword(password),
-    publicKey: apiKey('public'),
-    secretKey: apiKey('secret'),
-    webhookSecret: 'whsec_' + apiKey('secret').slice(8),
+    publicKey:      apiKey('public',  'test'),
+    secretKey:      apiKey('secret',  'test'),
+    livePublicKey:  apiKey('public',  'live'),
+    liveSecretKey:  apiKey('secret',  'live'),
+    webhookSecret: 'whsec_' + apiKey('secret', 'test').slice(16),
   }, expiresAt);
 
   await sendOtp(email, otp, businessName);
@@ -133,8 +147,10 @@ router.post('/auth/verify-email', authLimiter, ah(async (req, res) => {
     businessName: pd.businessName,
     email: pd.email,
     passwordHash: pd.passwordHash,
-    publicKey: pd.publicKey,
-    secretKey: pd.secretKey,
+    publicKey:     pd.publicKey,
+    secretKey:     pd.secretKey,
+    livePublicKey: pd.livePublicKey,
+    liveSecretKey: pd.liveSecretKey,
     webhookSecret: pd.webhookSecret,
     webhookUrl: null,
     demo: false,
@@ -195,7 +211,10 @@ router.put('/me/webhook', requireAuth, ah(async (req, res) => {
 }));
 
 router.get('/transactions', requireAuth, ah(async (req, res) => {
-  res.json({ transactions: await store.charges.forMerchant(req.merchant.id) });
+  const all = await store.charges.forMerchant(req.merchant.id);
+  const mode = req.mode || 'test';
+  const transactions = all.filter(c => (c.mode || 'test') === mode);
+  res.json({ transactions });
 }));
 
 router.get('/events', requireAuth, ah(async (req, res) => {
@@ -205,13 +224,16 @@ router.get('/events', requireAuth, ah(async (req, res) => {
 /* ========================= Charges ========================= */
 
 router.post('/charges', chargeLimiter, resolveMerchantByKey, ah(async (req, res) => {
+  const mode = req.mode || 'test';
   const idemKey = req.headers['idempotency-key'];
   if (idemKey) {
-    const existing = (await store.charges.forMerchant(req.merchant.id)).find((c) => c.idempotencyKey === idemKey);
+    const existing = (await store.charges.forMerchant(req.merchant.id)).find((c) => c.idempotencyKey === idemKey && (c.mode || 'test') === mode);
     if (existing) return res.status(200).json({ charge: existing });
   }
   const charge = await payments.createCharge(req.merchant, req.body || {});
-  if (idemKey) { charge.idempotencyKey = idemKey; await store.charges.update(charge); }
+  charge.mode = mode;
+  if (idemKey) charge.idempotencyKey = idemKey;
+  await store.charges.update(charge);
   res.status(201).json({ charge });
 }));
 
@@ -342,7 +364,9 @@ router.post('/admin/payouts/:id/complete', requireAdminAuth, ah(async (req, res)
 
 /* ── merchant payout requests ── */
 router.get('/payouts', requireAuth, ah(async (req, res) => {
-  res.json({ payouts: await store.payouts.forMerchant(req.merchant.id) });
+  const all = await store.payouts.forMerchant(req.merchant.id);
+  const mode = req.mode || 'test';
+  res.json({ payouts: all.filter(p => (p.mode || 'test') === mode) });
 }));
 
 router.post('/payouts', requireAuth, ah(async (req, res) => {
@@ -358,6 +382,7 @@ router.post('/payouts', requireAuth, ah(async (req, res) => {
   const payout = await store.payouts.insert({
     id: genId('pyt_'), merchantId: req.merchant.id,
     amount: amt, currency: 'GHS',
+    mode: req.mode || 'test',
     method: method || 'bank',
     bank: String(bank || '').trim(),
     accountNumber: String(accountNumber || '').trim(),
@@ -457,8 +482,8 @@ router.post('/charges/:reference/pay', loadCharge, ah(async (req, res) => {
     body.ussd = { type: '737' };
   }
 
-  const data = await paystack.charge(body);
-  console.log('[Paystack /charge]', JSON.stringify({ method, status: data.status, message: data.message, data_status: data.data && data.data.status, gateway_response: data.data && data.data.gateway_response }));
+  const data = await paystack.charge(body, charge.mode || 'test');
+  console.log('[Paystack /charge]', JSON.stringify({ method, mode: charge.mode, status: data.status, message: data.message, data_status: data.data && data.data.status, gateway_response: data.data && data.data.gateway_response }));
   if (!data.status) throw Object.assign(new Error(data.message || 'Charge failed'), { status: 400 });
 
   charge.paystackRef = paystackRef;
@@ -471,7 +496,7 @@ router.post('/charges/:reference/pay', loadCharge, ah(async (req, res) => {
 router.post('/charges/:reference/submit-otp', loadCharge, ah(async (req, res) => {
   const { otp } = req.body || {};
   if (!req.charge.paystackRef) throw Object.assign(new Error('No pending transaction.'), { status: 400 });
-  const data = await paystack.submitOtp(req.charge.paystackRef, String(otp || ''));
+  const data = await paystack.submitOtp(req.charge.paystackRef, String(otp || ''), req.charge.mode || 'test');
   if (!data.status) throw new Error(data.message || 'OTP failed');
   const result = resolvePaystackStatus(req.charge, data.data);
   await store.charges.update(req.charge);
@@ -482,7 +507,7 @@ router.post('/charges/:reference/submit-otp', loadCharge, ah(async (req, res) =>
 router.post('/charges/:reference/submit-pin', loadCharge, ah(async (req, res) => {
   const { pin } = req.body || {};
   if (!req.charge.paystackRef) throw Object.assign(new Error('No pending transaction.'), { status: 400 });
-  const data = await paystack.submitPin(req.charge.paystackRef, String(pin || ''));
+  const data = await paystack.submitPin(req.charge.paystackRef, String(pin || ''), req.charge.mode || 'test');
   if (!data.status) throw new Error(data.message || 'PIN failed');
   const result = resolvePaystackStatus(req.charge, data.data);
   await store.charges.update(req.charge);
@@ -494,7 +519,7 @@ router.get('/charges/:reference/poll', loadCharge, ah(async (req, res) => {
   const charge = req.charge;
   if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge, next: charge.status });
   if (!charge.paystackRef) return res.json({ charge, next: 'pending' });
-  const data = await paystack.getCharge(charge.paystackRef);
+  const data = await paystack.getCharge(charge.paystackRef, charge.mode || 'test');
   if (!data.status || !data.data) return res.json({ charge, next: 'pending' });
   const result = resolvePaystackStatus(charge, data.data);
   await store.charges.update(charge);
@@ -503,8 +528,10 @@ router.get('/charges/:reference/poll', loadCharge, ah(async (req, res) => {
 }));
 
 router.post('/charges/:reference/paystack-init', loadCharge, ah(async (req, res) => {
-  if (!cfg.PAYSTACK_SECRET_KEY) {
-    const e = new Error('Paystack is not configured. Set PAYSTACK_SECRET_KEY in environment variables.'); e.status = 503; throw e;
+  const chargeMode = req.charge.mode || 'test';
+  const paystackSk = chargeMode === 'live' ? cfg.PAYSTACK_SK_LIVE : cfg.PAYSTACK_SK_TEST;
+  if (!paystackSk) {
+    const e = new Error(`Paystack ${chargeMode} key not configured.`); e.status = 503; throw e;
   }
   const charge = req.charge;
   if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge, alreadyComplete: true });
@@ -512,17 +539,17 @@ router.post('/charges/:reference/paystack-init', loadCharge, ah(async (req, res)
     || charge.customerEmail || 'customer@cowrie.africa';
   const channels = Array.isArray(req.body && req.body.channels) ? req.body.channels : undefined;
   const paystackRef = `cwr_${charge.reference}_${Date.now()}`;
-  const data = await paystack.initialize({ email, amount: charge.amount, currency: charge.currency || 'GHS', reference: paystackRef, channels, metadata: { cowrie_reference: charge.reference, merchantId: charge.merchantId } });
+  const data = await paystack.initialize({ email, amount: charge.amount, currency: charge.currency || 'GHS', reference: paystackRef, channels, metadata: { cowrie_reference: charge.reference, merchantId: charge.merchantId } }, chargeMode);
   charge.paystackRef = paystackRef;
   await store.charges.update(charge);
-  res.json({ accessCode: data.access_code, publicKey: cfg.PAYSTACK_PUBLIC_KEY, paystackRef });
+  res.json({ accessCode: data.access_code, publicKey: paystack.publicKey(chargeMode), paystackRef });
 }));
 
 router.get('/charges/:reference/verify', loadCharge, ah(async (req, res) => {
   const charge = req.charge;
   if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge });
   if (!charge.paystackRef) return res.json({ charge });
-  const data = await paystack.verify(charge.paystackRef);
+  const data = await paystack.verify(charge.paystackRef, charge.mode || 'test');
   if (!data.status) throw new Error(data.message || 'Paystack verification failed');
   const tx = data.data;
   const CHANNEL_MAP = { mobile_money: 'mobile_money', bank_transfer: 'bank_transfer', ussd: 'ussd' };
@@ -546,8 +573,11 @@ router.post('/webhooks/paystack', (req, res, next) => {
     const sig = req.headers['x-paystack-signature'];
     const raw = req.rawBody;
     if (!sig || !raw) return res.status(400).json({ error: 'missing_signature' });
-    const expected = crypto.createHmac('sha512', cfg.PAYSTACK_SECRET_KEY).update(raw).digest('hex');
-    if (sig !== expected) return res.status(400).json({ error: 'invalid_signature' });
+    const testKey = cfg.PAYSTACK_SK_TEST || cfg.PAYSTACK_SECRET_KEY;
+    const liveKey = cfg.PAYSTACK_SK_LIVE || cfg.PAYSTACK_SECRET_KEY;
+    const expectedTest = testKey ? crypto.createHmac('sha512', testKey).update(raw).digest('hex') : null;
+    const expectedLive = liveKey ? crypto.createHmac('sha512', liveKey).update(raw).digest('hex') : null;
+    if (sig !== expectedTest && sig !== expectedLive) return res.status(400).json({ error: 'invalid_signature' });
     const event = JSON.parse(raw.toString());
     if (event.event === 'charge.success') {
       const cowrieRef = event.data && event.data.metadata && event.data.metadata.cowrie_reference;

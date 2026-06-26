@@ -33,26 +33,42 @@ app.use((e, _req, res, _next) => {
 
 async function seedDemoMerchant() {
   const existing = await store.merchants.byEmail('demo@adom.shop');
-  if (existing && existing.publicKey.startsWith('cowrie_pk_')) return;
+  if (existing && existing.livePublicKey) return; // fully migrated
+  const base = existing || {};
   const merchant = {
-    id: existing ? existing.id : merchantId(),
+    id: base.id || merchantId(),
     businessName: 'Adɔm Stores',
     email: 'demo@adom.shop',
-    passwordHash: hashPassword('password123'),
-    publicKey: apiKey('public'),
-    secretKey: apiKey('secret'),
-    webhookSecret: 'whsec_' + apiKey('secret').slice(8),
-    webhookUrl: null,
+    passwordHash: base.passwordHash || hashPassword('password123'),
+    publicKey:  base.publicKey  || apiKey('public',  'test'),
+    secretKey:  base.secretKey  || apiKey('secret',  'test'),
+    livePublicKey:  base.livePublicKey  || apiKey('public',  'live'),
+    liveSecretKey:  base.liveSecretKey  || apiKey('secret',  'live'),
+    webhookSecret: base.webhookSecret || ('whsec_' + apiKey('secret', 'test').slice(16)),
+    webhookUrl: base.webhookUrl || null,
     demo: true,
-    createdAt: existing ? existing.createdAt : Date.now(),
+    createdAt: base.createdAt || Date.now(),
   };
   if (existing) {
     await store.merchants.update(merchant);
-    console.log('  Updated demo merchant API keys to cowrie_pk_ prefix');
+    console.log('  Updated demo merchant (added live keys)');
   } else {
     await store.merchants.insert(merchant);
     console.log('  Seeded demo merchant: demo@adom.shop / password123');
   }
+}
+
+async function migrateMerchantKeys() {
+  const all = await store.merchants.all();
+  let count = 0;
+  for (const m of all) {
+    if (m.livePublicKey) continue;
+    m.livePublicKey = apiKey('public', 'live');
+    m.liveSecretKey = apiKey('secret', 'live');
+    await store.merchants.update(m);
+    count++;
+  }
+  if (count) console.log(`  Provisioned live keys for ${count} existing merchant(s)`);
 }
 
 async function connectWithRetry(maxAttempts = 6, delayMs = 3000) {
@@ -71,6 +87,7 @@ async function connectWithRetry(maxAttempts = 6, delayMs = 3000) {
 async function start() {
   await connectWithRetry();
   await seedDemoMerchant();
+  await migrateMerchantKeys();
   app.listen(cfg.PORT, async () => {
     const all = await store.merchants.all();
     const demo = all.find((m) => m.demo);
