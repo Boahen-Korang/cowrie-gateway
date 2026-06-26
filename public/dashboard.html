@@ -87,7 +87,8 @@ if(!token) location.href='/login';
 
 const API={
   async get(path){const r=await fetch(path,{headers:{authorization:'Bearer '+token}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed.');return d;},
-  async put(path,body){const r=await fetch(path,{method:'PUT',headers:{'content-type':'application/json',authorization:'Bearer '+token},body:JSON.stringify(body||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed.');return d;}
+  async put(path,body){const r=await fetch(path,{method:'PUT',headers:{'content-type':'application/json',authorization:'Bearer '+token},body:JSON.stringify(body||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed.');return d;},
+  async post(path,body){const r=await fetch(path,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+token},body:JSON.stringify(body||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed.');return d;}
 };
 
 const SYMS={GHS:'₵',NGN:'₦',KES:'KSh',ZAR:'R',USD:'$',EUR:'€',GBP:'£'};
@@ -106,19 +107,21 @@ function statusTag(status){
 const METHOD_LABEL={card:'Card',mobile_money:'Mobile money',bank_transfer:'Bank transfer',ussd:'USSD'};
 
 async function boot(){
-  let merchant, transactions, events;
+  let merchant, transactions, events, payouts;
   try{
-    [{merchant},{transactions},{events}]=await Promise.all([API.get('/api/me'),API.get('/api/transactions'),API.get('/api/events')]);
+    [{merchant},{transactions},{events},{payouts}]=await Promise.all([
+      API.get('/api/me'),API.get('/api/transactions'),API.get('/api/events'),API.get('/api/payouts')
+    ]);
   }catch(err){
     if(/unauthorized/i.test(err.message)){ localStorage.removeItem('cowrie_token'); location.href='/login'; return; }
     $('#app').innerHTML=`<div class="empty">Couldn't load dashboard: ${esc(err.message)}</div>`;
     return;
   }
   document.getElementById('merchName').textContent=merchant.businessName;
-  render(merchant, transactions, events);
+  render(merchant, transactions, events, payouts);
 }
 
-function render(merchant, transactions, events){
+function render(merchant, transactions, events, payouts){
   const success=transactions.filter(t=>t.status==='success');
   const failed=transactions.filter(t=>t.status==='failed');
   const pending=transactions.length-success.length-failed.length;
@@ -152,6 +155,58 @@ function render(merchant, transactions, events){
           <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted);">${new Date(t.createdAt).toLocaleString([], {month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
         </tr>`).join('')}
       </tbody></table></div>`:`<div class="empty">No transactions yet. Open <a href="/checkout" style="color:var(--plum);font-weight:600;">/checkout</a> and pay with the test card to see one appear.</div>`}
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Request Payout</h2></div>
+      <div class="panel-body" id="payoutForm">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+          <button class="btn primary" id="pyMethodBank" data-m="bank">🏦 Bank transfer</button>
+          <button class="btn" id="pyMethodMomo" data-m="mobile_money">📱 Mobile money</button>
+        </div>
+        <input type="hidden" id="pyMethod" value="bank">
+        <div id="pyBankFields">
+          <div class="field"><label>Bank name</label><input id="pyBank" placeholder="e.g. GCB Bank"></div>
+          <div class="field"><label>Account number</label><input id="pyAccountNumber" class="mono" placeholder="e.g. 1234567890"></div>
+          <div class="field"><label>Account name</label><input id="pyAccountName" placeholder="Full name on account"></div>
+        </div>
+        <div id="pyMomoFields" style="display:none">
+          <div class="field"><label>Provider</label>
+            <select id="pyMobileProvider" style="width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:13px;outline:none;background:var(--white)">
+              <option value="MTN">MTN Mobile Money</option>
+              <option value="Vodafone">Vodafone Cash</option>
+              <option value="AirtelTigo">AirtelTigo Money</option>
+            </select>
+          </div>
+          <div class="field"><label>Mobile money number</label><input id="pyMobileNumber" class="mono" placeholder="024 123 4567"></div>
+        </div>
+        <div class="field"><label>Amount (GHS)</label><input id="pyAmount" type="number" min="1" step="0.01" placeholder="e.g. 500.00"></div>
+        <div class="field"><label>Note <span style="font-weight:400;color:var(--muted)">(optional)</span></label><input id="pyNote" placeholder="e.g. Weekly earnings withdrawal"></div>
+        <button class="btn primary" id="submitPayout" style="width:100%;margin-top:4px">Submit payout request</button>
+        <div class="save-msg" id="payoutMsg"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>My payout requests</h2><span class="muted-note">${payouts.length} total</span></div>
+      ${payouts.length?`<div style="overflow:auto;"><table class="table"><thead><tr>
+        <th>Date</th><th>Method</th><th>Destination</th><th>Amount</th><th>Status</th>
+      </tr></thead><tbody>
+        ${payouts.map(p=>{
+          const dest=p.method==='mobile_money'
+            ?`${esc(p.mobileProvider||'')} ${esc(p.mobileNumber||'')}`
+            :`${esc(p.bank||'')} · ${esc(p.accountNumber||'')} (${esc(p.accountName||'')})`;
+          const stTag=p.status==='completed'?statusTag('success'):p.status==='processing'?statusTag('pending'):statusTag('pending');
+          const stLabel=p.status==='completed'?'completed':p.status==='processing'?'processing':'pending';
+          return `<tr>
+            <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">${new Date(p.createdAt).toLocaleString([],{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
+            <td>${p.method==='mobile_money'?'Mobile money':'Bank transfer'}</td>
+            <td style="font-size:12.5px">${dest}</td>
+            <td style="font-family:var(--mono);font-weight:700">${fmt(p.amount,'GHS')}</td>
+            <td>${stTag.replace(/(success|pending)/g,stLabel)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody></table></div>`:`<div class="empty">No payout requests yet.</div>`}
     </div>
 
     <div class="panel">
@@ -201,6 +256,49 @@ function render(merchant, transactions, events){
     navigator.clipboard&&navigator.clipboard.writeText(b.dataset.copy).catch(()=>{});
     const t=b.textContent;b.textContent='Copied';setTimeout(()=>b.textContent=t,1100);
   }));
+  /* payout method toggle */
+  function setPyMethod(m){
+    document.getElementById('pyMethod').value=m;
+    const isBank=m==='bank';
+    document.getElementById('pyBankFields').style.display=isBank?'':'none';
+    document.getElementById('pyMomoFields').style.display=isBank?'none':'';
+    document.getElementById('pyMethodBank').className='btn'+(isBank?' primary':'');
+    document.getElementById('pyMethodMomo').className='btn'+(isBank?'':' primary');
+  }
+  document.getElementById('pyMethodBank').addEventListener('click',()=>setPyMethod('bank'));
+  document.getElementById('pyMethodMomo').addEventListener('click',()=>setPyMethod('mobile_money'));
+
+  document.getElementById('submitPayout').addEventListener('click',async()=>{
+    const msg=document.getElementById('payoutMsg');
+    msg.className='save-msg';
+    const method=document.getElementById('pyMethod').value;
+    const amount=parseFloat(document.getElementById('pyAmount').value)||0;
+    const body={
+      method, amount:Math.round(amount*100),
+      bank:document.getElementById('pyBank').value.trim(),
+      accountNumber:document.getElementById('pyAccountNumber').value.trim(),
+      accountName:document.getElementById('pyAccountName').value.trim(),
+      mobileProvider:document.getElementById('pyMobileProvider').value,
+      mobileNumber:document.getElementById('pyMobileNumber').value.trim(),
+      note:document.getElementById('pyNote').value.trim(),
+    };
+    const btn=document.getElementById('submitPayout');
+    btn.disabled=true;btn.textContent='Submitting…';
+    try{
+      await API.post('/api/payouts',body);
+      msg.textContent='Payout request submitted. The admin will process it shortly.';
+      msg.classList.add('ok');
+      ['pyBank','pyAccountNumber','pyAccountName','pyMobileNumber','pyAmount','pyNote'].forEach(id=>document.getElementById(id).value='');
+      // refresh payout list
+      const {payouts:fresh}=await API.get('/api/payouts');
+      boot();
+    }catch(err){
+      msg.textContent=err.message;msg.classList.add('bad');
+    }finally{
+      btn.disabled=false;btn.textContent='Submit payout request';
+    }
+  });
+
   document.getElementById('saveWebhook').addEventListener('click',async ()=>{
     const msg=document.getElementById('webhookMsg');
     msg.className='save-msg';

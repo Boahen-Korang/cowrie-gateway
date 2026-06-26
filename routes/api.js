@@ -278,6 +278,40 @@ router.post('/admin/payouts/:id/complete', requireAdminAuth, (req, res, next) =>
   } catch (e) { next(e); }
 });
 
+/* ---- Merchant payout requests ---- */
+router.get('/payouts', requireAuth, (req, res) => {
+  const payouts = store.payouts.forMerchant(req.merchant.id)
+    .sort((a, b) => b.createdAt - a.createdAt);
+  res.json({ payouts });
+});
+
+router.post('/payouts', requireAuth, (req, res, next) => {
+  try {
+    const { amount, method, bank, accountNumber, accountName, mobileProvider, mobileNumber, note } = req.body || {};
+    const amt = Math.round(Number(amount));
+    if (!amt || amt <= 0) { const e = new Error('Enter a valid amount.'); e.status = 400; throw e; }
+    if (method === 'bank' && (!String(accountNumber || '').trim() || !String(accountName || '').trim())) {
+      const e = new Error('Account number and account name are required for bank payouts.'); e.status = 400; throw e;
+    }
+    if (method === 'mobile_money' && !String(mobileNumber || '').trim()) {
+      const e = new Error('Mobile money number is required.'); e.status = 400; throw e;
+    }
+    const payout = store.payouts.insert({
+      id: genId('pyt_'), merchantId: req.merchant.id,
+      amount: amt, currency: 'GHS',
+      method: method || 'bank',
+      bank: String(bank || '').trim(),
+      accountNumber: String(accountNumber || '').trim(),
+      accountName: String(accountName || '').trim(),
+      mobileProvider: String(mobileProvider || '').trim(),
+      mobileNumber: String(mobileNumber || '').trim(),
+      note: String(note || '').trim(),
+      status: 'pending', createdAt: Date.now(),
+    });
+    res.status(201).json({ payout });
+  } catch (e) { next(e); }
+});
+
 router.get('/admin/settlements', requireAdminAuth, (req, res) => {
   res.json({ settlements: store.settlements.all().sort((a, b) => b.createdAt - a.createdAt) });
 });

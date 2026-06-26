@@ -336,7 +336,7 @@ const API = {
 const VIEWS = {
   overview:     {title:'Overview',     desc:'Real-time balances, settlements, payouts and reconciliation.'},
   transactions: {title:'Transactions', desc:'All payment collections across your payment rails.'},
-  payouts:      {title:'Payouts',      desc:'Track and manage disbursements to vendors and recipients.'},
+  payouts:      {title:'Payouts',      desc:'Review and process payout requests submitted by merchants.'},
   settlements:  {title:'Settlements',  desc:'Reconcile and trigger settlements to your bank account.'},
   'new-payment':{title:'New payment',  desc:'Create a hosted payment link and share it with a customer.'},
 };
@@ -512,22 +512,17 @@ function txTable(rows, viewable=false){
 /* ========================= Payouts ========================= */
 async function renderPayouts(el){
   const {payouts} = await API.get('/api/admin/payouts');
-  const processing = payouts.filter(p=>p.status==='processing').length;
-  const completed  = payouts.filter(p=>p.status==='completed').length;
+  const pending   = payouts.filter(p=>p.status==='pending').length;
+  const completed = payouts.filter(p=>p.status==='completed').length;
 
   el.innerHTML = `
     <div class="section-actions">
-      <span class="badge" style="margin-right:auto">${processing} processing · ${completed} completed</span>
-      <button class="btn primary" id="openPayoutModal">+ Create payout</button>
+      <span class="badge" style="margin-right:auto">${pending} pending · ${completed} completed</span>
     </div>
     <div class="panel">
-      <div class="panel-head"><h2>Payouts</h2><span class="badge">${payouts.length} total</span></div>
+      <div class="panel-head"><h2>Payout requests from merchants</h2><span class="badge">${payouts.length} total</span></div>
       <div style="overflow:auto;">${payoutsTable(payouts)}</div>
     </div>`;
-
-  document.getElementById('openPayoutModal').addEventListener('click',()=>{
-    document.getElementById('payoutModal').classList.add('open');
-  });
 
   el.addEventListener('click', async e=>{
     const btn = e.target.closest('button[data-complete]');
@@ -544,21 +539,27 @@ async function renderPayouts(el){
 }
 
 function payoutsTable(rows){
-  if(!rows.length) return `<div class="empty-state"><strong>No payouts yet</strong>Create your first payout using the button above.</div>`;
+  if(!rows.length) return `<div class="empty-state"><strong>No payout requests yet</strong><br>Merchants submit payout requests from their dashboard.</div>`;
   return `<table class="table">
     <thead><tr>
-      <th>ID</th><th>Recipient</th><th>Method</th><th>Amount</th><th>Note</th><th>Status</th><th>Date</th><th></th>
+      <th>Merchant</th><th>Method</th><th>Payment details</th><th>Amount</th><th>Note</th><th>Status</th><th>Date</th><th></th>
     </tr></thead>
-    <tbody>${rows.map(r=>`<tr>
-      <td style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-soft)">${esc(r.id)}</td>
-      <td style="font-size:13px">${esc(r.recipient||'—')}</td>
-      <td style="font-size:13px">${methodLabel(r.method)}</td>
-      <td style="font-family:var(--mono);font-weight:800">${fmt(r.amount||0,r.currency)}</td>
-      <td style="font-size:12px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.note||'—')}</td>
-      <td>${statusTag(r.status)}</td>
-      <td style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap">${fmtDate(r.createdAt)}</td>
-      <td style="text-align:right">${r.status==='processing'?`<button class="btn sm" data-complete="${esc(r.id)}">Mark done</button>`:'<span style="font-size:11px;color:var(--mint);font-family:var(--mono)">✓ done</span>'}</td>
-    </tr>`).join('')}</tbody>
+    <tbody>${rows.map(r=>{
+      const dest = r.method==='mobile_money'
+        ? `<span style="font-size:12px">${esc(r.mobileProvider||'')} · ${esc(r.mobileNumber||'')}</span>`
+        : `<span style="font-size:12px">${esc(r.bank||'—')}<br><span style="font-family:var(--mono);font-size:11px">${esc(r.accountNumber||'')} · ${esc(r.accountName||'')}</span></span>`;
+      const canComplete = r.status==='pending'||r.status==='processing';
+      return `<tr>
+        <td style="font-weight:700;font-size:13px">${esc(r.merchantName||'—')}</td>
+        <td style="font-size:13px">${r.method==='mobile_money'?'Mobile money':'Bank transfer'}</td>
+        <td>${dest}</td>
+        <td style="font-family:var(--mono);font-weight:800">${fmt(r.amount||0,r.currency||'GHS')}</td>
+        <td style="font-size:12px;color:var(--muted);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.note||'—')}</td>
+        <td>${statusTag(r.status==='completed'?'success':r.status==='pending'?'pending':'pending')}</td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap">${fmtDate(r.createdAt)}</td>
+        <td style="text-align:right">${canComplete?`<button class="btn sm" data-complete="${esc(r.id)}">Mark done</button>`:'<span style="font-size:11px;color:var(--mint);font-family:var(--mono)">✓ done</span>'}</td>
+      </tr>`;
+    }).join('')}</tbody>
   </table>`;
 }
 
