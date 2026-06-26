@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: cowrie
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: COWRIE_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        value: admin@cowrie.africa
+      - key: ADMIN_PASSWORD
+        value: admin2026
+      - key: NODE_ENV
+        value: production
