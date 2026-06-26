@@ -32,9 +32,10 @@ app.use((e, _req, res, _next) => {
 });
 
 async function seedDemoMerchant() {
-  if (await store.merchants.byEmail('demo@adom.shop')) return;
-  await store.merchants.insert({
-    id: merchantId(),
+  const existing = await store.merchants.byEmail('demo@adom.shop');
+  if (existing && existing.publicKey.startsWith('cowrie_pk_')) return;
+  const merchant = {
+    id: existing ? existing.id : merchantId(),
     businessName: 'Adɔm Stores',
     email: 'demo@adom.shop',
     passwordHash: hashPassword('password123'),
@@ -43,9 +44,15 @@ async function seedDemoMerchant() {
     webhookSecret: 'whsec_' + apiKey('secret').slice(8),
     webhookUrl: null,
     demo: true,
-    createdAt: Date.now(),
-  });
-  console.log('  Seeded demo merchant: demo@adom.shop / password123');
+    createdAt: existing ? existing.createdAt : Date.now(),
+  };
+  if (existing) {
+    await store.merchants.update(merchant);
+    console.log('  Updated demo merchant API keys to cowrie_pk_ prefix');
+  } else {
+    await store.merchants.insert(merchant);
+    console.log('  Seeded demo merchant: demo@adom.shop / password123');
+  }
 }
 
 async function connectWithRetry(maxAttempts = 6, delayMs = 3000) {
@@ -71,7 +78,7 @@ async function start() {
     console.log('\n  Cowrie gateway running');
     console.log(`  -> http://localhost:${cfg.PORT}`);
     console.log(`  Paystack mode: ${mode}`);
-    if (demo) console.log(`  Demo public key: ${demo.publicKey}`);
+    if (demo) console.log(`  Demo Cowrie key: ${demo.publicKey}  (not a Paystack key)`);
   });
 }
 
