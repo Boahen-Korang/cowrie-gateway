@@ -219,7 +219,8 @@ form.addEventListener('submit',async e=>{
     btn.classList.remove('loading');
     btn.classList.add('done');
     btn.querySelector('.lbl').textContent='Signed in ✓';
-    setTimeout(()=>{ location.href='/dashboard'; },500);
+    const next = new URLSearchParams(location.search).get('next') || '/dashboard';
+    setTimeout(()=>{ location.href=next; },500);
   }catch(err){
     btn.classList.remove('loading');
     formErr.textContent=err.message;

@@ -288,7 +288,7 @@ input,select,textarea{font-family:inherit}
 
 /* ---- auth guard ---- */
 const token = localStorage.getItem('cowrie_token');
-if (!token) { location.href = '/login'; throw 0; }
+if (!token) { location.href = '/login?next=/admin'; throw 0; }
 
 /* ---- helpers ---- */
 const SYMS = { GHS:'₵', NGN:'₦', KES:'KSh', ZAR:'R', USD:'$', EUR:'€', GBP:'£' };
@@ -788,7 +788,7 @@ addEventListener('scroll',()=>{
     document.getElementById('merchantTag').textContent=merchant.businessName;
     await loadView('overview');
   }catch{
-    location.href='/login';
+    location.href='/login?next=/admin';
   }
 })();
 </script>
