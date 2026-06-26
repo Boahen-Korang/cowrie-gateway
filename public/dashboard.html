@@ -443,22 +443,7 @@ async function renderApiKeys(el){
       </div>
     </div>
 
-    <div class="panel">
-      <div class="panel-head"><h2>How to create a charge</h2></div>
-      <div style="padding:18px">
-        <div class="mono-note" style="margin-bottom:10px">POST your checkout request from your server:</div>
-        <pre style="background:var(--ivory-2);border:1px solid var(--line);border-radius:10px;padding:14px;font-family:var(--mono);font-size:11.5px;overflow:auto;line-height:1.7">POST https://cowrie-gateway.onrender.com/api/charges
-x-public-key: ${esc(M.publicKey)}
-
-{
-  "amount": 50000,
-  "currency": "GHS",
-  "customerEmail": "buyer@email.com",
-  "description": "Order #1234"
-}</pre>
-        <div class="mono-note" style="margin-top:10px">Then redirect the customer to:<br><code style="color:var(--plum)">https://cowrie-gateway.onrender.com/checkout?reference={reference}</code></div>
-      </div>
-    </div>`;
+    `;
 
   document.getElementById('revealSec').addEventListener('click',function(){
     const i=document.getElementById('secKey');
