@@ -339,6 +339,10 @@ input,select,textarea{font-family:inherit}
           Settlements
         </a>
         <div class="nav-sep"></div>
+        <a href="#" data-view="kyc">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.4 7.7 8 10 4.6-2.3 8-5 8-10V6z"/></svg>
+          KYC Review
+        </a>
         <a href="#" data-view="new-payment">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
           New payment
@@ -494,6 +498,7 @@ const VIEWS = {
   payouts:      {title:'Payouts',      desc:'Review and process payout requests submitted by merchants.'},
   settlements:  {title:'Settlements',  desc:'Reconcile and trigger settlements to your bank account.'},
   'new-payment':{title:'New payment',  desc:'Create a hosted payment link and share it with a customer.'},
+  'kyc':        {title:'KYC Review',   desc:'Review and approve merchant identity verification submissions.'},
 };
 
 let currentView = 'overview';
@@ -514,6 +519,7 @@ async function loadView(view){
     else if(view==='payouts')      await renderPayouts(el);
     else if(view==='settlements')  await renderSettlements(el);
     else if(view==='new-payment')  renderNewPayment(el);
+    else if(view==='kyc')          await renderKyc(el);
     document.getElementById('statusBadge').textContent =
       'Updated '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     reveal3d(el);
@@ -914,6 +920,84 @@ document.getElementById('submitPayoutBtn').addEventListener('click',async()=>{
     btn.disabled=false; btn.textContent='Create payout';
   }
 });
+
+/* ========================= KYC Review ========================= */
+async function renderKyc(el){
+  const {merchants}=await API.get('/api/admin/kyc');
+  if(!merchants.length){
+    el.innerHTML='<div class="state-box"><p>No merchant submissions yet.</p></div>';
+    document.getElementById('statusBadge').textContent='0 submissions';
+    return;
+  }
+
+  const statusBadge=s=>({
+    none:'<span class="badge">No submission</span>',
+    pending:'<span class="badge" style="background:rgba(224,161,46,.18);color:#E0A12E;border-color:rgba(224,161,46,.3)">Pending</span>',
+    approved:'<span class="badge" style="background:rgba(26,168,119,.18);color:#1FA877;border-color:rgba(26,168,119,.3)">Approved</span>',
+    rejected:'<span class="badge" style="background:rgba(239,106,76,.18);color:#EF6A4C;border-color:rgba(239,106,76,.3)">Rejected</span>',
+  }[s]||'<span class="badge">—</span>');
+
+  const pending=merchants.filter(m=>m.kycStatus==='pending');
+  document.getElementById('statusBadge').textContent=`${pending.length} pending`;
+
+  el.innerHTML=`
+    <div class="panel r3d">
+      <div class="panel-head"><h2>KYC Submissions</h2><span class="badge">${merchants.length} merchants</span></div>
+      <div style="overflow:auto">
+        <table class="table" id="kycTable">
+          <thead><tr><th>Business</th><th>Email</th><th>Status</th><th>Submitted</th><th>Submission</th><th>Actions</th></tr></thead>
+          <tbody>
+            ${merchants.map(m=>`
+            <tr>
+              <td><strong>${esc(m.businessName)}</strong></td>
+              <td style="font-family:var(--mono);font-size:12px">${esc(m.email)}</td>
+              <td>${statusBadge(m.kycStatus)}</td>
+              <td style="font-family:var(--mono);font-size:12px">${m.kycSubmittedAt?new Date(m.kycSubmittedAt).toLocaleString([],{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'-'}</td>
+              <td>
+                ${m.kycData?`<div style="font-size:12px;line-height:1.7;color:rgba(255,255,255,.65)">
+                  <div><strong style="color:rgba(255,255,255,.85)">${esc(m.kycData.fullName)}</strong></div>
+                  <div>${esc(m.kycData.idType)}: ${esc(m.kycData.idNumber)}</div>
+                  <div>${esc(m.kycData.phone)}</div>
+                  <div>${esc(m.kycData.businessType==='company'?`Company · ${m.kycData.businessRegNumber||'No reg #'}`:'Individual')}</div>
+                  <div>${esc(m.kycData.address)}</div>
+                </div>`:'-'}
+              </td>
+              <td>
+                ${m.kycStatus==='pending'?`
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <button class="btn sm" style="background:rgba(26,168,119,.2);border:1px solid rgba(26,168,119,.35);color:#1FA877" data-kyc-approve="${esc(m.id)}">Approve</button>
+                  <button class="btn sm" style="background:rgba(239,106,76,.15);border:1px solid rgba(239,106,76,.3);color:#EF6A4C" data-kyc-reject="${esc(m.id)}" data-biz="${esc(m.businessName)}">Reject</button>
+                </div>`
+                :m.kycStatus==='approved'?`<button class="btn sm" style="background:rgba(239,106,76,.15);border:1px solid rgba(239,106,76,.3);color:#EF6A4C" data-kyc-reject="${esc(m.id)}" data-biz="${esc(m.businessName)}">Revoke</button>`
+                :m.kycStatus==='rejected'?`<button class="btn sm" style="background:rgba(26,168,119,.2);border:1px solid rgba(26,168,119,.35);color:#1FA877" data-kyc-approve="${esc(m.id)}">Approve</button>`
+                :'—'}
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+
+  el.addEventListener('click',async e=>{
+    const approveBtn=e.target.closest('[data-kyc-approve]');
+    const rejectBtn=e.target.closest('[data-kyc-reject]');
+    if(approveBtn){
+      approveBtn.disabled=true; approveBtn.textContent='Approving…';
+      try{
+        await API.post(`/api/admin/kyc/${encodeURIComponent(approveBtn.dataset.kycApprove)}/approve`,{});
+        await loadView('kyc');
+      }catch(err){alert(err.message);approveBtn.disabled=false;approveBtn.textContent='Approve';}
+    } else if(rejectBtn){
+      const reason=prompt(`Reason for rejecting "${rejectBtn.dataset.biz}"? (leave blank for default)`);
+      if(reason===null)return;
+      rejectBtn.disabled=true; rejectBtn.textContent='Rejecting…';
+      try{
+        await API.post(`/api/admin/kyc/${encodeURIComponent(rejectBtn.dataset.kycReject)}/reject`,{reason});
+        await loadView('kyc');
+      }catch(err){alert(err.message);rejectBtn.disabled=false;rejectBtn.textContent='Reject';}
+    }
+  });
+}
 
 /* ========================= 3D Effects ========================= */
 

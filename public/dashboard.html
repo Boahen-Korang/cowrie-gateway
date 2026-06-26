@@ -246,6 +246,10 @@ input,select,textarea{font-family:inherit}
           My Payout Requests
         </a>
         <div class="nav-sep"></div>
+        <a href="#" data-view="verification" id="kycNavLink">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.4 7.7 8 10 4.6-2.3 8-5 8-10V6z"/></svg>
+          Verification
+        </a>
         <a href="#" data-view="webhooks">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 16.98h-5.99c-1.1 0-1.95.94-2.48 1.9A4 4 0 0 1 2 17c.01-.7.2-1.4.57-2"/><path d="m6 17 3.13-5.78c.53-.97.1-2.18-.5-3.1a4 4 0 1 1 6.89-4.06"/><path d="m12 6 3.13 5.73C15.66 12.7 16.9 13 18 13a4 4 0 0 1 0 8"/></svg>
           Webhook Deliveries
@@ -324,6 +328,7 @@ const VIEWS={
   'payout-history': {title:'My Payout Requests',  desc:'Track the status of your payout requests.'},
   'webhooks':       {title:'Webhook Deliveries',   desc:'Events delivered to your webhook endpoint.'},
   'api-keys':       {title:'API Keys & Webhook',   desc:'Manage your API keys and configure your webhook.'},
+  'verification':   {title:'Account Verification', desc:'Submit your KYC documents to verify your business.'},
 };
 
 async function loadView(view){
@@ -344,6 +349,7 @@ async function loadView(view){
     else if(view==='payout-history')  await renderPayoutHistory(vc);
     else if(view==='webhooks')        await renderWebhooks(vc);
     else if(view==='api-keys')        await renderApiKeys(vc);
+    else if(view==='verification')    await renderVerification(vc);
     reveal3d(vc);
     initTilt(vc);
   }catch(err){
@@ -354,7 +360,7 @@ async function loadView(view){
 
 /* ─── Overview ─── */
 async function renderOverview(el){
-  const [{transactions},{payouts}]=await Promise.all([API.get('/api/transactions'),API.get('/api/payouts')]);
+  const [{transactions},{payouts},kycRes]=await Promise.all([API.get('/api/transactions'),API.get('/api/payouts'),API.get('/api/kyc').catch(()=>null)]);
   const success=transactions.filter(t=>t.status==='success');
   const failed=transactions.filter(t=>t.status==='failed');
   const pending=transactions.filter(t=>t.status==='pending');
@@ -362,8 +368,37 @@ async function renderOverview(el){
   const collected=success.reduce((s,t)=>s+t.amount,0);
   const rate=transactions.length?((success.length/transactions.length)*100).toFixed(1):'0.0';
   const pendingPayout=payouts.filter(p=>p.status==='pending').reduce((s,p)=>s+p.amount,0);
+  const kycStatus=kycRes?.kycStatus||'none';
+
+  const kycBanner=kycStatus==='none'?`
+    <div class="kyc-banner r3d" style="background:rgba(91,44,143,.13);border:1px solid rgba(91,44,143,.3);border-radius:13px;padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;gap:14px;cursor:pointer" id="kycBannerBtn">
+      <div style="width:38px;height:38px;border-radius:50%;background:rgba(91,44,143,.25);display:grid;place-items:center;flex-shrink:0">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#C9AEFF" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.4 7.7 8 10 4.6-2.3 8-5 8-10V6z"/></svg>
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:700;color:#C9AEFF;font-size:13.5px">Verify your account</div>
+        <div style="color:rgba(255,255,255,.45);font-size:12.5px;margin-top:2px">Complete KYC to unlock full features and payouts.</div>
+      </div>
+      <div style="color:#C9AEFF;font-size:13px;font-weight:700">Verify →</div>
+    </div>`
+  :kycStatus==='pending'?`
+    <div style="background:rgba(224,161,46,.1);border:1px solid rgba(224,161,46,.25);border-radius:13px;padding:14px 20px;margin-bottom:18px;font-size:13px;color:#E0A12E;display:flex;align-items:center;gap:10px">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      Your KYC is under review — we'll notify you within 1–2 business days.
+    </div>`
+  :kycStatus==='rejected'?`
+    <div class="kyc-banner r3d" style="background:rgba(239,106,76,.1);border:1px solid rgba(239,106,76,.28);border-radius:13px;padding:14px 20px;margin-bottom:18px;font-size:13px;color:var(--coral);display:flex;align-items:center;gap:12px;cursor:pointer" id="kycBannerBtn">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+      <span>Verification rejected — <a href="#" id="kycBannerBtn" style="color:inherit;font-weight:700">Resubmit →</a></span>
+    </div>`:
+  kycStatus==='approved'?`
+    <div style="background:rgba(26,168,119,.08);border:1px solid rgba(26,168,119,.25);border-radius:13px;padding:12px 20px;margin-bottom:18px;font-size:13px;color:#1FA877;display:flex;align-items:center;gap:10px">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      Account verified
+    </div>`:'';
 
   el.innerHTML=`
+    ${kycBanner}
     <div class="kpis">
       <div class="kpi-tile r3d">
         <div class="kl">Total collected</div>
@@ -394,6 +429,9 @@ async function renderOverview(el){
         <tbody>${txRows(transactions.slice(0,5))}</tbody>
       </table></div>
     </div>`:''}`;
+
+  const kycBtn=document.getElementById('kycBannerBtn');
+  if(kycBtn) kycBtn.addEventListener('click',e=>{e.preventDefault();loadView('verification');document.querySelectorAll('.nav a,.mnav').forEach(x=>x.classList.toggle('active',x.dataset.view==='verification'));});
 }
 
 /* ─── Transactions ─── */
@@ -629,6 +667,100 @@ async function renderApiKeys(el){
   });
 }
 
+/* ─── KYC / Verification ─── */
+async function renderVerification(el){
+  if(!M) M=(await API.get('/api/me')).merchant;
+  const {kycStatus,kycData,kycRejectionReason}=await API.get('/api/kyc');
+
+  if(kycStatus==='approved'){
+    el.innerHTML=`<div class="panel r3d" style="padding:32px;text-align:center">
+      <div style="width:60px;height:60px;border-radius:50%;background:rgba(26,168,119,.18);border:1px solid rgba(26,168,119,.35);display:grid;place-items:center;margin:0 auto 18px;color:#1FA877">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
+      <h2 style="font-size:20px;font-weight:800;color:var(--ink)">Account verified</h2>
+      <p style="color:var(--muted);margin-top:8px;font-size:14px">Your business has been verified. You have full access to all Cowrie features.</p>
+    </div>`;
+    return;
+  }
+
+  if(kycStatus==='pending'){
+    el.innerHTML=`<div class="panel r3d" style="padding:32px;text-align:center">
+      <div style="width:60px;height:60px;border-radius:50%;background:rgba(224,161,46,.15);border:1px solid rgba(224,161,46,.3);display:grid;place-items:center;margin:0 auto 18px;color:#E0A12E">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      </div>
+      <h2 style="font-size:20px;font-weight:800;color:var(--ink)">Verification pending</h2>
+      <p style="color:var(--muted);margin-top:8px;font-size:14px">Your documents are under review. We'll update your status within 1–2 business days.</p>
+    </div>`;
+    return;
+  }
+
+  const rejectedBanner=kycStatus==='rejected'?`
+    <div style="background:rgba(239,106,76,.12);border:1px solid rgba(239,106,76,.3);border-radius:12px;padding:14px 18px;margin-bottom:20px;font-size:13.5px;color:var(--coral)">
+      <strong>Verification rejected</strong> — ${esc(kycRejectionReason||'Your submission did not meet our requirements.')} Please correct the details and resubmit.
+    </div>`:'';
+
+  el.innerHTML=`${rejectedBanner}
+    <div class="panel r3d">
+      <div class="panel-head"><h2>Business verification</h2></div>
+      <div style="padding:18px">
+        <div class="field"><div class="lbl">Full name (account owner / director)</div>
+          <input id="kFullName" placeholder="e.g. Kwame Mensah" value="${esc(kycData?.fullName||'')}">
+        </div>
+        <div class="field"><div class="lbl">Phone number</div>
+          <input id="kPhone" placeholder="e.g. 0241234567" value="${esc(kycData?.phone||'')}">
+        </div>
+        <div class="field"><div class="lbl">ID type</div>
+          <select id="kIdType">
+            <option value="">Select ID type</option>
+            ${['Ghana Card','Passport','Driver\'s License','Voter\'s ID'].map(t=>`<option${kycData?.idType===t?' selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><div class="lbl">ID number</div>
+          <input id="kIdNumber" placeholder="e.g. GHA-123456789-0" value="${esc(kycData?.idNumber||'')}">
+        </div>
+        <div class="field"><div class="lbl">Business type</div>
+          <select id="kBizType">
+            <option value="individual"${kycData?.businessType==='individual'||!kycData?' selected':''}>Individual / Sole proprietor</option>
+            <option value="company"${kycData?.businessType==='company'?' selected':''}>Registered company</option>
+          </select>
+        </div>
+        <div class="field"><div class="lbl">Business registration number <span style="color:var(--muted);font-weight:400">(optional)</span></div>
+          <input id="kRegNum" placeholder="e.g. CS-12345" value="${esc(kycData?.businessRegNumber||'')}">
+        </div>
+        <div class="field"><div class="lbl">Business address</div>
+          <input id="kAddress" placeholder="e.g. 12 Cantonments Road, Accra, Ghana" value="${esc(kycData?.address||'')}">
+        </div>
+        <div class="fb" id="kycFb"></div>
+        <button class="btn primary" id="kycSubmit" style="margin-top:6px">Submit for verification</button>
+      </div>
+    </div>`;
+
+  document.getElementById('kycSubmit').addEventListener('click',async()=>{
+    const fb=document.getElementById('kycFb');fb.className='fb';
+    const body={
+      fullName:document.getElementById('kFullName').value.trim(),
+      phone:document.getElementById('kPhone').value.trim(),
+      idType:document.getElementById('kIdType').value,
+      idNumber:document.getElementById('kIdNumber').value.trim(),
+      businessType:document.getElementById('kBizType').value,
+      businessRegNumber:document.getElementById('kRegNum').value.trim(),
+      address:document.getElementById('kAddress').value.trim(),
+    };
+    if(!body.fullName||!body.phone||!body.idType||!body.idNumber||!body.address){
+      fb.textContent='Please fill in all required fields.';fb.className='fb bad';return;
+    }
+    try{
+      document.getElementById('kycSubmit').disabled=true;
+      await API.post('/api/kyc',body);
+      fb.textContent='Submitted! We\'ll review your documents within 1–2 business days.';fb.className='fb ok';
+      setTimeout(()=>loadView('verification'),1500);
+    }catch(err){
+      document.getElementById('kycSubmit').disabled=false;
+      fb.textContent=err.message;fb.className='fb bad';
+    }
+  });
+}
+
 /* ========================= 3D Effects ========================= */
 
 function reveal3d(container){
@@ -684,6 +816,14 @@ async function boot(){
     const {merchant}=await API.get('/api/me');
     M=merchant;
     document.getElementById('merchantTag').textContent=merchant.businessName;
+    if(!merchant.kycStatus||merchant.kycStatus==='none'||merchant.kycStatus==='rejected'){
+      const link=document.getElementById('kycNavLink');
+      if(link){
+        const dot=document.createElement('span');
+        dot.style.cssText='width:7px;height:7px;background:#EF6A4C;border-radius:50%;margin-left:auto;flex-shrink:0';
+        link.appendChild(dot);
+      }
+    }
   }catch(err){
     if(/unauthorized/i.test(err.message)){localStorage.removeItem('cowrie_token');location.href='/login';return;}
   }

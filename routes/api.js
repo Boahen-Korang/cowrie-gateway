@@ -567,4 +567,68 @@ router.post('/webhooks/paystack', (req, res, next) => {
   })().catch(next);
 });
 
+/* ========================= KYC ========================= */
+
+router.post('/kyc', requireAuth, ah(async (req, res) => {
+  const merchant = req.merchant;
+  if (merchant.kycStatus === 'approved') {
+    const e = new Error('Your account is already verified.'); e.status = 409; throw e;
+  }
+  const { fullName, phone, idType, idNumber, businessType, businessRegNumber, address } = req.body || {};
+  if (!fullName || !phone || !idType || !idNumber || !address) {
+    const e = new Error('fullName, phone, idType, idNumber and address are required.'); e.status = 400; throw e;
+  }
+  merchant.kycStatus = 'pending';
+  merchant.kycData = {
+    fullName: String(fullName).trim(),
+    phone: String(phone).trim(),
+    idType: String(idType).trim(),
+    idNumber: String(idNumber).trim(),
+    businessType: String(businessType || 'individual').trim(),
+    businessRegNumber: String(businessRegNumber || '').trim(),
+    address: String(address).trim(),
+  };
+  merchant.kycSubmittedAt = Date.now();
+  merchant.kycRejectionReason = null;
+  await store.merchants.update(merchant);
+  res.json({ merchant: publicMerchant(merchant) });
+}));
+
+router.get('/kyc', requireAuth, (req, res) => {
+  const { kycStatus, kycData, kycSubmittedAt, kycReviewedAt, kycRejectionReason } = req.merchant;
+  res.json({ kycStatus: kycStatus || 'none', kycData: kycData || null, kycSubmittedAt, kycReviewedAt, kycRejectionReason });
+});
+
+router.get('/admin/kyc', requireAdminAuth, ah(async (req, res) => {
+  const all = await store.merchants.all();
+  const merchants = all.filter(m => !m.demo).map(m => ({
+    id: m.id, businessName: m.businessName, email: m.email,
+    kycStatus: m.kycStatus || 'none', kycData: m.kycData || null,
+    kycSubmittedAt: m.kycSubmittedAt, kycReviewedAt: m.kycReviewedAt,
+    kycRejectionReason: m.kycRejectionReason,
+  }));
+  res.json({ merchants });
+}));
+
+router.post('/admin/kyc/:merchantId/approve', requireAdminAuth, ah(async (req, res) => {
+  const merchant = await store.merchants.byId(req.params.merchantId);
+  if (!merchant) { const e = new Error('Merchant not found.'); e.status = 404; throw e; }
+  merchant.kycStatus = 'approved';
+  merchant.kycReviewedAt = Date.now();
+  merchant.kycRejectionReason = null;
+  await store.merchants.update(merchant);
+  res.json({ merchant: publicMerchant(merchant) });
+}));
+
+router.post('/admin/kyc/:merchantId/reject', requireAdminAuth, ah(async (req, res) => {
+  const merchant = await store.merchants.byId(req.params.merchantId);
+  if (!merchant) { const e = new Error('Merchant not found.'); e.status = 404; throw e; }
+  const reason = String((req.body || {}).reason || '').trim() || 'Your submission did not meet our requirements.';
+  merchant.kycStatus = 'rejected';
+  merchant.kycReviewedAt = Date.now();
+  merchant.kycRejectionReason = reason;
+  await store.merchants.update(merchant);
+  res.json({ merchant: publicMerchant(merchant) });
+}));
+
 module.exports = router;
