@@ -287,8 +287,8 @@ input,select,textarea{font-family:inherit}
 'use strict';
 
 /* ---- auth guard ---- */
-const token = localStorage.getItem('cowrie_token');
-if (!token) { location.href = '/login?next=/admin'; throw 0; }
+const token = localStorage.getItem('cowrie_admin_token');
+if (!token) { location.href = '/admin-login'; throw 0; }
 
 /* ---- helpers ---- */
 const SYMS = { GHS:'₵', NGN:'₦', KES:'KSh', ZAR:'R', USD:'$', EUR:'€', GBP:'£' };
@@ -316,7 +316,7 @@ const API = {
   async get(path){
     const r = await fetch(path,{headers:this._h()});
     const d = await r.json().catch(()=>({}));
-    if(r.status===401){localStorage.removeItem('cowrie_token');location.href='/login';throw 0;}
+    if(r.status===401){localStorage.removeItem('cowrie_admin_token');location.href='/admin-login';throw 0;}
     if(!r.ok) throw new Error(d.message||'Request failed');
     return d;
   },
@@ -327,7 +327,7 @@ const API = {
       body:JSON.stringify(body||{})
     });
     const d = await r.json().catch(()=>({}));
-    if(r.status===401){localStorage.removeItem('cowrie_token');location.href='/login';throw 0;}
+    if(r.status===401){localStorage.removeItem('cowrie_admin_token');location.href='/admin-login';throw 0;}
     if(!r.ok) throw new Error(d.message||'Request failed');
     return d;
   }
@@ -373,7 +373,7 @@ async function loadView(view){
 async function renderOverview(el){
   const [{overview},{transactions}] = await Promise.all([
     API.get('/api/admin/overview'),
-    API.get('/api/transactions')
+    API.get('/api/admin/transactions')
   ]);
   txCache = transactions;
 
@@ -462,7 +462,7 @@ function methodBreakdown(byMethod){
 
 /* ========================= Transactions ========================= */
 async function renderTransactions(el){
-  const {transactions} = await API.get('/api/transactions');
+  const {transactions} = await API.get('/api/admin/transactions');
   txCache = transactions;
 
   el.innerHTML = `
@@ -773,9 +773,8 @@ document.querySelectorAll('[data-view]').forEach(a=>{
 });
 document.getElementById('refreshBtn').addEventListener('click',()=>loadView(currentView));
 document.getElementById('logoutBtn').addEventListener('click',()=>{
-  localStorage.removeItem('cowrie_token');
-  localStorage.removeItem('cowrie_merchant');
-  location.href='/login';
+  localStorage.removeItem('cowrie_admin_token');
+  location.href='/admin-login';
 });
 addEventListener('scroll',()=>{
   document.getElementById('topbar').classList.toggle('stuck',scrollY>8);
@@ -784,11 +783,11 @@ addEventListener('scroll',()=>{
 /* ========================= Boot ========================= */
 (async()=>{
   try{
-    const {merchant}=await API.get('/api/me');
-    document.getElementById('merchantTag').textContent=merchant.businessName;
+    const {admin}=await API.get('/api/admin/auth/me');
+    document.getElementById('merchantTag').textContent=admin.email;
     await loadView('overview');
   }catch{
-    location.href='/login?next=/admin';
+    location.href='/admin-login';
   }
 })();
 </script>

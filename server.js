@@ -23,6 +23,7 @@ app.get('/checkout', (_, res) => res.sendFile(path.join(pub, 'checkout.html')));
 app.get('/dashboard', (_, res) => res.sendFile(path.join(pub, 'dashboard.html')));
 app.get('/register', (_, res) => res.sendFile(path.join(pub, 'register.html')));
 app.get('/admin', (_, res) => res.sendFile(path.join(pub, 'admin.html')));
+app.get('/admin-login', (_, res) => res.sendFile(path.join(pub, 'admin-login.html')));
 
 /* ---- JSON 404 + error handler ---- */
 app.use('/api', (_, res) => res.status(404).json({ error: 'not_found', message: 'Unknown endpoint.' }));
