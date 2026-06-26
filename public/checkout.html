@@ -133,6 +133,7 @@ button{font-family:inherit;cursor:pointer}
   </div>
 </div>
 
+<script src="https://js.paystack.co/v1/inline.js"></script>
 <script>
 "use strict";
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -142,13 +143,14 @@ const fmt=(minor,ccy)=>(SYMS[ccy]||(ccy+' '))+' '+(minor/100).toLocaleString('en
 const S={method:'card',step:'form',provider:'MTN',charge:null};
 const amount=()=>S.charge?S.charge.amount:0;
 const ccy=()=>S.charge?S.charge.currency:'GHS';
+const merchantName=()=>(S.charge&&S.charge.merchantName)||'Cowrie';
 
 const API={
   async get(path){const r=await fetch(path);const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed.');return d;},
-  async post(path,body,headers){const r=await fetch(path,{method:'POST',headers:{'content-type':'application/json',...(headers||{})},body:JSON.stringify(body||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed.');return d;}
+  async post(path,body,hdrs){const r=await fetch(path,{method:'POST',headers:{'content-type':'application/json',...(hdrs||{})},body:JSON.stringify(body||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed.');return d;}
 };
 
-/* session timer (cosmetic) */
+/* session timer */
 (function(){let t=899;const e=$('#timer');setInterval(()=>{if(reduce)return;t=Math.max(0,t-1);const m=Math.floor(t/60),s=t%60;e.textContent=m+':'+s.toString().padStart(2,'0');e.style.color=t<120?'var(--coral)':'';},1000);})();
 
 const ICONS={
@@ -158,209 +160,133 @@ const ICONS={
   ussd:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3h14M5 21h14M7 3v18M17 3v18M9 8h6M9 12h6"/></svg>'
 };
 const METHODS=[['card','Card'],['momo','Mobile money'],['bank','Bank'],['ussd','USSD']];
-const METHOD_TO_API={card:'card',momo:'mobile_money',bank:'bank_transfer',ussd:'ussd'};
+const CHANNELS={card:['card'],momo:['mobile_money'],bank:['bank_transfer'],ussd:['ussd']};
 
 function tabs(){
-  return `<div class="methods">${METHODS.map(m=>`<button class="mtab ${S.method===m[0]?'on':''}" data-m="${m[0]}"><span class="mi">${ICONS[m[0]]}</span>${m[1]}</button>`).join('')}</div>`;
+  return `<div class="methods">${METHODS.map(([id,lbl])=>`<button class="mtab ${S.method===id?'on':''}" data-m="${id}"><span class="mi">${ICONS[id]}</span>${lbl}</button>`).join('')}</div>`;
 }
+function payBtn(label){
+  return `<button class="pay" id="pay"><span class="spin"></span><span class="lbl">${label}</span></button>`;
+}
+
+function formFor(m){
+  const payLabel='Pay '+fmt(amount(),ccy());
+  const info='<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>';
+  if(m==='card') return `
+    <div class="hint">${info}Visa, Mastercard and Verve accepted. Your card details are entered securely in the next step.</div>
+    ${payBtn(payLabel)}`;
+  if(m==='momo') return `
+    <div class="field"><label>Network</label></div>
+    <div class="seg" id="prov">${['MTN','Vodafone','AirtelTigo'].map(p=>`<button data-p="${p}" class="${S.provider===p?'on':''}">${p}</button>`).join('')}</div>
+    <div class="hint">${info}A payment prompt will be sent to your phone to approve.</div>
+    ${payBtn(payLabel)}`;
+  if(m==='bank') return `
+    <div class="hint">${info}A one-time virtual account will be generated for your bank transfer.</div>
+    ${payBtn('Continue')}`;
+  if(m==='ussd') return `
+    <div class="hint">${info}A USSD code will be generated. Dial it from your bank's registered line.</div>
+    ${payBtn('Continue')}`;
+}
+
+function bindForm(){
+  if(S.method==='momo'){
+    $('#prov').querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{
+      S.provider=btn.dataset.p;
+      $('#prov').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===btn));
+    }));
+  }
+  $('#pay').addEventListener('click',()=>payWithPaystack(S.method));
+}
+
 function render(){
   const b=$('#body');
-  if(!S.charge){ b.innerHTML='<div class="state"><div class="spinbig"></div><h3>Loading checkout…</h3></div>'; return; }
+  if(!S.charge){b.innerHTML='<div class="state"><div class="spinbig"></div><h3>Loading checkout…</h3></div>';return;}
   if(S.step==='form'){
-    $('#amtLbl').textContent='Pay Adɔm Stores';
+    $('#amtLbl').textContent='Pay '+merchantName();
     $('#amtV').textContent=fmt(amount(),ccy());
     b.innerHTML=tabs()+formFor(S.method);
     b.querySelectorAll('.mtab').forEach(t=>t.addEventListener('click',()=>{S.method=t.dataset.m;render();}));
     bindForm();
   }
-  else if(S.step==='otp')renderOtp(b);
-  else if(S.step==='approve')b.innerHTML=stateApprove();
-  else if(S.step==='waiting')renderWaiting(b);
-  else if(S.step==='success')b.innerHTML=stateSuccess();
-  else if(S.step==='failed')b.innerHTML=stateFailed();
+  else if(S.step==='verifying') b.innerHTML=stateVerifying();
+  else if(S.step==='success') b.innerHTML=stateSuccess();
+  else if(S.step==='failed') b.innerHTML=stateFailed();
 }
 function go(step){S.step=step;render();}
-function simulate(fn,ms){if(reduce)fn();else setTimeout(fn,ms);}
 
-/* ---- forms ---- */
-function payBtn(label){return `<button class="pay" id="pay"><span class="spin"></span><span class="lbl">${label}</span></button>`;}
-
-function formFor(m){
-  if(m==='card')return `
-    <div class="field"><label>Card number</label><div class="inp-wrap">
-      <input class="mono" id="ccn" inputmode="numeric" placeholder="0000 0000 0000 0000" maxlength="19" autocomplete="cc-number">
-      <span class="brand-badge" id="brand" style="display:none"></span></div>
-      <div class="err" id="ccnErr">Enter a valid card number</div></div>
-    <div class="row2">
-      <div class="field"><label>Expiry</label><input class="mono" id="exp" inputmode="numeric" placeholder="MM / YY" maxlength="7"><div class="err" id="expErr">Invalid</div></div>
-      <div class="field"><label>CVV</label><input class="mono" id="cvv" inputmode="numeric" placeholder="123" maxlength="4"><div class="err" id="cvvErr">Invalid</div></div>
-    </div>
-    <div class="hint"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Test card: <b>4242 4242 4242 4242</b> · any future date</div>
-    ${payBtn('Pay '+fmt(amount(),ccy()))}`;
-  if(m==='momo')return `
-    <div class="field"><label>Network</label></div>
-    <div class="seg" id="prov">${['MTN','Vodafone','AirtelTigo'].map(p=>`<button data-p="${p}" class="${S.provider===p?'on':''}">${p}</button>`).join('')}</div>
-    <div class="field"><label>Mobile money number</label><input class="mono" id="phone" inputmode="numeric" placeholder="024 123 4567" maxlength="13"><div class="err" id="phoneErr">Enter a valid 10-digit number</div></div>
-    <div class="hint"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>You'll approve a prompt on your phone.</div>
-    ${payBtn('Pay '+fmt(amount(),ccy()))}`;
-  if(m==='bank')return `
-    <div class="hint"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>We'll generate a one-time account for this payment.</div>
-    ${payBtn('Continue')}`;
-  if(m==='ussd')return `
-    <div class="hint"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>We'll generate a USSD code for this payment.</div>
-    ${payBtn('Continue')}`;
-}
-
-/* ---- bind validation per method, then hand off to the real API ---- */
-function bindForm(){
+/* ---- Paystack integration ---- */
+async function payWithPaystack(uiMethod){
   const pay=$('#pay');
-  if(S.method==='card'){
-    const ccn=$('#ccn'),exp=$('#exp'),cvv=$('#cvv'),brand=$('#brand');
-    ccn.addEventListener('input',()=>{
-      let v=ccn.value.replace(/\D/g,'').slice(0,16);
-      ccn.value=v.replace(/(.{4})/g,'$1 ').trim();
-      const b=detectBrand(v); if(b){brand.textContent=b;brand.style.display='';}else brand.style.display='none';
-      ccn.classList.remove('bad');$('#ccnErr').classList.remove('show');
-    });
-    exp.addEventListener('input',()=>{let v=exp.value.replace(/\D/g,'').slice(0,4);if(v.length>=3)v=v.slice(0,2)+' / '+v.slice(2);exp.value=v;exp.classList.remove('bad');});
-    cvv.addEventListener('input',()=>{cvv.value=cvv.value.replace(/\D/g,'').slice(0,4);cvv.classList.remove('bad');});
-    pay.addEventListener('click',()=>{
-      let ok=true;
-      const num=ccn.value.replace(/\s/g,'');
-      if(num.length<16||!luhn(num)){ccn.classList.add('bad');$('#ccnErr').classList.add('show');ok=false;}
-      const em=exp.value.replace(/\D/g,'');
-      if(em.length<4||+em.slice(0,2)<1||+em.slice(0,2)>12){exp.classList.add('bad');$('#expErr').classList.add('show');ok=false;}
-      if(cvv.value.length<3){cvv.classList.add('bad');$('#cvvErr').classList.add('show');ok=false;}
-      if(!ok)return;
-      submitMethod(pay,'card',{number:num,expiry:exp.value.replace(/\D/g,'')});
-    });
-  }
-  else if(S.method==='momo'){
-    $('#prov').querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{S.provider=btn.dataset.p;$('#prov').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===btn));}));
-    const phone=$('#phone');
-    phone.addEventListener('input',()=>{phone.value=phone.value.replace(/[^\d ]/g,'');phone.classList.remove('bad');$('#phoneErr').classList.remove('show');});
-    pay.addEventListener('click',()=>{const d=phone.value.replace(/\D/g,'');if(d.length<10){phone.classList.add('bad');$('#phoneErr').classList.add('show');return;}submitMethod(pay,'momo',{phone:d,provider:S.provider});});
-  }
-  else if(S.method==='bank'){
-    pay.addEventListener('click',()=>submitMethod(pay,'bank',{}));
-  }
-  else if(S.method==='ussd'){
-    pay.addEventListener('click',()=>submitMethod(pay,'ussd',{}));
-  }
-}
-
-async function submitMethod(btn,uiMethod,details){
-  btn.classList.add('loading');
+  pay.classList.add('loading');
   try{
-    const {charge}=await API.post(`/api/charges/${S.charge.reference}/method`,{method:METHOD_TO_API[uiMethod],details});
-    S.charge=charge;
-    btn.classList.remove('loading');
-    routeFromCharge();
+    const {accessCode,publicKey,alreadyComplete}=await API.post(
+      `/api/charges/${S.charge.reference}/paystack-init`,
+      {channels:CHANNELS[uiMethod]||[]}
+    );
+    if(alreadyComplete){
+      // charge was already paid (e.g. user refreshed) — just reflect the status
+      const {charge}=await API.get(`/api/charges/${S.charge.reference}/verify`);
+      S.charge=charge;
+      routeFromCharge();
+      return;
+    }
+    pay.classList.remove('loading');
+
+    PaystackPop.newTransaction({
+      key: publicKey,
+      accessCode: accessCode,
+      onSuccess: async ()=>{
+        go('verifying');
+        try{
+          const {charge}=await API.get(`/api/charges/${S.charge.reference}/verify`);
+          S.charge=charge;
+          routeFromCharge();
+        }catch{go('failed');}
+      },
+      onCancel: ()=>{
+        /* user closed popup without paying — stay on form */
+      },
+    });
   }catch(err){
-    btn.classList.remove('loading');
+    pay.classList.remove('loading');
     alert(err.message);
   }
 }
 
 function routeFromCharge(){
   const st=S.charge.status;
-  if(st==='requires_otp')go('otp');
-  else if(st==='requires_approval'){go('approve');autoApprove();}
-  else if(st==='awaiting_transfer'||st==='awaiting_ussd')go('waiting');
-  else if(st==='success')go('success');
-  else if(st==='failed')go('failed');
+  if(st==='success') go('success');
+  else if(st==='failed') go('failed');
   else go('form');
 }
 
-/* demo only: simulates the customer approving the operator prompt, then asks the
-   server to confirm — a real integration would instead wait for the operator callback */
-function autoApprove(){
-  simulate(async ()=>{
-    try{ const {charge}=await API.post(`/api/charges/${S.charge.reference}/confirm`,{}); S.charge=charge; routeFromCharge(); }
-    catch{ go('failed'); }
-  },3400);
-}
-
-function detectBrand(v){
-  if(/^4/.test(v))return'VISA';
-  if(/^(5[1-5]|2[2-7])/.test(v))return'MASTERCARD';
-  if(/^(506[01]|650|5078|6280)/.test(v))return'VERVE';
-  return'';
-}
-function luhn(n){let s=0,a=false;for(let i=n.length-1;i>=0;i--){let d=+n[i];if(a){d*=2;if(d>9)d-=9;}s+=d;a=!a;}return s%10===0;}
-
 /* ---- states ---- */
-function stateApprove(){const p=(S.charge.auth&&S.charge.auth.provider)||S.provider;return `<div class="state"><div class="ic phone-pulse"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg></div><h3>Approve on your phone</h3><p>A prompt was sent to your ${p} line. Enter your mobile money PIN to authorise ${fmt(amount(),ccy())}.</p></div>`;}
-
-function renderWaiting(b){
-  const a=S.charge.auth||{};
-  if(S.charge.method==='bank_transfer'){
-    b.innerHTML=`<div class="detail-box">
-      <div class="drow"><span class="k">BANK</span><span class="v">${a.bank}</span></div>
-      <div class="drow"><span class="k">ACCOUNT</span><span class="v">${a.account} <button class="copy" data-c="${a.account}">copy</button></span></div>
-      <div class="drow"><span class="k">REFERENCE</span><span class="v">${a.reference} <button class="copy" data-c="${a.reference}">copy</button></span></div>
-      <div class="drow"><span class="k">AMOUNT</span><span class="v">${fmt(amount(),ccy())}</span></div>
-    </div>
-    <div class="hint"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Transfer to this one-time account, then confirm below.</div>
-    ${payBtn("I've sent the transfer")}`;
-  }else{
-    b.innerHTML=`<div class="ussd-code">${a.code}</div>
-    <div class="hint" style="margin-bottom:6px"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Dial this code on the phone linked to your bank, then confirm.</div>
-    ${payBtn("I've completed the payment")}`;
-  }
-  b.querySelectorAll('.copy').forEach(c=>c.addEventListener('click',()=>{navigator.clipboard&&navigator.clipboard.writeText(c.dataset.c).catch(()=>{});c.textContent='copied';setTimeout(()=>c.textContent='copy',1200);}));
-  $('#pay').addEventListener('click',async ()=>{
-    const btn=$('#pay');btn.classList.add('loading');
-    try{ const {charge}=await API.post(`/api/charges/${S.charge.reference}/confirm`,{}); S.charge=charge; btn.classList.remove('loading'); routeFromCharge(); }
-    catch{ btn.classList.remove('loading'); go('failed'); }
-  });
-}
-
-function renderOtp(b){
-  b.innerHTML=`<button class="back" id="back">← Back</button>
-    <div class="state"><div class="ic" style="background:var(--plum-tint);color:var(--plum)"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
-    <h3>Verify it's you</h3><p>Enter the 6-digit code sent to the phone linked to your card (3-D Secure).</p>
-    <div class="otp-boxes" id="otp">${Array.from({length:6}).map((_,i)=>`<input inputmode="numeric" maxlength="1" data-i="${i}">`).join('')}</div>
-    <button class="pay" id="verify" disabled><span class="spin"></span><span class="lbl">Verify &amp; pay</span></button>
-    <div class="resend" id="resend">Test OTP: <b>123456</b></div></div>`;
-  $('#verify').querySelector('.lbl').textContent='Verify & pay '+fmt(amount(),ccy());
-  $('#back').addEventListener('click',()=>go('form'));
-  const boxes=[...$('#otp').querySelectorAll('input')];
-  function check(){const code=boxes.map(b=>b.value).join('');$('#verify').disabled=code.length<6;}
-  boxes.forEach((bx,i)=>{
-    bx.addEventListener('input',()=>{bx.value=bx.value.replace(/\D/g,'');if(bx.value&&i<5)boxes[i+1].focus();check();});
-    bx.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!bx.value&&i>0)boxes[i-1].focus();});
-  });
-  boxes[0].focus();
-  $('#verify').addEventListener('click',async ()=>{
-    const v=$('#verify');const code=boxes.map(b=>b.value).join('');
-    v.classList.add('loading');
-    try{ const {charge}=await API.post(`/api/charges/${S.charge.reference}/authorize`,{otp:code}); S.charge=charge; v.classList.remove('loading'); routeFromCharge(); }
-    catch(err){ v.classList.remove('loading'); alert(err.message); }
-  });
+function stateVerifying(){
+  return `<div class="state"><div class="spinbig"></div><h3>Confirming payment…</h3><p>Please wait while we confirm your payment.</p></div>`;
 }
 
 function stateSuccess(){
-  $('#amtLbl').textContent='Paid to Adɔm Stores';
-  const methodLabel=({card:'Card',mobile_money:((S.charge.auth&&S.charge.auth.provider)||'')+' MoMo',bank_transfer:'Bank transfer',ussd:'USSD'})[S.charge.method]||S.charge.method;
+  $('#amtLbl').textContent='Paid to '+merchantName();
+  const ch=S.charge.auth&&S.charge.auth.channel;
+  const methodLabel=({card:'Card',mobile_money:'Mobile money',bank_transfer:'Bank transfer',ussd:'USSD'})[ch||S.charge.method]||S.charge.method||'—';
   return `<div class="state">
     <div class="ic done-ic"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
-    <h3>Payment successful</h3><p>Your payment of ${fmt(amount(),ccy())} to Adɔm Stores is complete.</p>
+    <h3>Payment successful</h3><p>Your payment of ${fmt(amount(),ccy())} to ${merchantName()} is complete.</p>
     <div class="receipt">
       <div class="drow"><span class="k">REFERENCE</span><span class="v">${S.charge.reference}</span></div>
       <div class="drow"><span class="k">METHOD</span><span class="v">${methodLabel}</span></div>
       <div class="drow"><span class="k">AMOUNT</span><span class="v" style="color:var(--mint)">${fmt(amount(),ccy())}</span></div>
     </div>
-    <button class="pay" id="ret">Return to Adɔm Stores</button>
+    <button class="pay" id="ret">Return to ${merchantName()}</button>
   </div>`;
 }
 
 function stateFailed(){
-  const f=S.charge.failure||{message:'Something went wrong with this payment.'};
+  const f=S.charge.failure||{message:'Your payment could not be processed.'};
   return `<div class="state">
     <div class="ic" style="background:var(--coral-tint);color:var(--coral)"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg></div>
     <h3>Payment failed</h3><p>${f.message}</p>
-    <button class="pay" id="retry" style="margin-top:10px">Start over</button>
+    <button class="pay" id="retry" style="margin-top:10px">Try again</button>
   </div>`;
 }
 
@@ -373,7 +299,8 @@ async function boot(){
       S.charge=charge;
     }else{
       const {publicKey}=await API.get('/api/demo/public-key');
-      const {charge}=await API.post('/api/charges',{amount:25000,currency:'GHS',email:$('#email').value},{'x-public-key':publicKey});
+      const email=$('#email').value||'demo@cowrie.local';
+      const {charge}=await API.post('/api/charges',{amount:25000,currency:'GHS',email},{'x-public-key':publicKey});
       S.charge=charge;
       history.replaceState(null,'','?reference='+charge.reference);
     }
@@ -386,7 +313,7 @@ async function boot(){
 
 document.addEventListener('click',e=>{
   if(e.target&&e.target.id==='ret') location.href='/';
-  if(e.target&&e.target.id==='retry') location.href=location.pathname;
+  if(e.target&&e.target.id==='retry') location.reload();
 });
 boot();
 </script>

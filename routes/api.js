@@ -1,8 +1,10 @@
 'use strict';
+const crypto = require('crypto');
 const express = require('express');
 const store = require('../lib/store');
 const cfg = require('../lib/config');
 const payments = require('../lib/payments');
+const paystack = require('../lib/paystack');
 const {
   merchantId, apiKey, genId, hashPassword, verifyPassword, signToken, verifyToken,
 } = require('../lib/util');
@@ -147,7 +149,8 @@ router.post('/charges', chargeLimiter, resolveMerchantByKey, (req, res, next) =>
 });
 
 router.get('/charges/:reference', loadCharge, (req, res) => {
-  res.json({ charge: req.charge });
+  const merchant = store.merchants.byId(req.charge.merchantId);
+  res.json({ charge: { ...req.charge, merchantName: merchant ? merchant.businessName : 'Cowrie' } });
 });
 
 router.post('/charges/:reference/method', loadCharge, (req, res, next) => {
@@ -303,6 +306,113 @@ router.post('/admin/new-payment', requireAdminAuth, (req, res, next) => {
       amount: Number(amount) || 0, currency: currency || 'GHS', email: String(email || '').trim(),
     });
     res.status(201).json({ charge, checkoutUrl: `/checkout?reference=${charge.reference}` });
+  } catch (e) { next(e); }
+});
+
+/* =========================== Paystack integration =========================== */
+
+// Initialize a Paystack transaction — returns access_code for the inline popup
+router.post('/charges/:reference/paystack-init', loadCharge, async (req, res, next) => {
+  try {
+    if (!cfg.PAYSTACK_SECRET_KEY) {
+      const e = new Error('Paystack is not configured. Set PAYSTACK_SECRET_KEY in environment variables.'); e.status = 503; throw e;
+    }
+    const charge = req.charge;
+    if (charge.status === 'success' || charge.status === 'failed') {
+      return res.json({ charge, alreadyComplete: true });
+    }
+    const email = charge.customerEmail || `customer_${charge.reference}@cowrie.local`;
+    const channels = Array.isArray(req.body && req.body.channels) ? req.body.channels : undefined;
+    const paystackRef = `cwr_${charge.reference}_${Date.now()}`;
+
+    const data = await paystack.initialize({
+      email,
+      amount: charge.amount,
+      currency: charge.currency || 'GHS',
+      reference: paystackRef,
+      channels,
+      metadata: { cowrie_reference: charge.reference, merchantId: charge.merchantId },
+    });
+
+    charge.paystackRef = paystackRef;
+    store.charges.update(charge);
+    store.persist();
+
+    res.json({ accessCode: data.access_code, publicKey: cfg.PAYSTACK_PUBLIC_KEY, paystackRef });
+  } catch (e) { next(e); }
+});
+
+// Poll this after Paystack popup callback to confirm charge status
+router.get('/charges/:reference/verify', loadCharge, async (req, res, next) => {
+  try {
+    const charge = req.charge;
+    if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge });
+    if (!charge.paystackRef) return res.json({ charge });
+
+    const data = await paystack.verify(charge.paystackRef);
+    if (!data.status) throw new Error(data.message || 'Paystack verification failed');
+
+    const tx = data.data;
+    const CHANNEL_MAP = { mobile_money: 'mobile_money', bank_transfer: 'bank_transfer', ussd: 'ussd' };
+
+    if (tx.status === 'success') {
+      charge.status = 'success';
+      charge.paidAt = Date.now();
+      charge.method = CHANNEL_MAP[tx.channel] || 'card';
+      charge.auth = {
+        provider: 'paystack',
+        channel: tx.channel,
+        last4: tx.authorization && tx.authorization.last4,
+        brand: tx.authorization && tx.authorization.card_type,
+        bank: tx.authorization && tx.authorization.bank,
+        phone: tx.customer && tx.customer.phone,
+      };
+      store.charges.update(charge);
+      store.persist();
+    } else if (tx.status === 'failed') {
+      charge.status = 'failed';
+      charge.failure = { message: tx.gateway_response || 'Payment failed' };
+      store.charges.update(charge);
+      store.persist();
+    }
+
+    res.json({ charge });
+  } catch (e) { next(e); }
+});
+
+// Paystack webhook — verifies HMAC signature against raw body, then updates charge
+router.post('/webhooks/paystack', (req, res, next) => {
+  try {
+    const sig = req.headers['x-paystack-signature'];
+    const raw = req.rawBody;
+    if (!sig || !raw) return res.status(400).json({ error: 'missing_signature' });
+
+    const expected = crypto.createHmac('sha512', cfg.PAYSTACK_SECRET_KEY).update(raw).digest('hex');
+    if (sig !== expected) return res.status(400).json({ error: 'invalid_signature' });
+
+    const event = JSON.parse(raw.toString());
+    if (event.event === 'charge.success') {
+      const cowrieRef = event.data && event.data.metadata && event.data.metadata.cowrie_reference;
+      if (cowrieRef) {
+        const charge = store.charges.byReference(cowrieRef);
+        if (charge && charge.status !== 'success') {
+          const CHANNEL_MAP = { mobile_money: 'mobile_money', bank_transfer: 'bank_transfer', ussd: 'ussd' };
+          charge.status = 'success';
+          charge.paidAt = Date.now();
+          charge.method = CHANNEL_MAP[event.data.channel] || 'card';
+          charge.auth = {
+            provider: 'paystack',
+            channel: event.data.channel,
+            last4: event.data.authorization && event.data.authorization.last4,
+            brand: event.data.authorization && event.data.authorization.card_type,
+            bank: event.data.authorization && event.data.authorization.bank,
+          };
+          store.charges.update(charge);
+          store.persist();
+        }
+      }
+    }
+    res.json({ received: true });
   } catch (e) { next(e); }
 });
 
