@@ -219,9 +219,11 @@ async function payWithPaystack(uiMethod){
   const pay=$('#pay');
   pay.classList.add('loading');
   try{
+    const emailEl=$('#email');
+    const email=emailEl&&emailEl.value.trim()||'';
     const {accessCode,publicKey,alreadyComplete}=await API.post(
       `/api/charges/${S.charge.reference}/paystack-init`,
-      {channels:CHANNELS[uiMethod]||[]}
+      {channels:CHANNELS[uiMethod]||[],email}
     );
     if(alreadyComplete){
       // charge was already paid (e.g. user refreshed) — just reflect the status

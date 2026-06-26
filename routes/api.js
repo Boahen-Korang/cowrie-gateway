@@ -321,7 +321,9 @@ router.post('/charges/:reference/paystack-init', loadCharge, async (req, res, ne
     if (charge.status === 'success' || charge.status === 'failed') {
       return res.json({ charge, alreadyComplete: true });
     }
-    const email = charge.customerEmail || `customer_${charge.reference}@cowrie.local`;
+    const email = (req.body.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(req.body.email) ? req.body.email : null)
+      || charge.customerEmail
+      || `customer@cowrie.africa`;
     const channels = Array.isArray(req.body && req.body.channels) ? req.body.channels : undefined;
     const paystackRef = `cwr_${charge.reference}_${Date.now()}`;
 
