@@ -669,19 +669,27 @@ async function renderApiKeys(el){
 
 /* ─── KYC / Verification ─── */
 const kycFiles={idFront:null,idBack:null,certificate:null};
+const isMobileDevice=('ontouchstart' in window)||navigator.maxTouchPoints>0;
 
-function kycUploadZone(id,label,hint){
+function kycUploadZone(id,label,hint,allowPdf=false){
+  const accept=allowPdf?'image/*,.pdf':'image/*';
   return `<div class="field">
     <div class="lbl">${label}</div>
     <label class="upload-zone" id="uz-${id}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;border:1.5px dashed rgba(255,255,255,.15);border-radius:12px;padding:20px;cursor:pointer;transition:.15s;min-height:110px;position:relative;background:rgba(255,255,255,.03)">
-      <input type="file" id="fi-${id}" accept="image/*,.pdf" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
+      <input type="file" id="fi-${id}" accept="${accept}" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
       <div id="up-preview-${id}" style="display:none;width:100%;text-align:center"></div>
       <div id="up-placeholder-${id}" style="text-align:center;pointer-events:none">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.5" style="margin-bottom:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <div style="font-size:12.5px;color:rgba(255,255,255,.35)">${hint}</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:3px">JPG, PNG or PDF · max 5 MB</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:3px">${allowPdf?'JPG, PNG or PDF':'JPG or PNG'} · max 5 MB</div>
       </div>
     </label>
+    <!-- hidden camera-capture input; button shown only on touch devices via JS -->
+    <input type="file" id="cam-fi-${id}" accept="image/*" capture="environment" style="display:none">
+    <button type="button" id="cam-btn-${id}" style="display:none;width:100%;margin-top:8px;height:42px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:rgba(255,255,255,.65);font-family:var(--display);font-size:13.5px;font-weight:600;cursor:pointer;gap:8px;align-items:center;justify-content:center;transition:.15s">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      Take photo
+    </button>
   </div>`;
 }
 
@@ -752,12 +760,12 @@ async function renderVerification(el){
 
         <div style="margin:24px 0 8px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.38)">ID Documents</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          ${kycUploadZone('idFront','ID — front side','Click or drag to upload front of ID')}
-          ${kycUploadZone('idBack','ID — back side','Click or drag to upload back of ID')}
+          ${kycUploadZone('idFront','ID — front side','Tap to choose or drag photo')}
+          ${kycUploadZone('idBack','ID — back side','Tap to choose or drag photo')}
         </div>
 
         <div style="margin:20px 0 8px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.38)">Business Document</div>
-        ${kycUploadZone('certificate','Business certificate / registration','Certificate of incorporation, business registration or equivalent')}
+        ${kycUploadZone('certificate','Business certificate / registration','Certificate of incorporation, business registration or equivalent',true)}
 
         <div class="fb" id="kycFb"></div>
         <button class="btn primary" id="kycSubmit" style="margin-top:12px">Submit for verification</button>
@@ -767,9 +775,17 @@ async function renderVerification(el){
   /* Wire up file inputs */
   ['idFront','idBack','certificate'].forEach(key=>{
     const input=document.getElementById(`fi-${key}`);
+    const camInput=document.getElementById(`cam-fi-${key}`);
+    const camBtn=document.getElementById(`cam-btn-${key}`);
     const zone=document.getElementById(`uz-${key}`);
     const preview=document.getElementById(`up-preview-${key}`);
     const placeholder=document.getElementById(`up-placeholder-${key}`);
+
+    const markDone=()=>{
+      zone.style.borderColor='rgba(91,44,143,.55)';
+      zone.style.background='rgba(91,44,143,.08)';
+      if(camBtn)camBtn.style.background='rgba(91,44,143,.15)';
+    };
 
     const load=file=>{
       if(!file)return;
@@ -787,13 +803,20 @@ async function renderVerification(el){
         preview.innerHTML=isPdf
           ?`<div style="padding:10px;font-size:12px;color:#C9AEFF">📄 ${esc(file.name)}</div>`
           :`<img src="${e.target.result}" style="max-height:90px;max-width:100%;border-radius:7px;object-fit:contain"><div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:5px">${esc(file.name)}</div>`;
-        zone.style.borderColor='rgba(91,44,143,.55)';
-        zone.style.background='rgba(91,44,143,.08)';
+        markDone();
       };
       reader.readAsDataURL(file);
     };
 
     input.addEventListener('change',()=>load(input.files[0]));
+    camInput.addEventListener('change',()=>load(camInput.files[0]));
+
+    /* Show camera button on touch devices */
+    if(isMobileDevice&&camBtn){
+      camBtn.style.display='flex';
+      camBtn.addEventListener('click',()=>camInput.click());
+    }
+
     zone.addEventListener('dragover',e=>{e.preventDefault();zone.style.borderColor='rgba(139,92,246,.6)';});
     zone.addEventListener('dragleave',()=>zone.style.borderColor='');
     zone.addEventListener('drop',e=>{
