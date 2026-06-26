@@ -48,8 +48,21 @@ async function seedDemoMerchant() {
   console.log('  Seeded demo merchant: demo@adom.shop / password123');
 }
 
+async function connectWithRetry(maxAttempts = 6, delayMs = 3000) {
+  for (let i = 1; i <= maxAttempts; i++) {
+    try {
+      await migrate();
+      return;
+    } catch (e) {
+      if (i === maxAttempts) throw e;
+      console.log(`  [DB] Not ready (attempt ${i}/${maxAttempts}), retrying in ${delayMs / 1000}s…`);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+}
+
 async function start() {
-  await migrate();
+  await connectWithRetry();
   await seedDemoMerchant();
   app.listen(cfg.PORT, async () => {
     const all = await store.merchants.all();

@@ -440,8 +440,8 @@ router.post('/charges/:reference/pay', loadCharge, ah(async (req, res) => {
   if (method === 'card') {
     body.card = { number: String(number || '').replace(/\s/g, ''), cvv: String(cvv || ''), expiry_month: String(expiry_month || ''), expiry_year: String(expiry_year || '') };
   } else if (method === 'mobile_money') {
-    const PROV = { MTN: 'mtn', Vodafone: 'vod', AirtelTigo: 'atl' };
-    body.mobile_money = { phone: normalizePhone(phone), provider: PROV[provider] || 'mtn' };
+    const PROV = { MTN: 'mtn', Vodafone: 'vod', AirtelTigo: 'tgo' };
+    body.mobile_money = { phone: normalizePhone(phone), provider: PROV[provider] || provider || 'mtn' };
   } else if (method === 'bank') {
     body.bank_transfer = { account_expires_at: new Date(Date.now() + 3_600_000).toISOString() };
   } else if (method === 'ussd') {
