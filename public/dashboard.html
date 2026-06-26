@@ -219,10 +219,34 @@ input,select,textarea{font-family:inherit}
       <div class="brand"><span class="shell"></span>Cowrie</div>
       <div class="topbar-right">
         <span class="merchant-tag" id="merchantTag">…</span>
-        <!-- Test / Live toggle -->
-        <div id="modeToggle" style="display:flex;align-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:2px;gap:2px;cursor:pointer;user-select:none">
-          <span id="btnTest" style="padding:4px 11px;border-radius:6px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;transition:.15s">TEST</span>
-          <span id="btnLive" style="padding:4px 11px;border-radius:6px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;transition:.15s">LIVE</span>
+        <!-- Mode dropdown -->
+        <div style="position:relative" id="modeWrap">
+          <button id="modeBtn" style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;color:#fff;transition:.15s;user-select:none">
+            <span id="modeDot" style="width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#E0A12E"></span>
+            <span id="modeLabel">TEST</span>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div id="modeDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:#1a1035;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px;min-width:180px;box-shadow:0 16px 40px rgba(0,0,0,.5);z-index:999">
+            <div id="ddTest" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;transition:.12s" onmouseenter="this.style.background='rgba(255,255,255,.07)'" onmouseleave="this.style.background=''">
+              <span style="width:7px;height:7px;border-radius:50%;background:#E0A12E;flex-shrink:0"></span>
+              <div>
+                <div style="font-family:var(--mono);font-size:11.5px;font-weight:700;color:#E0A12E">Test mode</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:1px">Simulated payments</div>
+              </div>
+            </div>
+            <div id="ddLive" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;transition:.12s" onmouseenter="this.style.background='rgba(255,255,255,.07)'" onmouseleave="this.style.background=''">
+              <span style="width:7px;height:7px;border-radius:50%;flex-shrink:0" id="ddLiveDot"></span>
+              <div>
+                <div style="font-family:var(--mono);font-size:11.5px;font-weight:700" id="ddLiveLabel">Live mode</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:1px" id="ddLiveHint">Real payments</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Toast notification -->
+        <div id="modeToast" style="display:none;position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#1a1035;border:1px solid rgba(239,106,76,.4);border-radius:12px;padding:13px 20px;font-size:13.5px;color:#EF6A4C;z-index:9999;box-shadow:0 12px 36px rgba(0,0,0,.5);display:none;align-items:center;gap:10px;max-width:360px;text-align:center">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M12 2 4 6v6c0 5 3.4 7.7 8 10 4.6-2.3 8-5 8-10V6z"/></svg>
+          <span>Complete account verification before switching to Live mode.</span>
         </div>
         <button class="btn sm" id="logoutBtn">Sign out</button>
       </div>
@@ -936,27 +960,84 @@ window.addEventListener('scroll',()=>{
   });
 },{passive:true});
 
-/* ========================= Mode toggle ========================= */
+/* ========================= Mode dropdown ========================= */
+let KYC_APPROVED=false;
+let modeDropOpen=false;
+
 function applyMode(){
   const isLive=MODE==='live';
-  const btnTest=document.getElementById('btnTest');
-  const btnLive=document.getElementById('btnLive');
-  if(btnTest&&btnLive){
-    btnTest.style.background=isLive?'':'rgba(224,161,46,.25)';
-    btnTest.style.color=isLive?'rgba(255,255,255,.4)':'#E0A12E';
-    btnLive.style.background=isLive?'rgba(26,168,119,.25)':'';
-    btnLive.style.color=isLive?'#1FA877':'rgba(255,255,255,.4)';
+  const dot=document.getElementById('modeDot');
+  const label=document.getElementById('modeLabel');
+  if(dot)dot.style.background=isLive?'#1FA877':'#E0A12E';
+  if(label)label.textContent=isLive?'LIVE':'TEST';
+}
+
+function updateDropdownLiveState(){
+  const dot=document.getElementById('ddLiveDot');
+  const lbl=document.getElementById('ddLiveLabel');
+  const hint=document.getElementById('ddLiveHint');
+  if(!dot)return;
+  if(KYC_APPROVED){
+    dot.style.background='#1FA877';
+    lbl.style.color='#1FA877';
+    if(hint)hint.textContent='Real payments';
+  }else{
+    dot.style.background='rgba(255,255,255,.2)';
+    lbl.style.color='rgba(255,255,255,.3)';
+    if(hint)hint.textContent='Requires account verification';
   }
 }
 
-document.getElementById('modeToggle').addEventListener('click',()=>{
-  MODE=MODE==='live'?'test':'live';
+function openModeDropdown(){
+  const dd=document.getElementById('modeDropdown');
+  if(!dd)return;
+  /* mark active item */
+  document.getElementById('ddTest').style.background=MODE==='test'?'rgba(224,161,46,.1)':'';
+  document.getElementById('ddLive').style.background=MODE==='live'?'rgba(26,168,119,.1)':'';
+  updateDropdownLiveState();
+  dd.style.display='block';
+  modeDropOpen=true;
+}
+function closeModeDropdown(){
+  const dd=document.getElementById('modeDropdown');
+  if(dd)dd.style.display='none';
+  modeDropOpen=false;
+}
+
+function switchMode(m){
+  closeModeDropdown();
+  if(m===MODE)return;
+  MODE=m;
   localStorage.setItem('cowrie_mode',MODE);
   applyMode();
-  /* reload current view with new mode */
-  const current=document.querySelector('.nav a.active')||document.querySelector('[data-view].active');
-  const view=current?current.dataset.view:'overview';
-  loadView(view);
+  const current=document.querySelector('.nav a.active,[data-view].active');
+  loadView(current?current.dataset.view:'overview');
+}
+
+function showModeToast(msg){
+  const t=document.getElementById('modeToast');
+  if(!t)return;
+  t.querySelector('span').textContent=msg;
+  t.style.display='flex';
+  clearTimeout(t._tid);
+  t._tid=setTimeout(()=>t.style.display='none',3500);
+}
+
+document.getElementById('modeBtn').addEventListener('click',e=>{
+  e.stopPropagation();
+  modeDropOpen?closeModeDropdown():openModeDropdown();
+});
+document.getElementById('ddTest').addEventListener('click',()=>switchMode('test'));
+document.getElementById('ddLive').addEventListener('click',()=>{
+  if(!KYC_APPROVED){
+    closeModeDropdown();
+    showModeToast('Complete account verification before switching to Live mode.');
+    return;
+  }
+  switchMode('live');
+});
+document.addEventListener('click',e=>{
+  if(modeDropOpen&&!document.getElementById('modeWrap').contains(e.target))closeModeDropdown();
 });
 
 /* ========================= Boot & Nav ========================= */
@@ -966,7 +1047,14 @@ async function boot(){
     const {merchant}=await API.get('/api/me');
     M=merchant;
     document.getElementById('merchantTag').textContent=merchant.businessName;
-    if(!merchant.kycStatus||merchant.kycStatus==='none'||merchant.kycStatus==='rejected'){
+    KYC_APPROVED=merchant.kycStatus==='approved';
+    /* If somehow in live mode but KYC not approved, drop back to test */
+    if(MODE==='live'&&!KYC_APPROVED){
+      MODE='test';
+      localStorage.setItem('cowrie_mode','test');
+      applyMode();
+    }
+    if(!KYC_APPROVED){
       const link=document.getElementById('kycNavLink');
       if(link){
         const dot=document.createElement('span');
