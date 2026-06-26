@@ -9,239 +9,177 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --dark:#09071A; --dark2:#0F0C22;
   --plum:#5B2C8F; --plum-deep:#3D1D62; --plum-light:#7B45B8;
-  --gold:#C8860A; --gold-light:#E0A12E;
-  --mint:#1A9B6E; --coral:#F87171;
-  --border:rgba(255,255,255,.1); --border-focus:rgba(139,92,246,.6);
-  --text:#FFFFFF; --text-soft:rgba(255,255,255,.55); --text-muted:rgba(255,255,255,.3);
+  --gold:#C8860A; --mint:#1A9B6E; --coral:#EF6A4C;
+  --dark:#09071A; --dark2:#120C24; --dark3:#1C1335;
   --display:'Plus Jakarta Sans',sans-serif; --mono:'JetBrains Mono',monospace;
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-html{height:100%}
-body{min-height:100vh;background:var(--dark);color:var(--text);font-family:var(--display);-webkit-font-smoothing:antialiased;line-height:1.5}
-::selection{background:var(--plum);color:#fff}
-a{color:inherit;text-decoration:none}
-button{font-family:inherit;cursor:pointer}
+html,body{height:100%}
+body{
+  background:var(--dark);color:#fff;font-family:var(--display);
+  -webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center;
+  padding:24px;position:relative;overflow:hidden;
+}
+body::before{content:'';position:fixed;top:-25%;left:-20%;width:65%;height:65%;background:radial-gradient(circle,rgba(91,44,143,.4),transparent 65%);filter:blur(70px);pointer-events:none}
+body::after{content:'';position:fixed;bottom:-25%;right:-20%;width:60%;height:60%;background:radial-gradient(circle,rgba(200,134,10,.22),transparent 65%);filter:blur(60px);pointer-events:none}
+.bg-dots{position:fixed;inset:0;background-image:radial-gradient(rgba(255,255,255,.05) 1.2px,transparent 1.2px);background-size:28px 28px;pointer-events:none;z-index:0}
 
-.bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
-.bg-glow::before{content:'';position:absolute;top:-20%;right:-10%;width:60%;height:70%;background:radial-gradient(circle,rgba(91,44,143,.45),transparent 65%);filter:blur(80px)}
-.bg-glow::after{content:'';position:absolute;bottom:-25%;left:-15%;width:55%;height:65%;background:radial-gradient(circle,rgba(200,134,10,.2),transparent 65%);filter:blur(70px)}
-.bg-dots{position:fixed;inset:0;background-image:radial-gradient(rgba(255,255,255,.05) 1.2px,transparent 1.2px);background-size:30px 30px;pointer-events:none;z-index:0}
+.shell{width:26px;height:26px;border-radius:50% 50% 48% 48%/60% 60% 40% 40%;background:linear-gradient(135deg,var(--gold),var(--plum-light));position:relative;flex-shrink:0;box-shadow:inset 0 -2px 4px rgba(0,0,0,.25)}
+.shell::before{content:'';position:absolute;left:50%;top:18%;bottom:18%;width:2px;background:rgba(255,255,255,.65);transform:translateX(-50%);border-radius:2px}
 
-.shell{width:28px;height:28px;border-radius:50% 50% 48% 48%/60% 60% 40% 40%;background:linear-gradient(135deg,var(--gold-light),var(--plum-light));position:relative;flex-shrink:0;box-shadow:inset 0 -2px 4px rgba(0,0,0,.3)}
-.shell::before{content:'';position:absolute;left:50%;top:18%;bottom:18%;width:2px;background:rgba(255,255,255,.7);transform:translateX(-50%);border-radius:2px}
+.card{
+  position:relative;z-index:1;
+  width:100%;max-width:420px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:22px;padding:40px 40px 36px;
+  backdrop-filter:blur(20px);
+  box-shadow:0 32px 80px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08);
+}
 
-.split{display:grid;grid-template-columns:1fr 1fr;min-height:100vh;position:relative;z-index:1}
-@media(max-width:900px){.split{grid-template-columns:1fr}.brand{display:none}}
+.card-top{display:flex;align-items:center;gap:10px;margin-bottom:32px}
+.brand-name{font-weight:800;font-size:19px;letter-spacing:-.02em}
 
-/* Brand */
-.brand{display:flex;flex-direction:column;padding:44px 52px;border-right:1px solid var(--border)}
-.brand-logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.02em}
-.brand-mid{margin:auto 0}
-.brand-mid h2{font-size:clamp(30px,3.4vw,46px);font-weight:800;line-height:1.07;letter-spacing:-.03em;max-width:14ch}
-.brand-mid p{color:var(--text-soft);font-size:16px;margin-top:18px;max-width:38ch;line-height:1.65}
-.brand-feats{margin-top:36px;display:flex;flex-direction:column;gap:14px}
-.feat{display:flex;align-items:flex-start;gap:12px;font-size:14.5px;color:rgba(255,255,255,.72);line-height:1.5}
-.feat-ck{width:22px;height:22px;flex-shrink:0;border-radius:6px;background:rgba(26,155,110,.18);border:1px solid rgba(26,155,110,.32);display:grid;place-items:center;color:var(--mint);margin-top:2px}
-.feat-ck svg{width:11px;height:11px}
-.brand-trust{display:flex;gap:22px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--text-muted)}
-.brand-trust span{display:flex;align-items:center;gap:7px}
-.brand-trust .ck{color:var(--mint)}
+h1{font-size:27px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:6px}
+.sub{color:rgba(255,255,255,.45);font-size:14px;margin-bottom:28px;line-height:1.55}
 
-/* Form */
-.form-side{display:flex;flex-direction:column;background:var(--dark2);padding:clamp(28px,4vw,52px)}
-.form-top{display:flex;align-items:center}
-.mob-logo{display:none;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.02em}
-@media(max-width:900px){.mob-logo{display:flex}}
-.back{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--text-muted);transition:color .15s}
-.back:hover{color:rgba(255,255,255,.65)}
-.form-box{margin:auto;width:100%;max-width:400px;padding:44px 0}
-.form-box h1{font-size:33px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
-.form-box .sub{color:var(--text-soft);font-size:15px;margin-top:10px;margin-bottom:34px;line-height:1.62}
-
-.field{margin-bottom:18px}
-.field label{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:9px}
+.field{margin-bottom:16px}
+.field label{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.38);margin-bottom:8px}
 .field input{
-  display:block;width:100%;background:rgba(255,255,255,.06);border:1.5px solid var(--border);
-  border-radius:10px;padding:13px 16px;font-family:var(--display);font-size:15px;
-  color:#fff;outline:none;transition:border-color .15s,box-shadow .15s,background .15s;-webkit-appearance:none
+  width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);
+  border-radius:10px;padding:13px 16px;color:#fff;font-family:var(--display);font-size:15px;
+  outline:none;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none
 }
-.field input::placeholder{color:rgba(255,255,255,.2)}
-.field input:focus{border-color:var(--border-focus);background:rgba(255,255,255,.09);box-shadow:0 0 0 3px rgba(91,44,143,.2)}
-.field input.bad{border-color:rgba(248,113,113,.5);background:rgba(248,113,113,.07)}
-.input-wrap{position:relative}
-.toggle-pw{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text-muted);padding:4px 8px;letter-spacing:.05em;transition:color .15s}
+.field input::placeholder{color:rgba(255,255,255,.22)}
+.field input:focus{border-color:rgba(139,92,246,.65);background:rgba(255,255,255,.08);box-shadow:0 0 0 3px rgba(91,44,143,.22)}
+.field input.bad{border-color:rgba(239,106,76,.65);background:rgba(239,106,76,.07)}
+.inp-wrap{position:relative}
+.toggle-pw{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;font-family:var(--mono);font-size:11px;font-weight:700;color:rgba(255,255,255,.35);padding:4px 8px;letter-spacing:.05em;cursor:pointer;transition:color .15s}
 .toggle-pw:hover{color:rgba(255,255,255,.7)}
-.err{color:var(--coral);font-size:12.5px;margin-top:6px;display:none;font-family:var(--mono)}
+.err{color:#F87171;font-size:12.5px;margin-top:5px;display:none;font-family:var(--mono)}
 .err.show{display:block}
-.pw-hint{font-family:var(--mono);font-size:11px;color:var(--text-muted);margin-top:5px}
+.pw-hint{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.28);margin-top:5px}
 
-.btn-primary{
-  width:100%;height:52px;
-  background:linear-gradient(135deg,var(--plum-light),var(--plum));
-  color:#fff;border:none;border-radius:10px;
-  font-weight:700;font-size:15px;letter-spacing:-.01em;margin-top:6px;
-  display:flex;align-items:center;justify-content:center;gap:9px;
-  transition:opacity .15s,transform .15s,box-shadow .15s;
-  position:relative;cursor:pointer;
-  box-shadow:0 4px 18px -4px rgba(91,44,143,.5);
+.btn{
+  width:100%;height:52px;background:var(--plum);border:none;border-radius:10px;
+  color:#fff;font-family:var(--display);font-weight:700;font-size:15px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;
+  transition:background .15s,transform .15s,box-shadow .15s;position:relative;margin-top:8px;
 }
-.btn-primary:hover{opacity:.92;transform:translateY(-1px);box-shadow:0 12px 30px -8px rgba(91,44,143,.55)}
-.btn-primary:active{transform:none}
-.btn-primary.loading{color:transparent;pointer-events:none}
-.btn-primary .spin{position:absolute;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none}
-.btn-primary.loading .spin{display:block}
-.btn-primary.done{background:var(--mint);box-shadow:none;pointer-events:none}
+.btn:hover{background:var(--plum-deep);transform:translateY(-1px);box-shadow:0 10px 28px -8px rgba(91,44,143,.5)}
+.btn:active{transform:none;box-shadow:none}
+.btn.loading{color:transparent;pointer-events:none}
+.btn .spin{position:absolute;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none}
+.btn.loading .spin{display:block}
+.btn.done{background:var(--mint);pointer-events:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-.form-footer{margin-top:26px;text-align:center;font-size:14px;color:var(--text-muted)}
-.form-footer a{color:var(--gold-light);font-weight:700}
-.form-footer a:hover{color:#F5C464}
-.secure-badge{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:20px;font-family:var(--mono);font-size:11px;color:var(--text-muted)}
-.secure-badge svg{width:12px;height:12px}
+.card-foot{margin-top:24px;text-align:center;font-size:14px;color:rgba(255,255,255,.3)}
+.card-foot a{color:rgba(200,134,10,.85);font-weight:700;text-decoration:none}
+.card-foot a:hover{color:#F5C464}
+.secure-badge{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:16px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.25)}
 
 /* OTP step */
 .otp-step{display:none}
-.otp-email{font-family:var(--mono);font-size:13px;color:var(--gold-light);background:rgba(200,134,10,.1);border:1px solid rgba(200,134,10,.25);border-radius:8px;padding:8px 12px;margin-bottom:24px;text-align:center;word-break:break-all}
-.otp-boxes{display:flex;gap:10px;justify-content:center;margin:24px 0 8px}
-.otp-boxes input{width:44px;height:54px;text-align:center;font-family:var(--mono);font-weight:700;font-size:24px;background:rgba(255,255,255,.07);border:1.5px solid var(--border);border-radius:11px;color:#fff;outline:none;transition:border-color .15s,box-shadow .15s}
-.otp-boxes input:focus{border-color:var(--border-focus);box-shadow:0 0 0 3px rgba(91,44,143,.2)}
-.resend-row{text-align:center;margin-top:16px;font-family:var(--mono);font-size:12px;color:var(--text-muted)}
-.resend-row button{background:none;border:none;color:var(--gold-light);font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;padding:0}
+.otp-email{font-family:var(--mono);font-size:12.5px;color:rgba(200,134,10,.9);background:rgba(200,134,10,.1);border:1px solid rgba(200,134,10,.25);border-radius:8px;padding:8px 12px;margin-bottom:22px;text-align:center;word-break:break-all}
+.otp-boxes{display:flex;gap:9px;justify-content:center;margin:22px 0 8px}
+.otp-boxes input{width:42px;height:52px;text-align:center;font-family:var(--mono);font-weight:700;font-size:22px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.1);border-radius:11px;color:#fff;outline:none;transition:border-color .15s,box-shadow .15s}
+.otp-boxes input:focus{border-color:rgba(139,92,246,.65);box-shadow:0 0 0 3px rgba(91,44,143,.22)}
+.resend-row{text-align:center;margin-top:14px;font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.3)}
+.resend-row button{background:none;border:none;color:rgba(200,134,10,.85);font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;padding:0;transition:color .15s}
 .resend-row button:hover{color:#F5C464}
-.resend-row button:disabled{color:var(--text-muted);cursor:default}
-.back-link{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--text-muted);font-family:var(--mono);font-size:12px;cursor:pointer;margin-bottom:20px;transition:color .15s}
+.resend-row button:disabled{color:rgba(255,255,255,.25);cursor:default}
+.back-link{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:rgba(255,255,255,.35);font-family:var(--mono);font-size:12px;cursor:pointer;margin-bottom:20px;transition:color .15s;padding:0}
 .back-link:hover{color:rgba(255,255,255,.65)}
 
-@media(max-width:480px){input{font-size:16px!important}.otp-boxes input{font-size:20px!important}.form-box h1{font-size:28px}}
+@media(max-width:480px){input{font-size:16px!important}.card{padding:32px 24px 28px}.otp-boxes input{font-size:18px!important;width:38px;height:48px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
-<div class="bg-glow"></div>
 <div class="bg-dots"></div>
 
-<div class="split">
+<div class="card">
+  <div class="card-top">
+    <span class="shell"></span>
+    <span class="brand-name">Cowrie</span>
+  </div>
 
-  <!-- BRAND -->
-  <div class="brand">
-    <div class="brand-logo"><span class="shell"></span>Cowrie</div>
-    <div class="brand-mid">
-      <h2>Start collecting payments today.</h2>
-      <p>Set up your merchant account in minutes and go live across Africa's top payment rails.</p>
-      <div class="brand-feats">
-        <div class="feat">
-          <span class="feat-ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
-          Mobile money, cards &amp; bank transfer — one checkout
-        </div>
-        <div class="feat">
-          <span class="feat-ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
-          Real-time dashboard, webhooks &amp; full API access
-        </div>
-        <div class="feat">
-          <span class="feat-ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
-          Live API keys ready in seconds
-        </div>
-        <div class="feat">
-          <span class="feat-ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
-          No setup fees, no minimums, no hidden charges
-        </div>
+  <!-- Step 1: Registration form -->
+  <div id="regStep">
+    <h1>Create your account.</h1>
+    <p class="sub">Get your merchant account and API keys in under two minutes.</p>
+
+    <form id="regForm" novalidate>
+      <div class="field">
+        <label for="bizName">Business name</label>
+        <input type="text" id="bizName" placeholder="Your company name" autocomplete="organization">
+        <div class="err" id="bizNameErr">Enter your business name</div>
       </div>
-    </div>
-    <div class="brand-trust">
-      <span><span class="ck">✓</span> PCI-DSS Level 1</span>
-      <span><span class="ck">✓</span> 256-bit TLS</span>
-      <span><span class="ck">✓</span> Licensed &amp; regulated</span>
+      <div class="field">
+        <label for="email">Work email</label>
+        <input type="email" id="email" placeholder="you@company.com" autocomplete="email">
+        <div class="err" id="emailErr">Enter a valid email address</div>
+      </div>
+      <div class="field">
+        <label for="pw">Password</label>
+        <div class="inp-wrap">
+          <input type="password" id="pw" placeholder="Min. 8 characters" autocomplete="new-password">
+          <button type="button" class="toggle-pw" id="togglePw">SHOW</button>
+        </div>
+        <div class="pw-hint">At least 8 characters</div>
+        <div class="err" id="pwErr">Password must be at least 8 characters</div>
+      </div>
+      <div class="field">
+        <label for="pw2">Confirm password</label>
+        <div class="inp-wrap">
+          <input type="password" id="pw2" placeholder="Repeat password" autocomplete="new-password">
+        </div>
+        <div class="err" id="pw2Err">Passwords do not match</div>
+      </div>
+      <div class="err" id="formErr" style="margin-top:6px;margin-bottom:10px"></div>
+      <button type="submit" class="btn" id="submitBtn">
+        <span class="lbl">Create account</span><span class="spin"></span>
+      </button>
+    </form>
+
+    <div class="card-foot">Already have an account? <a href="/login">Sign in</a></div>
+    <div class="secure-badge">
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      Protected by bank-grade encryption
     </div>
   </div>
 
-  <!-- FORM -->
-  <div class="form-side">
-    <div class="form-top">
-      <div class="mob-logo"><span class="shell"></span>Cowrie</div>
-      <a href="/" class="back">← cowrie.africa</a>
+  <!-- Step 2: OTP verification -->
+  <div id="otpStep" class="otp-step">
+    <button class="back-link" id="backToReg">← Back</button>
+    <h1 style="font-size:24px;margin-bottom:8px">Check your email.</h1>
+    <p class="sub" style="margin-bottom:14px">We sent a 6-digit code to:</p>
+    <div class="otp-email" id="otpEmailDisplay"></div>
+    <p style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:4px">Enter the code below to verify your email and activate your account.</p>
+    <div class="otp-boxes" id="otpBoxes">
+      <input inputmode="numeric" maxlength="1" data-i="0">
+      <input inputmode="numeric" maxlength="1" data-i="1">
+      <input inputmode="numeric" maxlength="1" data-i="2">
+      <input inputmode="numeric" maxlength="1" data-i="3">
+      <input inputmode="numeric" maxlength="1" data-i="4">
+      <input inputmode="numeric" maxlength="1" data-i="5">
     </div>
-    <div class="form-box">
-      <h1>Create your account.</h1>
-      <p class="sub">Get your merchant account and API keys in under two minutes.</p>
-
-      <!-- Step 1: Registration form -->
-      <div id="regStep">
-        <form id="regForm" novalidate>
-          <div class="field">
-            <label for="bizName">Business name</label>
-            <input type="text" id="bizName" placeholder="Your company name" autocomplete="organization">
-            <div class="err" id="bizNameErr">Enter your business name</div>
-          </div>
-          <div class="field">
-            <label for="email">Work email</label>
-            <input type="email" id="email" placeholder="you@company.com" autocomplete="email">
-            <div class="err" id="emailErr">Enter a valid email address</div>
-          </div>
-          <div class="field">
-            <label for="pw">Password</label>
-            <div class="input-wrap">
-              <input type="password" id="pw" placeholder="Min. 8 characters" autocomplete="new-password">
-              <button type="button" class="toggle-pw" id="togglePw">SHOW</button>
-            </div>
-            <div class="pw-hint">At least 8 characters</div>
-            <div class="err" id="pwErr">Password must be at least 8 characters</div>
-          </div>
-          <div class="field">
-            <label for="pw2">Confirm password</label>
-            <div class="input-wrap">
-              <input type="password" id="pw2" placeholder="Repeat password" autocomplete="new-password">
-            </div>
-            <div class="err" id="pw2Err">Passwords do not match</div>
-          </div>
-          <div class="err" id="formErr" style="margin-top:8px;margin-bottom:12px"></div>
-          <button type="submit" class="btn-primary" id="submitBtn">
-            <span class="lbl">Create account</span><span class="spin"></span>
-          </button>
-        </form>
-        <p class="form-footer">Already have an account? <a href="/login">Sign in</a></p>
-        <div class="secure-badge">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-          Protected by bank-grade encryption
-        </div>
-      </div>
-
-      <!-- Step 2: OTP verification -->
-      <div id="otpStep" class="otp-step">
-        <button class="back-link" id="backToReg">← Back</button>
-        <h1 style="font-size:28px;margin-bottom:10px">Check your email.</h1>
-        <p class="sub" style="margin-bottom:16px">We sent a 6-digit code to:</p>
-        <div class="otp-email" id="otpEmailDisplay"></div>
-        <p style="font-size:13.5px;color:var(--text-soft);margin-bottom:4px">Enter the code below to verify your email and activate your account.</p>
-        <div class="otp-boxes" id="otpBoxes">
-          <input inputmode="numeric" maxlength="1" data-i="0">
-          <input inputmode="numeric" maxlength="1" data-i="1">
-          <input inputmode="numeric" maxlength="1" data-i="2">
-          <input inputmode="numeric" maxlength="1" data-i="3">
-          <input inputmode="numeric" maxlength="1" data-i="4">
-          <input inputmode="numeric" maxlength="1" data-i="5">
-        </div>
-        <div class="err" id="otpErr" style="text-align:center;margin-bottom:8px"></div>
-        <button class="btn-primary" id="verifyBtn" disabled>
-          <span class="lbl">Verify &amp; create account</span><span class="spin"></span>
-        </button>
-        <div class="resend-row">
-          Didn't get a code? <button id="resendBtn">Resend</button>
-        </div>
-      </div>
-    </div>
+    <div class="err" id="otpErr" style="text-align:center;margin-bottom:8px"></div>
+    <button class="btn" id="verifyBtn" disabled>
+      <span class="lbl">Verify &amp; activate account</span><span class="spin"></span>
+    </button>
+    <div class="resend-row">Didn't get a code? <button id="resendBtn">Resend</button></div>
   </div>
-
 </div>
+
 <script>
 'use strict';
-/* ── password show/hide ── */
 const togglePw=document.getElementById('togglePw');
 const pw=document.getElementById('pw');
 togglePw.addEventListener('click',()=>{const s=pw.type==='password';pw.type=s?'text':'password';togglePw.textContent=s?'HIDE':'SHOW';});
 
-/* ── registration form ── */
 const form=document.getElementById('regForm');
 const btn=document.getElementById('submitBtn');
 const bizName=document.getElementById('bizName');
@@ -249,8 +187,14 @@ const email=document.getElementById('email');
 const pw2=document.getElementById('pw2');
 const formErr=document.getElementById('formErr');
 
-function clearErr(el,errEl){el.classList.remove('bad');errEl.classList.remove('show');}
-[bizName,email,pw,pw2].forEach(el=>{el.addEventListener('input',()=>{const errEl=document.getElementById(el.id+'Err');if(errEl)clearErr(el,errEl);});});
+[bizName,email,pw,pw2].forEach(el=>{
+  el.addEventListener('input',()=>{
+    el.classList.remove('bad');
+    const errEl=document.getElementById(el.id+'Err');
+    if(errEl)errEl.classList.remove('show');
+    formErr.classList.remove('show');
+  });
+});
 
 function validate(){
   let ok=true;
@@ -276,8 +220,7 @@ form.addEventListener('submit',async e=>{
     if(data.status==='verify_email'){
       pendingEmail=data.email;
       showOtpStep(data.email);
-    } else {
-      /* fallback: if server returns token directly */
+    }else{
       localStorage.setItem('cowrie_token',data.token);
       btn.classList.add('done');btn.querySelector('.lbl').textContent='Account created ✓';
       setTimeout(()=>{location.href=new URLSearchParams(location.search).get('next')||'/dashboard';},500);
@@ -287,7 +230,6 @@ form.addEventListener('submit',async e=>{
   }
 });
 
-/* ── OTP step ── */
 function showOtpStep(emailAddr){
   document.getElementById('regStep').style.display='none';
   document.getElementById('otpStep').style.display='block';
@@ -314,15 +256,12 @@ otpBoxes.forEach((box,i)=>{
     updateVerifyBtn();
     document.getElementById('otpErr').classList.remove('show');
   });
-  box.addEventListener('keydown',e=>{
-    if(e.key==='Backspace'&&!box.value&&i>0)otpBoxes[i-1].focus();
-  });
+  box.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!box.value&&i>0)otpBoxes[i-1].focus();});
   box.addEventListener('paste',e=>{
     e.preventDefault();
     const text=(e.clipboardData||window.clipboardData).getData('text').replace(/\D/g,'').slice(0,6);
     text.split('').forEach((ch,j)=>{if(otpBoxes[i+j])otpBoxes[i+j].value=ch;});
-    const next=Math.min(i+text.length,5);
-    otpBoxes[next].focus();
+    otpBoxes[Math.min(i+text.length,5)].focus();
     updateVerifyBtn();
   });
 });
@@ -346,7 +285,6 @@ document.getElementById('verifyBtn').addEventListener('click',async()=>{
   }
 });
 
-/* ── Resend ── */
 const resendBtn=document.getElementById('resendBtn');
 let resendCooldown=0;
 resendBtn.addEventListener('click',async()=>{
@@ -357,13 +295,8 @@ resendBtn.addEventListener('click',async()=>{
     otpBoxes.forEach(b=>b.value='');otpBoxes[0].focus();updateVerifyBtn();
     resendCooldown=Date.now()+60000;
     let s=60;
-    const t=setInterval(()=>{
-      s--;resendBtn.textContent=`Resend (${s}s)`;
-      if(s<=0){clearInterval(t);resendBtn.textContent='Resend';resendBtn.disabled=false;}
-    },1000);
-  }catch{
-    resendBtn.disabled=false;
-  }
+    const t=setInterval(()=>{s--;resendBtn.textContent=`Resend (${s}s)`;if(s<=0){clearInterval(t);resendBtn.textContent='Resend';resendBtn.disabled=false;}},1000);
+  }catch{resendBtn.disabled=false;}
 });
 </script>
 </body>
