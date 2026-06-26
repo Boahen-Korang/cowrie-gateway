@@ -9,208 +9,155 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --dark:#09071A; --dark2:#0F0C22; --dark3:#1A1535;
-  --plum:#5B2C8F; --plum-deep:#3D1D62; --plum-light:#7B45B8; --plum-glow:rgba(91,44,143,.55);
-  --gold:#C8860A; --gold-light:#E0A12E;
-  --mint:#1A9B6E; --coral:#F87171;
-  --border:rgba(255,255,255,.1); --border-focus:rgba(139,92,246,.6);
-  --text:#FFFFFF; --text-soft:rgba(255,255,255,.55); --text-muted:rgba(255,255,255,.3);
+  --plum:#5B2C8F; --plum-deep:#3D1D62; --plum-light:#7B45B8;
+  --gold:#C8860A; --mint:#1A9B6E; --coral:#EF6A4C;
+  --dark:#09071A; --dark2:#120C24; --dark3:#1C1335;
   --display:'Plus Jakarta Sans',sans-serif; --mono:'JetBrains Mono',monospace;
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-html{height:100%}
-body{min-height:100vh;background:var(--dark);color:var(--text);font-family:var(--display);-webkit-font-smoothing:antialiased;line-height:1.5}
-::selection{background:var(--plum);color:#fff}
-a{color:inherit;text-decoration:none}
-button{font-family:inherit;cursor:pointer}
+html,body{height:100%}
+body{
+  background:var(--dark);color:#fff;font-family:var(--display);
+  -webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center;
+  padding:24px;position:relative;overflow:hidden;
+}
+body::before{content:'';position:fixed;top:-25%;left:-20%;width:65%;height:65%;background:radial-gradient(circle,rgba(91,44,143,.4),transparent 65%);filter:blur(70px);pointer-events:none}
+body::after{content:'';position:fixed;bottom:-25%;right:-20%;width:60%;height:60%;background:radial-gradient(circle,rgba(200,134,10,.22),transparent 65%);filter:blur(60px);pointer-events:none}
+.bg-dots{position:fixed;inset:0;background-image:radial-gradient(rgba(255,255,255,.05) 1.2px,transparent 1.2px);background-size:28px 28px;pointer-events:none;z-index:0}
 
-/* Ambient background glows */
-.bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
-.bg-glow::before{content:'';position:absolute;top:-20%;left:-10%;width:60%;height:70%;background:radial-gradient(circle,rgba(91,44,143,.45),transparent 65%);filter:blur(80px)}
-.bg-glow::after{content:'';position:absolute;bottom:-25%;right:-15%;width:55%;height:65%;background:radial-gradient(circle,rgba(200,134,10,.2),transparent 65%);filter:blur(70px)}
-.bg-dots{position:fixed;inset:0;background-image:radial-gradient(rgba(255,255,255,.05) 1.2px,transparent 1.2px);background-size:30px 30px;pointer-events:none;z-index:0}
+.shell{width:26px;height:26px;border-radius:50% 50% 48% 48%/60% 60% 40% 40%;background:linear-gradient(135deg,var(--gold),var(--plum-light));position:relative;flex-shrink:0;box-shadow:inset 0 -2px 4px rgba(0,0,0,.25)}
+.shell::before{content:'';position:absolute;left:50%;top:18%;bottom:18%;width:2px;background:rgba(255,255,255,.65);transform:translateX(-50%);border-radius:2px}
 
-.shell{width:28px;height:28px;border-radius:50% 50% 48% 48%/60% 60% 40% 40%;background:linear-gradient(135deg,var(--gold-light),var(--plum-light));position:relative;flex-shrink:0;box-shadow:inset 0 -2px 4px rgba(0,0,0,.3)}
-.shell::before{content:'';position:absolute;left:50%;top:18%;bottom:18%;width:2px;background:rgba(255,255,255,.7);transform:translateX(-50%);border-radius:2px}
+.card{
+  position:relative;z-index:1;
+  width:100%;max-width:420px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:22px;padding:40px 40px 36px;
+  backdrop-filter:blur(20px);
+  box-shadow:0 32px 80px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08);
+}
 
-/* ─── Layout ─── */
-.split{display:grid;grid-template-columns:1fr 1fr;min-height:100vh;position:relative;z-index:1}
-@media(max-width:900px){.split{grid-template-columns:1fr}.brand{display:none}}
+.card-top{display:flex;align-items:center;gap:10px;margin-bottom:32px}
+.brand-name{font-weight:800;font-size:19px;letter-spacing:-.02em}
 
-/* ─── Brand panel ─── */
-.brand{display:flex;flex-direction:column;padding:44px 52px;border-right:1px solid var(--border)}
-.brand-logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.02em}
-.brand-mid{margin:auto 0}
-.brand-mid h2{font-size:clamp(30px,3.4vw,46px);font-weight:800;line-height:1.07;letter-spacing:-.03em;max-width:14ch}
-.brand-mid p{color:var(--text-soft);font-size:16px;margin-top:18px;max-width:38ch;line-height:1.65}
-.brand-stats{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:38px}
-.bstat{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:18px 20px;transition:.2s}
-.bstat:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.13)}
-.bstat .bv{font-size:26px;font-weight:800;letter-spacing:-.025em;line-height:1;background:linear-gradient(135deg,#fff,rgba(255,255,255,.75));-webkit-background-clip:text;background-clip:text;color:transparent}
-.bstat .bl{font-family:var(--mono);font-size:10.5px;color:var(--text-muted);margin-top:7px}
-.brand-trust{display:flex;gap:22px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--text-muted)}
-.brand-trust span{display:flex;align-items:center;gap:7px}
-.brand-trust .ck{color:var(--mint)}
+h1{font-size:27px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:6px}
+.sub{color:rgba(255,255,255,.45);font-size:14px;margin-bottom:30px;line-height:1.55}
 
-/* ─── Form panel ─── */
-.form-side{display:flex;flex-direction:column;background:var(--dark2);padding:clamp(28px,4vw,52px)}
-.form-top{display:flex;align-items:center}
-.mob-logo{display:none;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.02em}
-@media(max-width:900px){.mob-logo{display:flex}}
-.back{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--text-muted);transition:color .15s}
-.back:hover{color:rgba(255,255,255,.65)}
-.form-box{margin:auto;width:100%;max-width:400px;padding:52px 0}
-.form-box h1{font-size:33px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
-.form-box .sub{color:var(--text-soft);font-size:15px;margin-top:10px;margin-bottom:38px;line-height:1.62}
-
-.field{margin-bottom:20px}
-.field-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.field label{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:9px}
-.forgot{font-size:12px;font-weight:600;color:var(--gold-light);font-family:var(--mono);letter-spacing:.04em}
+.field{margin-bottom:18px}
+.field-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.field label{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.38)}
+.forgot{font-size:11px;font-weight:700;color:rgba(200,134,10,.85);font-family:var(--mono);letter-spacing:.04em;text-decoration:none}
 .forgot:hover{color:#F5C464}
 .field input{
-  display:block;width:100%;background:rgba(255,255,255,.06);border:1.5px solid var(--border);
-  border-radius:10px;padding:13px 16px;font-family:var(--display);font-size:15px;
-  color:#fff;outline:none;transition:border-color .15s,box-shadow .15s,background .15s;-webkit-appearance:none
+  width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);
+  border-radius:10px;padding:13px 16px;color:#fff;font-family:var(--display);font-size:15px;
+  outline:none;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none
 }
-.field input::placeholder{color:rgba(255,255,255,.2)}
-.field input:focus{border-color:var(--border-focus);background:rgba(255,255,255,.09);box-shadow:0 0 0 3px rgba(91,44,143,.2)}
-.field input.bad{border-color:rgba(248,113,113,.5);background:rgba(248,113,113,.07)}
-.input-wrap{position:relative}
-.toggle-pw{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text-muted);padding:4px 8px;letter-spacing:.05em;transition:color .15s}
+.field input::placeholder{color:rgba(255,255,255,.22)}
+.field input:focus{border-color:rgba(139,92,246,.65);background:rgba(255,255,255,.08);box-shadow:0 0 0 3px rgba(91,44,143,.22)}
+.field input.bad{border-color:rgba(239,106,76,.65);background:rgba(239,106,76,.07)}
+.inp-wrap{position:relative}
+.toggle-pw{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;font-family:var(--mono);font-size:11px;font-weight:700;color:rgba(255,255,255,.35);padding:4px 8px;letter-spacing:.05em;cursor:pointer;transition:color .15s}
 .toggle-pw:hover{color:rgba(255,255,255,.7)}
-.err{color:var(--coral);font-size:12.5px;margin-top:6px;display:none;font-family:var(--mono)}
+.err{color:#F87171;font-size:12.5px;margin-top:5px;display:none;font-family:var(--mono)}
 .err.show{display:block}
 
-.remember-row{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none;font-size:14px;color:var(--text-soft);margin:4px 0 30px}
+.remember-row{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none;font-size:14px;color:rgba(255,255,255,.45);margin:4px 0 24px}
 .remember-row input{position:absolute;opacity:0;width:0;height:0}
-.cb-box{width:18px;height:18px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);background:rgba(255,255,255,.05);display:grid;place-items:center;transition:.15s}
+.cb-box{width:18px;height:18px;flex-shrink:0;border-radius:5px;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);display:grid;place-items:center;transition:.15s}
 .remember-row input:checked+.cb-box{background:var(--plum);border-color:var(--plum)}
 .cb-box svg{width:10px;height:10px;opacity:0;transition:.15s}
 .remember-row input:checked+.cb-box svg{opacity:1}
 
-.btn-primary{
-  width:100%;height:52px;
-  background:linear-gradient(135deg,var(--plum-light),var(--plum));
-  color:#fff;border:none;border-radius:10px;
-  font-weight:700;font-size:15px;letter-spacing:-.01em;
-  display:flex;align-items:center;justify-content:center;gap:9px;
-  transition:opacity .15s,transform .15s,box-shadow .15s;
-  position:relative;cursor:pointer;
-  box-shadow:0 4px 18px -4px rgba(91,44,143,.5);
+.btn{
+  width:100%;height:52px;background:var(--plum);border:none;border-radius:10px;
+  color:#fff;font-family:var(--display);font-weight:700;font-size:15px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;
+  transition:background .15s,transform .15s,box-shadow .15s;position:relative;margin-top:4px;
 }
-.btn-primary:hover{opacity:.92;transform:translateY(-1px);box-shadow:0 12px 30px -8px rgba(91,44,143,.55)}
-.btn-primary:active{transform:none}
-.btn-primary.loading{color:transparent;pointer-events:none}
-.btn-primary .spin{position:absolute;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none}
-.btn-primary.loading .spin{display:block}
-.btn-primary.done{background:var(--mint);box-shadow:none;pointer-events:none}
+.btn:hover{background:var(--plum-deep);transform:translateY(-1px);box-shadow:0 10px 28px -8px rgba(91,44,143,.5)}
+.btn:active{transform:none;box-shadow:none}
+.btn.loading{color:transparent;pointer-events:none}
+.btn .spin{position:absolute;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none}
+.btn.loading .spin{display:block}
+.btn.done{background:var(--mint);pointer-events:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-.form-footer{margin-top:28px;text-align:center;font-size:14px;color:var(--text-muted)}
-.form-footer a{color:var(--gold-light);font-weight:700}
-.form-footer a:hover{color:#F5C464}
-.secure-badge{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:20px;font-family:var(--mono);font-size:11px;color:var(--text-muted)}
-.secure-badge svg{width:12px;height:12px}
-.admin-access{display:block;text-align:center;margin-top:26px;font-family:var(--mono);font-size:11px;color:var(--text-muted);letter-spacing:.04em;transition:color .15s}
-.admin-access:hover{color:rgba(255,255,255,.5)}
+.card-foot{margin-top:26px;text-align:center;font-size:14px;color:rgba(255,255,255,.3)}
+.card-foot a{color:rgba(200,134,10,.85);font-weight:700;text-decoration:none}
+.card-foot a:hover{color:#F5C464}
+.secure-badge{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:16px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.25)}
+.admin-link{display:block;text-align:center;margin-top:18px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.22);letter-spacing:.04em;text-decoration:none;transition:color .15s}
+.admin-link:hover{color:rgba(255,255,255,.5)}
 
-@media(max-width:480px){input{font-size:16px!important}.form-box{padding:36px 0}.form-box h1{font-size:28px}}
+@media(max-width:480px){input{font-size:16px!important}.card{padding:32px 24px 28px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
-<div class="bg-glow"></div>
 <div class="bg-dots"></div>
 
-<div class="split">
-
-  <!-- BRAND -->
-  <div class="brand">
-    <div class="brand-logo"><span class="shell"></span>Cowrie</div>
-    <div class="brand-mid">
-      <h2>The payment infrastructure for modern Africa.</h2>
-      <p>Collect from any channel, disburse to any wallet, settle in the currency you choose — one API, one dashboard, every rail.</p>
-      <div class="brand-stats">
-        <div class="bstat"><div class="bv">$3.4B+</div><div class="bl">Processed annually</div></div>
-        <div class="bstat"><div class="bv">28,000+</div><div class="bl">Businesses onboard</div></div>
-        <div class="bstat"><div class="bv">99.99%</div><div class="bl">Platform uptime</div></div>
-        <div class="bstat"><div class="bv">7</div><div class="bl">African markets</div></div>
-      </div>
-    </div>
-    <div class="brand-trust">
-      <span><span class="ck">✓</span> PCI-DSS Level 1</span>
-      <span><span class="ck">✓</span> 256-bit TLS</span>
-      <span><span class="ck">✓</span> Licensed &amp; regulated</span>
-    </div>
+<div class="card">
+  <div class="card-top">
+    <span class="shell"></span>
+    <span class="brand-name">Cowrie</span>
   </div>
 
-  <!-- FORM -->
-  <div class="form-side">
-    <div class="form-top">
-      <div class="mob-logo"><span class="shell"></span>Cowrie</div>
-      <a href="index.html" class="back">← cowrie.africa</a>
+  <h1>Welcome back.</h1>
+  <p class="sub">Sign in to your merchant dashboard to manage payments, payouts and settlements.</p>
+
+  <form id="loginForm" novalidate>
+    <div class="field">
+      <label for="email">Email address</label>
+      <input type="email" id="email" placeholder="you@company.com" autocomplete="email">
+      <div class="err" id="emailErr">Enter a valid email address</div>
     </div>
-    <div class="form-box">
-      <h1>Welcome back.</h1>
-      <p class="sub">Sign in to your merchant dashboard to manage payments, payouts and settlements.</p>
-
-      <form id="loginForm" novalidate>
-        <div class="field">
-          <label for="email">Email address</label>
-          <input type="email" id="email" placeholder="you@company.com" autocomplete="email" value="demo@adom.shop">
-          <div class="err" id="emailErr">Enter a valid email address</div>
-        </div>
-        <div class="field">
-          <div class="field-top">
-            <label for="pw" style="margin-bottom:0">Password</label>
-            <a href="#" class="forgot">Forgot password?</a>
-          </div>
-          <div class="input-wrap" style="margin-top:9px">
-            <input type="password" id="pw" placeholder="••••••••" autocomplete="current-password" value="password123">
-            <button type="button" class="toggle-pw" id="togglePw">SHOW</button>
-          </div>
-          <div class="err" id="pwErr">Enter your password</div>
-        </div>
-        <label class="remember-row">
-          <input type="checkbox" id="remember">
-          <span class="cb-box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
-          Keep me signed in
-        </label>
-        <div class="err" id="formErr" style="margin-bottom:14px"></div>
-        <button type="submit" class="btn-primary" id="signinBtn">
-          <span class="lbl">Sign in</span><span class="spin"></span>
-        </button>
-      </form>
-
-      <p class="form-footer">New to Cowrie? <a href="/register">Create a free account</a></p>
-      <div class="secure-badge">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-        Protected by bank-grade encryption
+    <div class="field">
+      <div class="field-top">
+        <label for="pw" style="margin-bottom:0">Password</label>
+        <a href="#" class="forgot">Forgot password?</a>
       </div>
-      <a href="/admin-login" class="admin-access">Admin console →</a>
+      <div class="inp-wrap" style="margin-top:9px">
+        <input type="password" id="pw" placeholder="••••••••" autocomplete="current-password">
+        <button type="button" class="toggle-pw" id="togglePw">SHOW</button>
+      </div>
+      <div class="err" id="pwErr">Enter your password</div>
     </div>
-  </div>
+    <label class="remember-row">
+      <input type="checkbox" id="remember">
+      <span class="cb-box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+      Keep me signed in
+    </label>
+    <div class="err" id="formErr" style="margin-bottom:12px"></div>
+    <button type="submit" class="btn" id="signinBtn">
+      <span class="lbl">Sign in</span><span class="spin"></span>
+    </button>
+  </form>
 
+  <div class="card-foot">
+    New to Cowrie? <a href="/register">Create a free account</a>
+  </div>
+  <div class="secure-badge">
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+    Protected by bank-grade encryption
+  </div>
+  <a href="/admin-login" class="admin-link">Admin console →</a>
 </div>
+
 <script>
 'use strict';
 const pw=document.getElementById('pw'),togglePw=document.getElementById('togglePw');
 togglePw.addEventListener('click',()=>{const s=pw.type==='password';pw.type=s?'text':'password';togglePw.textContent=s?'HIDE':'SHOW';});
 const form=document.getElementById('loginForm'),btn=document.getElementById('signinBtn');
 const emailEl=document.getElementById('email'),emailErr=document.getElementById('emailErr'),pwErr=document.getElementById('pwErr'),formErr=document.getElementById('formErr');
-function validate(){
-  let ok=true;
-  const eok=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value.trim());
-  emailEl.classList.toggle('bad',!eok);emailErr.classList.toggle('show',!eok);ok=ok&&eok;
-  const pok=pw.value.length>0;
-  pw.classList.toggle('bad',!pok);pwErr.classList.toggle('show',!pok);ok=ok&&pok;
-  return ok;
-}
-[emailEl,pw].forEach(el=>el.addEventListener('input',()=>{el.classList.remove('bad');(el===emailEl?emailErr:pwErr).classList.remove('show');}));
+[emailEl,pw].forEach(el=>el.addEventListener('input',()=>{el.classList.remove('bad');(el===emailEl?emailErr:pwErr).classList.remove('show');formErr.classList.remove('show');}));
 form.addEventListener('submit',async e=>{
   e.preventDefault();formErr.classList.remove('show');
-  if(!validate())return;
+  let ok=true;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value.trim())){emailEl.classList.add('bad');emailErr.classList.add('show');ok=false;}
+  if(!pw.value){pw.classList.add('bad');pwErr.classList.add('show');ok=false;}
+  if(!ok)return;
   btn.classList.add('loading');
   try{
     const res=await fetch('/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:emailEl.value.trim(),password:pw.value,remember:document.getElementById('remember').checked})});
