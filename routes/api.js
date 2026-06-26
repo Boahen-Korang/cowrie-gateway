@@ -311,6 +311,98 @@ router.post('/admin/new-payment', requireAdminAuth, (req, res, next) => {
 
 /* =========================== Paystack integration =========================== */
 
+// Map Paystack status → next step
+function resolvePaystackStatus(charge, tx) {
+  const CHAN = { mobile_money: 'mobile_money', bank_transfer: 'bank_transfer', ussd: 'ussd' };
+  switch (tx.status) {
+    case 'success':
+      charge.status = 'success'; charge.paidAt = Date.now();
+      charge.method = CHAN[tx.channel] || 'card';
+      charge.auth = { provider: 'paystack', channel: tx.channel, last4: tx.authorization && tx.authorization.last4, brand: tx.authorization && tx.authorization.card_type };
+      return { next: 'success' };
+    case 'failed':
+      charge.status = 'failed';
+      charge.failure = { message: tx.gateway_response || 'Payment failed' };
+      return { next: 'failed' };
+    case 'send_otp': return { next: 'otp' };
+    case 'send_pin': return { next: 'pin' };
+    case 'pay_offline': return { next: 'bank_details', detail: tx.data };
+    case 'pending': return { next: 'pending', detail: tx.display_text };
+    default: return { next: 'pending' };
+  }
+}
+
+// Direct charge — no Paystack popup, purely server-side
+router.post('/charges/:reference/pay', loadCharge, async (req, res, next) => {
+  try {
+    const charge = req.charge;
+    if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge, next: charge.status });
+
+    const { method, email: bodyEmail, phone, provider, number, cvv, expiry_month, expiry_year } = req.body || {};
+    const email = (bodyEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bodyEmail) ? bodyEmail : null)
+      || charge.customerEmail || 'customer@cowrie.africa';
+    const paystackRef = `cwr_${charge.reference}_${Date.now()}`;
+
+    const body = { email, amount: charge.amount, currency: charge.currency || 'GHS', reference: paystackRef, metadata: { cowrie_reference: charge.reference } };
+
+    if (method === 'card') {
+      body.card = { number: String(number || '').replace(/\s/g, ''), cvv: String(cvv || ''), expiry_month: String(expiry_month || ''), expiry_year: String(expiry_year || '') };
+    } else if (method === 'mobile_money') {
+      const PROV = { MTN: 'mtn', Vodafone: 'vod', AirtelTigo: 'atl' };
+      body.mobile_money = { phone: String(phone || ''), provider: PROV[provider] || 'mtn' };
+    } else if (method === 'bank') {
+      body.bank_transfer = { account_expires_at: new Date(Date.now() + 3_600_000).toISOString() };
+    } else if (method === 'ussd') {
+      body.ussd = { type: '737' };
+    }
+
+    const data = await paystack.charge(body);
+    if (!data.status) throw Object.assign(new Error(data.message || 'Charge failed'), { status: 400 });
+
+    charge.paystackRef = paystackRef;
+    const result = resolvePaystackStatus(charge, data.data);
+    store.charges.update(charge); store.persist();
+    res.json({ charge, next: result.next, detail: result.detail });
+  } catch (e) { next(e); }
+});
+
+router.post('/charges/:reference/submit-otp', loadCharge, async (req, res, next) => {
+  try {
+    const { otp } = req.body || {};
+    if (!req.charge.paystackRef) throw Object.assign(new Error('No pending transaction.'), { status: 400 });
+    const data = await paystack.submitOtp(req.charge.paystackRef, String(otp || ''));
+    if (!data.status) throw new Error(data.message || 'OTP failed');
+    const result = resolvePaystackStatus(req.charge, data.data);
+    store.charges.update(req.charge); store.persist();
+    res.json({ charge: req.charge, next: result.next, detail: result.detail });
+  } catch (e) { next(e); }
+});
+
+router.post('/charges/:reference/submit-pin', loadCharge, async (req, res, next) => {
+  try {
+    const { pin } = req.body || {};
+    if (!req.charge.paystackRef) throw Object.assign(new Error('No pending transaction.'), { status: 400 });
+    const data = await paystack.submitPin(req.charge.paystackRef, String(pin || ''));
+    if (!data.status) throw new Error(data.message || 'PIN failed');
+    const result = resolvePaystackStatus(req.charge, data.data);
+    store.charges.update(req.charge); store.persist();
+    res.json({ charge: req.charge, next: result.next, detail: result.detail });
+  } catch (e) { next(e); }
+});
+
+router.get('/charges/:reference/poll', loadCharge, async (req, res, next) => {
+  try {
+    const charge = req.charge;
+    if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge, next: charge.status });
+    if (!charge.paystackRef) return res.json({ charge, next: 'pending' });
+    const data = await paystack.getCharge(charge.paystackRef);
+    if (!data.status || !data.data) return res.json({ charge, next: 'pending' });
+    const result = resolvePaystackStatus(charge, data.data);
+    store.charges.update(charge); store.persist();
+    res.json({ charge, next: result.next, detail: result.detail });
+  } catch (e) { next(e); }
+});
+
 // Initialize a Paystack transaction — returns access_code for the inline popup
 router.post('/charges/:reference/paystack-init', loadCharge, async (req, res, next) => {
   try {

@@ -133,14 +133,13 @@ button{font-family:inherit;cursor:pointer}
   </div>
 </div>
 
-<script src="https://js.paystack.co/v1/inline.js"></script>
 <script>
 "use strict";
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $=s=>document.querySelector(s);
 const SYMS={GHS:'₵',NGN:'₦',KES:'KSh',ZAR:'R',USD:'$',EUR:'€',GBP:'£'};
 const fmt=(minor,ccy)=>(SYMS[ccy]||(ccy+' '))+' '+(minor/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-const S={method:'card',step:'form',provider:'MTN',charge:null};
+const S={method:'card',step:'form',provider:'MTN',charge:null,bankDetail:null};
 const amount=()=>S.charge?S.charge.amount:0;
 const ccy=()=>S.charge?S.charge.currency:'GHS';
 const merchantName=()=>(S.charge&&S.charge.merchantName)||'Cowrie';
@@ -150,7 +149,6 @@ const API={
   async post(path,body,hdrs){const r=await fetch(path,{method:'POST',headers:{'content-type':'application/json',...(hdrs||{})},body:JSON.stringify(body||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed.');return d;}
 };
 
-/* session timer */
 (function(){let t=899;const e=$('#timer');setInterval(()=>{if(reduce)return;t=Math.max(0,t-1);const m=Math.floor(t/60),s=t%60;e.textContent=m+':'+s.toString().padStart(2,'0');e.style.color=t<120?'var(--coral)':'';},1000);})();
 
 const ICONS={
@@ -160,42 +158,123 @@ const ICONS={
   ussd:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3h14M5 21h14M7 3v18M17 3v18M9 8h6M9 12h6"/></svg>'
 };
 const METHODS=[['card','Card'],['momo','Mobile money'],['bank','Bank'],['ussd','USSD']];
-const CHANNELS={card:['card'],momo:['mobile_money'],bank:['bank_transfer'],ussd:['ussd']};
 
 function tabs(){
   return `<div class="methods">${METHODS.map(([id,lbl])=>`<button class="mtab ${S.method===id?'on':''}" data-m="${id}"><span class="mi">${ICONS[id]}</span>${lbl}</button>`).join('')}</div>`;
 }
-function payBtn(label){
-  return `<button class="pay" id="pay"><span class="spin"></span><span class="lbl">${label}</span></button>`;
-}
+function payBtn(label){return `<button class="pay" id="pay"><span class="spin"></span><span class="lbl">${label}</span></button>`;}
+
+function detectBrand(n){if(/^4/.test(n))return'VISA';if(/^(5[1-5]|2[2-7])/.test(n))return'MASTERCARD';if(/^(506[01]|6280|650|5078)/.test(n))return'VERVE';return'';}
+function luhn(n){let s=0,a=false;for(let i=n.length-1;i>=0;i--){let d=+n[i];if(a){d*=2;if(d>9)d-=9;}s+=d;a=!a;}return s%10===0;}
 
 function formFor(m){
   const payLabel='Pay '+fmt(amount(),ccy());
   const info='<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>';
   if(m==='card') return `
-    <div class="hint">${info}Visa, Mastercard and Verve accepted. Your card details are entered securely in the next step.</div>
+    <div class="field"><label>Card number</label>
+      <div class="inp-wrap"><input class="mono" id="ccn" inputmode="numeric" placeholder="0000 0000 0000 0000" maxlength="19" autocomplete="cc-number">
+      <span class="brand-badge" id="brand" style="display:none"></span></div>
+      <div class="err" id="ccnErr">Enter a valid 16-digit card number</div></div>
+    <div class="row2">
+      <div class="field"><label>Expiry</label><input class="mono" id="exp" inputmode="numeric" placeholder="MM / YY" maxlength="7" autocomplete="cc-exp"><div class="err" id="expErr">Invalid expiry</div></div>
+      <div class="field"><label>CVV</label><input class="mono" id="cvv" inputmode="numeric" placeholder="123" maxlength="4" autocomplete="cc-csc"><div class="err" id="cvvErr">Invalid CVV</div></div>
+    </div>
+    <div class="hint">${info}Your card details are transmitted securely and never stored.</div>
     ${payBtn(payLabel)}`;
   if(m==='momo') return `
     <div class="field"><label>Network</label></div>
     <div class="seg" id="prov">${['MTN','Vodafone','AirtelTigo'].map(p=>`<button data-p="${p}" class="${S.provider===p?'on':''}">${p}</button>`).join('')}</div>
-    <div class="hint">${info}A payment prompt will be sent to your phone to approve.</div>
+    <div class="field"><label>Mobile money number</label>
+      <input class="mono" id="phone" inputmode="numeric" placeholder="024 123 4567" maxlength="13" autocomplete="tel">
+      <div class="err" id="phoneErr">Enter a valid 10-digit number</div></div>
+    <div class="hint">${info}You will receive a prompt on your phone to approve this payment.</div>
     ${payBtn(payLabel)}`;
   if(m==='bank') return `
-    <div class="hint">${info}A one-time virtual account will be generated for your bank transfer.</div>
+    <div class="hint">${info}A one-time virtual account will be generated for your transfer.</div>
     ${payBtn('Continue')}`;
   if(m==='ussd') return `
-    <div class="hint">${info}A USSD code will be generated. Dial it from your bank's registered line.</div>
+    <div class="hint">${info}A USSD code will be generated. Dial it from your registered line.</div>
     ${payBtn('Continue')}`;
 }
 
 function bindForm(){
-  if(S.method==='momo'){
-    $('#prov').querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{
-      S.provider=btn.dataset.p;
-      $('#prov').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===btn));
-    }));
+  const m=S.method;
+  if(m==='card'){
+    const ccn=$('#ccn'),exp=$('#exp'),cvv=$('#cvv'),brand=$('#brand');
+    ccn.addEventListener('input',()=>{
+      let v=ccn.value.replace(/\D/g,'').slice(0,16);
+      ccn.value=v.replace(/(.{4})/g,'$1 ').trim();
+      const b=detectBrand(v);brand.textContent=b;brand.style.display=b?'':'none';
+      ccn.classList.remove('bad');$('#ccnErr').classList.remove('show');
+    });
+    exp.addEventListener('input',()=>{
+      let v=exp.value.replace(/\D/g,'').slice(0,4);
+      if(v.length>=3)v=v.slice(0,2)+' / '+v.slice(2);
+      exp.value=v;exp.classList.remove('bad');$('#expErr').classList.remove('show');
+    });
+    cvv.addEventListener('input',()=>{cvv.value=cvv.value.replace(/\D/g,'').slice(0,4);cvv.classList.remove('bad');$('#cvvErr').classList.remove('show');});
+    $('#pay').addEventListener('click',()=>{
+      let ok=true;
+      const num=ccn.value.replace(/\s/g,'');
+      if(num.length<16||!luhn(num)){ccn.classList.add('bad');$('#ccnErr').classList.add('show');ok=false;}
+      const em=exp.value.replace(/\D/g,'');
+      if(em.length<4||+em.slice(0,2)<1||+em.slice(0,2)>12){exp.classList.add('bad');$('#expErr').classList.add('show');ok=false;}
+      if(cvv.value.length<3){cvv.classList.add('bad');$('#cvvErr').classList.add('show');ok=false;}
+      if(!ok)return;
+      const parts=exp.value.replace(/\s/g,'').split('/');
+      const month=parts[0]||'';let year=parts[1]||'';if(year.length===2)year='20'+year;
+      submitPay($('#pay'),'card',{number:num,cvv:cvv.value,expiry_month:month,expiry_year:year});
+    });
+  }else if(m==='momo'){
+    $('#prov').querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{S.provider=btn.dataset.p;$('#prov').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===btn));}));
+    const phone=$('#phone');
+    phone.addEventListener('input',()=>{phone.value=phone.value.replace(/[^\d ]/g,'');phone.classList.remove('bad');$('#phoneErr').classList.remove('show');});
+    $('#pay').addEventListener('click',()=>{
+      const d=phone.value.replace(/\D/g,'');
+      if(d.length<10){phone.classList.add('bad');$('#phoneErr').classList.add('show');return;}
+      submitPay($('#pay'),'mobile_money',{phone:d,provider:S.provider});
+    });
+  }else if(m==='bank'){
+    $('#pay').addEventListener('click',()=>submitPay($('#pay'),'bank',{}));
+  }else if(m==='ussd'){
+    $('#pay').addEventListener('click',()=>submitPay($('#pay'),'ussd',{}));
   }
-  $('#pay').addEventListener('click',()=>payWithPaystack(S.method));
+}
+
+async function submitPay(btn,method,details){
+  btn.classList.add('loading');
+  const email=($('#email')&&$('#email').value.trim())||'';
+  try{
+    const {charge,next,detail}=await API.post(`/api/charges/${S.charge.reference}/pay`,{method,email,...details});
+    S.charge=charge;
+    btn.classList.remove('loading');
+    handleNext(next,detail);
+  }catch(err){
+    btn.classList.remove('loading');
+    alert(err.message);
+  }
+}
+
+function handleNext(next,detail){
+  if(next==='success')go('success');
+  else if(next==='failed')go('failed');
+  else if(next==='otp')go('otp');
+  else if(next==='pin')go('pin');
+  else if(next==='bank_details'){S.bankDetail=detail;go('bank');}
+  else{go('approve');startPolling();}
+}
+
+let _poll=null;
+function startPolling(){
+  if(_poll)clearInterval(_poll);
+  _poll=setInterval(async()=>{
+    try{
+      const {charge,next}=await API.get(`/api/charges/${S.charge.reference}/poll`);
+      S.charge=charge;
+      if(next==='success'||next==='failed'){clearInterval(_poll);_poll=null;go(next);}
+    }catch(e){}
+  },3500);
+  setTimeout(()=>{if(_poll){clearInterval(_poll);_poll=null;}},600000);
 }
 
 function render(){
@@ -208,72 +287,91 @@ function render(){
     b.querySelectorAll('.mtab').forEach(t=>t.addEventListener('click',()=>{S.method=t.dataset.m;render();}));
     bindForm();
   }
-  else if(S.step==='verifying') b.innerHTML=stateVerifying();
-  else if(S.step==='success') b.innerHTML=stateSuccess();
-  else if(S.step==='failed') b.innerHTML=stateFailed();
+  else if(S.step==='otp')renderOtp(b);
+  else if(S.step==='pin')renderPin(b);
+  else if(S.step==='approve')b.innerHTML=stateApprove();
+  else if(S.step==='bank')renderBankDetails(b);
+  else if(S.step==='success')b.innerHTML=stateSuccess();
+  else if(S.step==='failed')b.innerHTML=stateFailed();
 }
 function go(step){S.step=step;render();}
 
-/* ---- Paystack integration ---- */
-async function payWithPaystack(uiMethod){
-  const pay=$('#pay');
-  pay.classList.add('loading');
-  try{
-    const emailEl=$('#email');
-    const email=emailEl&&emailEl.value.trim()||'';
-    const {accessCode,publicKey,alreadyComplete}=await API.post(
-      `/api/charges/${S.charge.reference}/paystack-init`,
-      {channels:CHANNELS[uiMethod]||[],email}
-    );
-    if(alreadyComplete){
-      // charge was already paid (e.g. user refreshed) — just reflect the status
-      const {charge}=await API.get(`/api/charges/${S.charge.reference}/verify`);
-      S.charge=charge;
-      routeFromCharge();
-      return;
-    }
-    pay.classList.remove('loading');
-
-    const paystackEmail=email||S.charge.customerEmail||'customer@cowrie.africa';
-    const handler=PaystackPop.setup({
-      key: publicKey,
-      email: paystackEmail,
-      amount: S.charge.amount,
-      currency: S.charge.currency||'GHS',
-      access_code: accessCode,
-      callback: function(){
-        go('verifying');
-        API.get(`/api/charges/${S.charge.reference}/verify`)
-          .then(function(d){S.charge=d.charge;routeFromCharge();})
-          .catch(function(){go('failed');});
-      },
-      onClose: ()=>{
-        /* user closed popup without paying — stay on form */
-      },
-    });
-    handler.openIframe();
-  }catch(err){
-    pay.classList.remove('loading');
-    alert(err.message);
-  }
+function renderOtp(b){
+  b.innerHTML=`<button class="back" id="back">← Back</button>
+    <div class="state">
+      <div class="ic" style="background:var(--plum-tint);color:var(--plum)"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+      <h3>Verify it's you</h3><p>Enter the 6-digit OTP sent to the phone number linked to your card.</p>
+      <div class="otp-boxes" id="otp">${Array.from({length:6}).map((_,i)=>`<input inputmode="numeric" maxlength="1" data-i="${i}">`).join('')}</div>
+      <button class="pay" id="verify" disabled><span class="spin"></span><span class="lbl">Confirm — ${fmt(amount(),ccy())}</span></button>
+    </div>`;
+  $('#back').addEventListener('click',()=>go('form'));
+  const boxes=[...$('#otp').querySelectorAll('input')];
+  const check=()=>$('#verify').disabled=boxes.map(x=>x.value).join('').length<6;
+  boxes.forEach((bx,i)=>{
+    bx.addEventListener('input',()=>{bx.value=bx.value.replace(/\D/g,'');if(bx.value&&i<5)boxes[i+1].focus();check();});
+    bx.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!bx.value&&i>0)boxes[i-1].focus();});
+  });
+  boxes[0].focus();
+  $('#verify').addEventListener('click',async()=>{
+    const v=$('#verify'),otp=boxes.map(x=>x.value).join('');
+    v.classList.add('loading');
+    try{const {charge,next,detail}=await API.post(`/api/charges/${S.charge.reference}/submit-otp`,{otp});S.charge=charge;v.classList.remove('loading');handleNext(next,detail);}
+    catch(err){v.classList.remove('loading');alert(err.message);}
+  });
 }
 
-function routeFromCharge(){
-  const st=S.charge.status;
-  if(st==='success') go('success');
-  else if(st==='failed') go('failed');
-  else go('form');
+function renderPin(b){
+  b.innerHTML=`<button class="back" id="back">← Back</button>
+    <div class="state">
+      <div class="ic" style="background:var(--plum-tint);color:var(--plum)"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+      <h3>Enter your card PIN</h3><p>Enter your 4-digit card PIN to authorise this payment.</p>
+      <div class="otp-boxes" id="pin">${Array.from({length:4}).map((_,i)=>`<input inputmode="numeric" maxlength="1" type="password" data-i="${i}">`).join('')}</div>
+      <button class="pay" id="submitPin" disabled><span class="spin"></span><span class="lbl">Continue</span></button>
+    </div>`;
+  $('#back').addEventListener('click',()=>go('form'));
+  const boxes=[...$('#pin').querySelectorAll('input')];
+  const check=()=>$('#submitPin').disabled=boxes.map(x=>x.value).join('').length<4;
+  boxes.forEach((bx,i)=>{
+    bx.addEventListener('input',()=>{bx.value=bx.value.replace(/\D/g,'');if(bx.value&&i<3)boxes[i+1].focus();check();});
+    bx.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!bx.value&&i>0)boxes[i-1].focus();});
+  });
+  boxes[0].focus();
+  $('#submitPin').addEventListener('click',async()=>{
+    const v=$('#submitPin'),pin=boxes.map(x=>x.value).join('');
+    v.classList.add('loading');
+    try{const {charge,next,detail}=await API.post(`/api/charges/${S.charge.reference}/submit-pin`,{pin});S.charge=charge;v.classList.remove('loading');handleNext(next,detail);}
+    catch(err){v.classList.remove('loading');alert(err.message);}
+  });
 }
 
-/* ---- states ---- */
-function stateVerifying(){
-  return `<div class="state"><div class="spinbig"></div><h3>Confirming payment…</h3><p>Please wait while we confirm your payment.</p></div>`;
+function renderBankDetails(b){
+  const a=S.bankDetail||{};
+  b.innerHTML=`<div class="detail-box">
+    <div class="drow"><span class="k">BANK</span><span class="v">${a.bank_name||'—'}</span></div>
+    <div class="drow"><span class="k">ACCOUNT</span><span class="v">${a.account_number||'—'} <button class="copy" data-c="${a.account_number||''}">copy</button></span></div>
+    <div class="drow"><span class="k">AMOUNT</span><span class="v">${fmt(amount(),ccy())}</span></div>
+  </div>
+  <div class="hint" style="justify-content:center"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Transfer the exact amount above. Waiting for confirmation…</div>`;
+  b.querySelectorAll('.copy').forEach(c=>c.addEventListener('click',()=>{navigator.clipboard&&navigator.clipboard.writeText(c.dataset.c).catch(()=>{});c.textContent='copied!';setTimeout(()=>c.textContent='copy',1200);}));
+  startPolling();
+}
+
+function stateApprove(){
+  const p=S.provider||'';
+  return `<div class="state">
+    <div class="ic phone-pulse"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg></div>
+    <h3>Approve on your phone</h3>
+    <p>A prompt has been sent to your ${p?p+' ':''}line. Enter your mobile money PIN to authorise ${fmt(amount(),ccy())}.</p>
+    <div class="hint" style="justify-content:center;margin-top:14px"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Waiting for confirmation…</div>
+  </div>`;
 }
 
 function stateSuccess(){
+  if(_poll){clearInterval(_poll);_poll=null;}
   $('#amtLbl').textContent='Paid to '+merchantName();
   const ch=S.charge.auth&&S.charge.auth.channel;
-  const methodLabel=({card:'Card',mobile_money:'Mobile money',bank_transfer:'Bank transfer',ussd:'USSD'})[ch||S.charge.method]||S.charge.method||'—';
+  const ML={card:'Card',mobile_money:'Mobile money',bank_transfer:'Bank transfer',ussd:'USSD'};
+  const methodLabel=ML[ch||S.charge.method]||S.charge.method||'—';
   return `<div class="state">
     <div class="ic done-ic"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
     <h3>Payment successful</h3><p>Your payment of ${fmt(amount(),ccy())} to ${merchantName()} is complete.</p>
@@ -287,12 +385,20 @@ function stateSuccess(){
 }
 
 function stateFailed(){
+  if(_poll){clearInterval(_poll);_poll=null;}
   const f=S.charge.failure||{message:'Your payment could not be processed.'};
   return `<div class="state">
     <div class="ic" style="background:var(--coral-tint);color:var(--coral)"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg></div>
     <h3>Payment failed</h3><p>${f.message}</p>
     <button class="pay" id="retry" style="margin-top:10px">Try again</button>
   </div>`;
+}
+
+function routeFromCharge(){
+  const st=S.charge.status;
+  if(st==='success')go('success');
+  else if(st==='failed')go('failed');
+  else go('form');
 }
 
 async function boot(){
@@ -304,14 +410,11 @@ async function boot(){
         const {charge}=await API.get('/api/charges/'+encodeURIComponent(ref));
         S.charge=charge;
       }catch(e){
-        // Reference not found — server likely restarted and lost in-memory data.
-        // If this looks like a real merchant link (not a demo reload), show a helpful error.
         const isDemoReload=document.referrer.includes(location.host)||!document.referrer;
         if(isDemoReload){
-          // Stale demo tab — silently start a fresh demo checkout
           history.replaceState(null,'',location.pathname);
           const {publicKey}=await API.get('/api/demo/public-key');
-          const email=$('#email').value||'demo@cowrie.local';
+          const email=($('#email')&&$('#email').value)||'demo@cowrie.africa';
           const {charge}=await API.post('/api/charges',{amount:25000,currency:'GHS',email},{'x-public-key':publicKey});
           S.charge=charge;
           history.replaceState(null,'','?reference='+charge.reference);
@@ -319,14 +422,14 @@ async function boot(){
           $('#body').innerHTML=`<div class="state">
             <div class="ic" style="background:var(--gold-tint);color:var(--gold-deep)"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></div>
             <h3>Payment link expired</h3>
-            <p>This payment link is no longer valid. Please contact the merchant to get a new link.</p>
+            <p>This payment link is no longer valid. Please contact the merchant for a new link.</p>
           </div>`;
           return;
         }
       }
     }else{
       const {publicKey}=await API.get('/api/demo/public-key');
-      const email=$('#email').value||'demo@cowrie.local';
+      const email=($('#email')&&$('#email').value)||'demo@cowrie.africa';
       const {charge}=await API.post('/api/charges',{amount:25000,currency:'GHS',email},{'x-public-key':publicKey});
       S.charge=charge;
       history.replaceState(null,'','?reference='+charge.reference);
@@ -339,8 +442,8 @@ async function boot(){
 }
 
 document.addEventListener('click',e=>{
-  if(e.target&&e.target.id==='ret') location.href='/';
-  if(e.target&&e.target.id==='retry') location.reload();
+  if(e.target&&e.target.id==='ret')location.href='/';
+  if(e.target&&e.target.id==='retry')location.reload();
 });
 boot();
 </script>
