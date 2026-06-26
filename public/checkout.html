@@ -234,8 +234,12 @@ async function payWithPaystack(uiMethod){
     }
     pay.classList.remove('loading');
 
+    const paystackEmail=email||S.charge.customerEmail||'customer@cowrie.africa';
     const handler=PaystackPop.setup({
       key: publicKey,
+      email: paystackEmail,
+      amount: S.charge.amount,
+      currency: S.charge.currency||'GHS',
       access_code: accessCode,
       callback: function(){
         go('verifying');
