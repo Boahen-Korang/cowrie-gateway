@@ -9,7 +9,7 @@ const { merchantId, apiKey, hashPassword } = require('./lib/util');
 
 const app = express();
 app.set('trust proxy', true);
-app.use(express.json({ limit: '256kb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
+app.use(express.json({ limit: '20mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/api', api);

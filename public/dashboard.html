@@ -668,6 +668,23 @@ async function renderApiKeys(el){
 }
 
 /* ─── KYC / Verification ─── */
+const kycFiles={idFront:null,idBack:null,certificate:null};
+
+function kycUploadZone(id,label,hint){
+  return `<div class="field">
+    <div class="lbl">${label}</div>
+    <label class="upload-zone" id="uz-${id}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;border:1.5px dashed rgba(255,255,255,.15);border-radius:12px;padding:20px;cursor:pointer;transition:.15s;min-height:110px;position:relative;background:rgba(255,255,255,.03)">
+      <input type="file" id="fi-${id}" accept="image/*,.pdf" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
+      <div id="up-preview-${id}" style="display:none;width:100%;text-align:center"></div>
+      <div id="up-placeholder-${id}" style="text-align:center;pointer-events:none">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.5" style="margin-bottom:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div style="font-size:12.5px;color:rgba(255,255,255,.35)">${hint}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:3px">JPG, PNG or PDF · max 5 MB</div>
+      </div>
+    </label>
+  </div>`;
+}
+
 async function renderVerification(el){
   if(!M) M=(await API.get('/api/me')).merchant;
   const {kycStatus,kycData,kycRejectionReason}=await API.get('/api/kyc');
@@ -693,6 +710,8 @@ async function renderVerification(el){
     </div>`;
     return;
   }
+
+  kycFiles.idFront=null; kycFiles.idBack=null; kycFiles.certificate=null;
 
   const rejectedBanner=kycStatus==='rejected'?`
     <div style="background:rgba(239,106,76,.12);border:1px solid rgba(239,106,76,.3);border-radius:12px;padding:14px 18px;margin-bottom:20px;font-size:13.5px;color:var(--coral)">
@@ -724,16 +743,64 @@ async function renderVerification(el){
             <option value="company"${kycData?.businessType==='company'?' selected':''}>Registered company</option>
           </select>
         </div>
-        <div class="field"><div class="lbl">Business registration number <span style="color:var(--muted);font-weight:400">(optional)</span></div>
+        <div class="field"><div class="lbl">Business registration number</div>
           <input id="kRegNum" placeholder="e.g. CS-12345" value="${esc(kycData?.businessRegNumber||'')}">
         </div>
         <div class="field"><div class="lbl">Business address</div>
           <input id="kAddress" placeholder="e.g. 12 Cantonments Road, Accra, Ghana" value="${esc(kycData?.address||'')}">
         </div>
+
+        <div style="margin:24px 0 8px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.38)">ID Documents</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          ${kycUploadZone('idFront','ID — front side','Click or drag to upload front of ID')}
+          ${kycUploadZone('idBack','ID — back side','Click or drag to upload back of ID')}
+        </div>
+
+        <div style="margin:20px 0 8px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.38)">Business Document</div>
+        ${kycUploadZone('certificate','Business certificate / registration','Certificate of incorporation, business registration or equivalent')}
+
         <div class="fb" id="kycFb"></div>
-        <button class="btn primary" id="kycSubmit" style="margin-top:6px">Submit for verification</button>
+        <button class="btn primary" id="kycSubmit" style="margin-top:12px">Submit for verification</button>
       </div>
     </div>`;
+
+  /* Wire up file inputs */
+  ['idFront','idBack','certificate'].forEach(key=>{
+    const input=document.getElementById(`fi-${key}`);
+    const zone=document.getElementById(`uz-${key}`);
+    const preview=document.getElementById(`up-preview-${key}`);
+    const placeholder=document.getElementById(`up-placeholder-${key}`);
+
+    const load=file=>{
+      if(!file)return;
+      if(file.size>5*1024*1024){
+        document.getElementById('kycFb').textContent=`${file.name} exceeds 5 MB.`;
+        document.getElementById('kycFb').className='fb bad';
+        return;
+      }
+      const reader=new FileReader();
+      reader.onload=e=>{
+        kycFiles[key]=e.target.result;
+        const isPdf=file.type==='application/pdf';
+        preview.style.display='block';
+        placeholder.style.display='none';
+        preview.innerHTML=isPdf
+          ?`<div style="padding:10px;font-size:12px;color:#C9AEFF">📄 ${esc(file.name)}</div>`
+          :`<img src="${e.target.result}" style="max-height:90px;max-width:100%;border-radius:7px;object-fit:contain"><div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:5px">${esc(file.name)}</div>`;
+        zone.style.borderColor='rgba(91,44,143,.55)';
+        zone.style.background='rgba(91,44,143,.08)';
+      };
+      reader.readAsDataURL(file);
+    };
+
+    input.addEventListener('change',()=>load(input.files[0]));
+    zone.addEventListener('dragover',e=>{e.preventDefault();zone.style.borderColor='rgba(139,92,246,.6)';});
+    zone.addEventListener('dragleave',()=>zone.style.borderColor='');
+    zone.addEventListener('drop',e=>{
+      e.preventDefault();zone.style.borderColor='';
+      const f=e.dataTransfer.files[0];if(f){input.files=e.dataTransfer.files;load(f);}
+    });
+  });
 
   document.getElementById('kycSubmit').addEventListener('click',async()=>{
     const fb=document.getElementById('kycFb');fb.className='fb';
@@ -745,17 +812,28 @@ async function renderVerification(el){
       businessType:document.getElementById('kBizType').value,
       businessRegNumber:document.getElementById('kRegNum').value.trim(),
       address:document.getElementById('kAddress').value.trim(),
+      idFront:kycFiles.idFront,
+      idBack:kycFiles.idBack,
+      certificate:kycFiles.certificate,
     };
     if(!body.fullName||!body.phone||!body.idType||!body.idNumber||!body.address){
       fb.textContent='Please fill in all required fields.';fb.className='fb bad';return;
     }
+    if(!body.idFront||!body.idBack){
+      fb.textContent='Please upload both the front and back of your ID.';fb.className='fb bad';return;
+    }
+    if(!body.certificate){
+      fb.textContent='Please upload your business certificate or registration document.';fb.className='fb bad';return;
+    }
     try{
-      document.getElementById('kycSubmit').disabled=true;
+      const btn=document.getElementById('kycSubmit');
+      btn.disabled=true;btn.textContent='Uploading…';
       await API.post('/api/kyc',body);
       fb.textContent='Submitted! We\'ll review your documents within 1–2 business days.';fb.className='fb ok';
-      setTimeout(()=>loadView('verification'),1500);
+      setTimeout(()=>loadView('verification'),1800);
     }catch(err){
-      document.getElementById('kycSubmit').disabled=false;
+      const btn=document.getElementById('kycSubmit');
+      btn.disabled=false;btn.textContent='Submit for verification';
       fb.textContent=err.message;fb.className='fb bad';
     }
   });

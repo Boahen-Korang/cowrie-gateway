@@ -574,9 +574,24 @@ router.post('/kyc', requireAuth, ah(async (req, res) => {
   if (merchant.kycStatus === 'approved') {
     const e = new Error('Your account is already verified.'); e.status = 409; throw e;
   }
-  const { fullName, phone, idType, idNumber, businessType, businessRegNumber, address } = req.body || {};
+  const { fullName, phone, idType, idNumber, businessType, businessRegNumber, address, idFront, idBack, certificate } = req.body || {};
   if (!fullName || !phone || !idType || !idNumber || !address) {
     const e = new Error('fullName, phone, idType, idNumber and address are required.'); e.status = 400; throw e;
+  }
+  if (!idFront || !idBack) {
+    const e = new Error('Front and back photos of your ID are required.'); e.status = 400; throw e;
+  }
+  if (!certificate) {
+    const e = new Error('Business certificate or registration document is required.'); e.status = 400; throw e;
+  }
+  const MAX = 5 * 1024 * 1024; // 5 MB base64 string length ≈ 6.7 MB file
+  for (const [label, val] of [['idFront', idFront], ['idBack', idBack], ['certificate', certificate]]) {
+    if (typeof val !== 'string' || !val.startsWith('data:')) {
+      const e = new Error(`${label} must be a valid data URL.`); e.status = 400; throw e;
+    }
+    if (val.length > MAX) {
+      const e = new Error(`${label} exceeds the 5 MB limit.`); e.status = 400; throw e;
+    }
   }
   merchant.kycStatus = 'pending';
   merchant.kycData = {
@@ -587,6 +602,9 @@ router.post('/kyc', requireAuth, ah(async (req, res) => {
     businessType: String(businessType || 'individual').trim(),
     businessRegNumber: String(businessRegNumber || '').trim(),
     address: String(address).trim(),
+    idFront,
+    idBack,
+    certificate,
   };
   merchant.kycSubmittedAt = Date.now();
   merchant.kycRejectionReason = null;
