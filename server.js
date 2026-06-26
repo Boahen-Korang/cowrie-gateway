@@ -67,9 +67,11 @@ async function start() {
   app.listen(cfg.PORT, async () => {
     const all = await store.merchants.all();
     const demo = all.find((m) => m.demo);
+    const mode = (cfg.PAYSTACK_SECRET_KEY || '').startsWith('sk_live_') ? 'LIVE' : 'TEST';
     console.log('\n  Cowrie gateway running');
     console.log(`  -> http://localhost:${cfg.PORT}`);
-    if (demo) console.log(`\n  Demo public key: ${demo.publicKey}\n`);
+    console.log(`  Paystack mode: ${mode}`);
+    if (demo) console.log(`  Demo public key: ${demo.publicKey}`);
   });
 }
 
