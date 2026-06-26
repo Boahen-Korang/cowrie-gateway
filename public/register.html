@@ -6,122 +6,152 @@
 <title>Cowrie — Create account</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ivory:#F7F5F0; --ivory-2:#FBFAF6; --white:#FFFFFF;
-  --ink:#1B1330; --ink-soft:#564E68; --muted:#7A7388; --faint:#A39CB0;
-  --line:#E8E3DA;
-  --plum:#5B2C8F; --plum-deep:#3A1A60; --plum-br:#7B45B8; --plum-tint:#EFE6F7;
-  --gold:#E0A12E; --gold-deep:#B8801C; --gold-tint:#F8EFD9;
-  --mint:#1FA877; --mint-tint:#DCF1E9; --coral:#EF6A4C;
-  --darkbg:#1B1330; --darkbg-2:#241844;
-  --display:'Plus Jakarta Sans',sans-serif; --body:'Plus Jakarta Sans',sans-serif; --mono:'JetBrains Mono',monospace;
+  --ink:#0F0D1A; --ink-soft:#4B4668; --muted:#7B76A0; --faint:#B8B3D0;
+  --white:#FFFFFF; --border:#E2DCF0;
+  --plum:#5B2C8F; --plum-deep:#3D1D62; --plum-light:#7B45B8;
+  --gold:#C8860A; --mint:#1A9B6E; --coral:#DC3545;
+  --dark:#09071A;
+  --display:'Plus Jakarta Sans',sans-serif; --mono:'JetBrains Mono',monospace;
 }
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--ivory);color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased;line-height:1.55;min-height:100vh}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{height:100%}
+body{min-height:100vh;background:#F8F7FC;color:var(--ink);font-family:var(--display);-webkit-font-smoothing:antialiased;line-height:1.5}
 ::selection{background:var(--plum);color:#fff}
 a{color:inherit;text-decoration:none}
 button{font-family:inherit;cursor:pointer}
-.shell{width:26px;height:26px;border-radius:50% 50% 48% 48%/60% 60% 40% 40%;background:linear-gradient(135deg,var(--gold),var(--plum-br));position:relative;box-shadow:inset 0 -2px 4px rgba(0,0,0,.2);flex-shrink:0}
-.shell::before{content:'';position:absolute;left:50%;top:18%;bottom:18%;width:2px;background:rgba(255,255,255,.6);transform:translateX(-50%);border-radius:2px}
-.logo{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:21px;letter-spacing:-.02em}
 
-.split{display:grid;grid-template-columns:1.05fr 1fr;min-height:100vh}
-@media(max-width:900px){.split{grid-template-columns:1fr}.brandside{display:none}}
+.split{display:grid;grid-template-columns:1fr 1fr;min-height:100vh}
+@media(max-width:900px){.split{grid-template-columns:1fr}.brand{display:none}}
 
-.brandside{position:relative;background:linear-gradient(165deg,#2A1A52,var(--darkbg) 60%);color:#fff;padding:46px 52px;display:flex;flex-direction:column;overflow:hidden}
-.brandside::before{content:'';position:absolute;right:-15%;top:-10%;width:60%;height:60%;background:radial-gradient(circle,rgba(224,161,46,.22),transparent 65%);filter:blur(10px)}
-.brandside::after{content:'';position:absolute;left:-20%;bottom:-15%;width:60%;height:60%;background:radial-gradient(circle,rgba(123,69,184,.4),transparent 65%);filter:blur(20px)}
-.brandside .logo{color:#fff;position:relative;z-index:2}
-.bs-mid{margin:auto 0;position:relative;z-index:2}
-.bs-mid h2{font-family:var(--display);font-weight:800;font-size:clamp(28px,3.4vw,42px);line-height:1.1;letter-spacing:-.025em;max-width:13ch}
-.bs-mid p{color:#B5ADC8;font-size:16px;margin-top:16px;max-width:36ch}
-.feats{margin-top:32px;display:flex;flex-direction:column;gap:14px}
-.feat{display:flex;align-items:center;gap:13px;font-size:14px;color:#C5BCDA;position:relative;z-index:2}
-.feat .ck{width:22px;height:22px;border-radius:6px;background:rgba(31,168,119,.25);border:1px solid rgba(31,168,119,.4);display:grid;place-items:center;flex-shrink:0;color:var(--mint)}
-.bs-bot{position:relative;z-index:2;display:flex;gap:20px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;color:#8F84B4;margin-top:38px}
-.bs-bot span{display:flex;align-items:center;gap:7px}.bs-bot .ck2{color:var(--gold)}
+.shell{width:28px;height:28px;border-radius:50% 50% 48% 48%/60% 60% 40% 40%;background:linear-gradient(135deg,var(--gold),var(--plum-light));position:relative;flex-shrink:0;box-shadow:inset 0 -2px 4px rgba(0,0,0,.22)}
+.shell::before{content:'';position:absolute;left:50%;top:18%;bottom:18%;width:2px;background:rgba(255,255,255,.65);transform:translateX(-50%);border-radius:2px}
 
-.formside{display:flex;flex-direction:column;padding:clamp(24px,4vw,48px)}
-.fs-top{display:flex;align-items:center;justify-content:space-between}
-.fs-top .mob-logo{display:none}
-.fs-top .back{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-left:auto;display:inline-flex;align-items:center;gap:7px}
-.fs-top .back:hover{color:var(--plum)}
-@media(max-width:900px){.fs-top .mob-logo{display:flex}}
-.form-box{margin:auto;width:100%;max-width:392px;padding:36px 0}
-.form-box h1{font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:-.02em}
-.form-box .sub{color:var(--ink-soft);font-size:15px;margin-top:7px;margin-bottom:28px}
+/* ─── Brand panel ─── */
+.brand{position:relative;background:var(--dark);color:#fff;display:flex;flex-direction:column;padding:44px 52px;overflow:hidden}
+.brand::before{content:'';position:absolute;top:-10%;right:-20%;width:70%;height:70%;background:radial-gradient(circle,rgba(91,44,143,.55),transparent 68%);filter:blur(60px);pointer-events:none}
+.brand::after{content:'';position:absolute;bottom:-25%;left:-10%;width:60%;height:60%;background:radial-gradient(circle,rgba(200,134,10,.28),transparent 68%);filter:blur(50px);pointer-events:none}
+.brand-dots{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.055) 1.2px,transparent 1.2px);background-size:30px 30px;pointer-events:none;z-index:0}
+.brand-logo{display:flex;align-items:center;gap:10px;position:relative;z-index:2;font-weight:800;font-size:20px;letter-spacing:-.02em}
+.brand-mid{margin:auto 0;position:relative;z-index:2}
+.brand-mid h2{font-size:clamp(30px,3.4vw,46px);font-weight:800;line-height:1.07;letter-spacing:-.03em;max-width:14ch}
+.brand-mid p{color:rgba(255,255,255,.48);font-size:16px;margin-top:18px;max-width:38ch;line-height:1.65}
+.brand-feats{margin-top:36px;display:flex;flex-direction:column;gap:14px}
+.feat{display:flex;align-items:flex-start;gap:12px;font-size:14.5px;color:rgba(255,255,255,.75);line-height:1.5}
+.feat-ck{width:22px;height:22px;flex-shrink:0;border-radius:6px;background:rgba(26,155,110,.2);border:1px solid rgba(26,155,110,.35);display:grid;place-items:center;color:var(--mint);margin-top:1px}
+.feat-ck svg{width:11px;height:11px}
+.brand-trust{position:relative;z-index:2;display:flex;gap:22px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.3)}
+.brand-trust span{display:flex;align-items:center;gap:7px}
+.brand-trust .ck{color:var(--mint)}
 
-.field{margin-bottom:16px}
-.field label{display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:7px}
-.input-wrap{position:relative}
-.field input{width:100%;background:var(--white);border:1.5px solid var(--line);border-radius:11px;padding:13px 15px;color:var(--ink);font-family:var(--body);font-size:15px;transition:.18s;outline:none}
+/* ─── Form panel ─── */
+.form-side{display:flex;flex-direction:column;background:var(--white);padding:clamp(28px,4vw,52px)}
+.form-top{display:flex;align-items:center}
+.mob-logo{display:none;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.02em}
+@media(max-width:900px){.mob-logo{display:flex}}
+.back{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--muted);transition:color .15s}
+.back:hover{color:var(--plum)}
+.form-box{margin:auto;width:100%;max-width:400px;padding:44px 0}
+.form-box h1{font-size:33px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.form-box .sub{color:var(--ink-soft);font-size:15px;margin-top:10px;margin-bottom:34px;line-height:1.62}
+
+.field{margin-bottom:18px}
+.field label{display:block;font-size:14px;font-weight:600;color:var(--ink);margin-bottom:8px}
+.field input{
+  display:block;width:100%;background:var(--white);border:1.5px solid var(--border);
+  border-radius:10px;padding:13px 16px;font-family:var(--display);font-size:15px;
+  color:var(--ink);outline:none;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none
+}
 .field input::placeholder{color:var(--faint)}
-.field input:focus{border-color:var(--plum);box-shadow:0 0 0 4px var(--plum-tint)}
-.field input.bad{border-color:var(--coral);box-shadow:0 0 0 4px rgba(239,106,76,.12)}
-.toggle-pw{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);font-family:var(--mono);font-size:11px;font-weight:600;padding:4px 6px}
+.field input:focus{border-color:var(--plum);box-shadow:0 0 0 3px rgba(91,44,143,.1)}
+.field input.bad{border-color:var(--coral);box-shadow:0 0 0 3px rgba(220,53,69,.08)}
+.input-wrap{position:relative}
+.toggle-pw{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted);padding:4px 8px;letter-spacing:.05em}
 .toggle-pw:hover{color:var(--plum)}
 .err{color:var(--coral);font-size:12.5px;margin-top:6px;display:none}
 .err.show{display:block}
-
-.btn-submit{width:100%;background:var(--plum);color:#fff;border:none;border-radius:11px;padding:14px;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;gap:9px;transition:.22s;position:relative;margin-top:4px}
-.btn-submit:hover{background:var(--plum-deep)}
-.btn-submit.loading{color:transparent;pointer-events:none}
-.btn-submit .spin{position:absolute;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;display:none;animation:spin .7s linear infinite}
-.btn-submit.loading .spin{display:block}
-.btn-submit.done{background:var(--mint);pointer-events:none}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-.signin{text-align:center;margin-top:26px;font-size:14px;color:var(--ink-soft)}
-.signin a{color:var(--plum);font-weight:700}.signin a:hover{text-decoration:underline}
-.secure{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:22px;font-family:var(--mono);font-size:11px;color:var(--faint)}
-.secure svg{width:13px;height:13px}
 .pw-hint{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:5px}
 
-@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+.btn-primary{
+  width:100%;height:52px;background:var(--plum);color:#fff;border:none;border-radius:10px;
+  font-weight:700;font-size:15px;letter-spacing:-.01em;margin-top:6px;
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  transition:background .15s,transform .15s,box-shadow .15s;position:relative;cursor:pointer
+}
+.btn-primary:hover{background:var(--plum-deep);transform:translateY(-1px);box-shadow:0 10px 28px -8px rgba(91,44,143,.4)}
+.btn-primary:active{transform:none;box-shadow:none}
+.btn-primary.loading{color:transparent;pointer-events:none}
+.btn-primary .spin{position:absolute;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none}
+.btn-primary.loading .spin{display:block}
+.btn-primary.done{background:var(--mint);pointer-events:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.form-footer{margin-top:26px;text-align:center;font-size:14px;color:var(--muted)}
+.form-footer a{color:var(--plum);font-weight:700}
+.form-footer a:hover{text-decoration:underline}
+.secure-badge{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:20px;font-family:var(--mono);font-size:11px;color:var(--faint)}
+.secure-badge svg{width:12px;height:12px}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <div class="split">
 
-  <div class="brandside">
-    <a href="/" class="logo"><span class="shell"></span>Cowrie</a>
-    <div class="bs-mid">
+  <!-- BRAND -->
+  <div class="brand">
+    <div class="brand-dots"></div>
+    <div class="brand-logo"><span class="shell"></span>Cowrie</div>
+    <div class="brand-mid">
       <h2>Start collecting payments today.</h2>
       <p>Set up your merchant account in minutes and go live across Africa's top payment rails.</p>
-      <div class="feats">
-        <div class="feat"><span class="ck"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Mobile money, cards, bank transfer &amp; USSD</div>
-        <div class="feat"><span class="ck"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Real-time dashboard &amp; webhooks</div>
-        <div class="feat"><span class="ck"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>API keys ready instantly</div>
-        <div class="feat"><span class="ck"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>No hidden fees</div>
+      <div class="brand-feats">
+        <div class="feat">
+          <span class="feat-ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+          Mobile money, cards &amp; bank transfer — in one checkout
+        </div>
+        <div class="feat">
+          <span class="feat-ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+          Real-time dashboard, webhooks &amp; full API access
+        </div>
+        <div class="feat">
+          <span class="feat-ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+          Live public &amp; secret API keys ready instantly
+        </div>
+        <div class="feat">
+          <span class="feat-ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+          No setup fees, no minimums, no hidden charges
+        </div>
       </div>
     </div>
-    <div class="bs-bot">
-      <span><span class="ck2">✓</span> PCI-DSS Level 1</span>
-      <span><span class="ck2">✓</span> 256-bit encryption</span>
-      <span><span class="ck2">✓</span> Licensed &amp; regulated</span>
+    <div class="brand-trust">
+      <span><span class="ck">✓</span> PCI-DSS Level 1</span>
+      <span><span class="ck">✓</span> 256-bit TLS</span>
+      <span><span class="ck">✓</span> Licensed &amp; regulated</span>
     </div>
   </div>
 
-  <div class="formside">
-    <div class="fs-top">
-      <a href="/" class="logo mob-logo"><span class="shell"></span>Cowrie</a>
-      <a href="/" class="back">← Back to cowrie.africa</a>
+  <!-- FORM -->
+  <div class="form-side">
+    <div class="form-top">
+      <div class="mob-logo"><span class="shell"></span>Cowrie</div>
+      <a href="/" class="back">← cowrie.africa</a>
     </div>
     <div class="form-box">
-      <h1>Create account</h1>
-      <p class="sub">Get your merchant account and API keys in seconds.</p>
+      <h1>Create your account.</h1>
+      <p class="sub">Get your merchant account and API keys in under two minutes.</p>
 
       <form id="regForm" novalidate>
         <div class="field">
           <label for="bizName">Business name</label>
-          <input type="text" id="bizName" placeholder="Adɔm Stores" autocomplete="organization">
+          <input type="text" id="bizName" placeholder="Your company name" autocomplete="organization">
           <div class="err" id="bizNameErr">Enter your business name</div>
         </div>
         <div class="field">
           <label for="email">Work email</label>
-          <input type="email" id="email" placeholder="you@business.com" autocomplete="email">
+          <input type="email" id="email" placeholder="you@company.com" autocomplete="email">
           <div class="err" id="emailErr">Enter a valid email address</div>
         </div>
         <div class="field">
@@ -140,17 +170,14 @@ button{font-family:inherit;cursor:pointer}
           </div>
           <div class="err" id="pw2Err">Passwords do not match</div>
         </div>
-
-        <div class="err" id="formErr" style="margin-top:8px;margin-bottom:12px;"></div>
-
-        <button type="submit" class="btn-submit" id="submitBtn">
-          <span class="lbl">Create account</span>
-          <span class="spin"></span>
+        <div class="err" id="formErr" style="margin-top:8px;margin-bottom:12px"></div>
+        <button type="submit" class="btn-primary" id="submitBtn">
+          <span class="lbl">Create account</span><span class="spin"></span>
         </button>
       </form>
 
-      <p class="signin">Already have an account? <a href="/login">Sign in</a></p>
-      <div class="secure">
+      <p class="form-footer">Already have an account? <a href="/login">Sign in</a></p>
+      <div class="secure-badge">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
         Protected by bank-grade encryption
       </div>
@@ -158,74 +185,49 @@ button{font-family:inherit;cursor:pointer}
   </div>
 
 </div>
-
 <script>
 'use strict';
-const togglePw = document.getElementById('togglePw');
-const pw = document.getElementById('pw');
-togglePw.addEventListener('click', () => {
-  const show = pw.type === 'password';
-  pw.type = show ? 'text' : 'password';
-  togglePw.textContent = show ? 'HIDE' : 'SHOW';
+const togglePw=document.getElementById('togglePw');
+const pw=document.getElementById('pw');
+togglePw.addEventListener('click',()=>{const s=pw.type==='password';pw.type=s?'text':'password';togglePw.textContent=s?'HIDE':'SHOW';});
+
+const form=document.getElementById('regForm');
+const btn=document.getElementById('submitBtn');
+const bizName=document.getElementById('bizName');
+const email=document.getElementById('email');
+const pw2=document.getElementById('pw2');
+const formErr=document.getElementById('formErr');
+
+function clearErr(el,errEl){el.classList.remove('bad');errEl.classList.remove('show');}
+[bizName,email,pw,pw2].forEach(el=>{
+  el.addEventListener('input',()=>{const errEl=document.getElementById(el.id+'Err');if(errEl)clearErr(el,errEl);});
 });
 
-const form = document.getElementById('regForm');
-const btn = document.getElementById('submitBtn');
-const bizName = document.getElementById('bizName');
-const email = document.getElementById('email');
-const pw2 = document.getElementById('pw2');
-const formErr = document.getElementById('formErr');
-
-function clearErr(el, errEl) {
-  el.classList.remove('bad');
-  errEl.classList.remove('show');
-}
-
-[bizName, email, pw, pw2].forEach(el => {
-  el.addEventListener('input', () => {
-    const errEl = document.getElementById(el.id + 'Err');
-    if (errEl) clearErr(el, errEl);
-  });
-});
-
-function validate() {
-  let ok = true;
-  if (!bizName.value.trim()) { bizName.classList.add('bad'); document.getElementById('bizNameErr').classList.add('show'); ok = false; }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) { email.classList.add('bad'); document.getElementById('emailErr').classList.add('show'); ok = false; }
-  if (pw.value.length < 8) { pw.classList.add('bad'); document.getElementById('pwErr').classList.add('show'); ok = false; }
-  if (pw2.value !== pw.value) { pw2.classList.add('bad'); document.getElementById('pw2Err').classList.add('show'); ok = false; }
+function validate(){
+  let ok=true;
+  if(!bizName.value.trim()){bizName.classList.add('bad');document.getElementById('bizNameErr').classList.add('show');ok=false;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())){email.classList.add('bad');document.getElementById('emailErr').classList.add('show');ok=false;}
+  if(pw.value.length<8){pw.classList.add('bad');document.getElementById('pwErr').classList.add('show');ok=false;}
+  if(pw2.value!==pw.value){pw2.classList.add('bad');document.getElementById('pw2Err').classList.add('show');ok=false;}
   return ok;
 }
 
-form.addEventListener('submit', async e => {
+form.addEventListener('submit',async e=>{
   e.preventDefault();
   formErr.classList.remove('show');
-  if (!validate()) return;
-
+  if(!validate())return;
   btn.classList.add('loading');
-  try {
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        businessName: bizName.value.trim(),
-        email: email.value.trim(),
-        password: pw.value,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Registration failed.');
-    localStorage.setItem('cowrie_token', data.token);
-    localStorage.setItem('cowrie_merchant', JSON.stringify(data.merchant));
-    btn.classList.remove('loading');
-    btn.classList.add('done');
-    btn.querySelector('.lbl').textContent = 'Account created ✓';
-    const next = new URLSearchParams(location.search).get('next') || '/dashboard';
-    setTimeout(() => { location.href = next; }, 500);
-  } catch (err) {
-    btn.classList.remove('loading');
-    formErr.textContent = err.message;
-    formErr.classList.add('show');
+  try{
+    const res=await fetch('/api/auth/register',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({businessName:bizName.value.trim(),email:email.value.trim(),password:pw.value})});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.message||'Registration failed.');
+    localStorage.setItem('cowrie_token',data.token);
+    localStorage.setItem('cowrie_merchant',JSON.stringify(data.merchant));
+    btn.classList.remove('loading');btn.classList.add('done');btn.querySelector('.lbl').textContent='Account created ✓';
+    const next=new URLSearchParams(location.search).get('next')||'/dashboard';
+    setTimeout(()=>{location.href=next;},500);
+  }catch(err){
+    btn.classList.remove('loading');formErr.textContent=err.message;formErr.classList.add('show');
   }
 });
 </script>
