@@ -163,12 +163,13 @@ router.post('/auth/resend-otp', authLimiter, ah(async (req, res) => {
 
 /* Login */
 router.post('/auth/login', authLimiter, ah(async (req, res) => {
-  const { email, password } = req.body || {};
+  const { email, password, remember } = req.body || {};
   const merchant = email && await store.merchants.byEmail(email);
   if (!merchant || !verifyPassword(password || '', merchant.passwordHash)) {
     const e = new Error('Invalid email or password.'); e.status = 401; throw e;
   }
-  const token = signToken({ sub: merchant.id, exp: Date.now() + cfg.TOKEN_TTL_MS });
+  const ttl = remember ? cfg.REMEMBER_TTL_MS : cfg.TOKEN_TTL_MS;
+  const token = signToken({ sub: merchant.id, exp: Date.now() + ttl });
   res.json({ token, merchant: publicMerchant(merchant) });
 }));
 

@@ -69,7 +69,8 @@ input,select,textarea{font-family:inherit}
 
 /* ─── Layout ─── */
 .grid{display:grid;grid-template-columns:220px 1fr;gap:18px;padding:18px 0 60px}
-@media(max-width:860px){.grid{grid-template-columns:1fr}.sidebar{display:none}}
+@media(max-width:860px){.grid{grid-template-columns:1fr;padding-bottom:84px}.sidebar{display:none}.wrap{padding:0 13px}.content{padding:14px;border-radius:14px}.kpis{grid-template-columns:1fr}.merchant-tag{max-width:120px;font-size:10px}}
+@media(max-width:420px){.kpi-tile .kv{font-size:22px}.table th,.table td{padding:8px 9px;font-size:12px}.vhdr h1{font-size:20px}.topbar-in{padding:11px 0}input,select,textarea{font-size:16px!important}}
 
 /* ─── Sidebar ─── */
 .sidebar{
@@ -189,6 +190,15 @@ input,select,textarea{font-family:inherit}
 .r3d{will-change:transform,opacity;transform:perspective(900px) rotateX(18deg) translateY(30px) scale(.97);opacity:0}
 .r3d.in{transform:perspective(900px) rotateX(0) translateY(0) scale(1);opacity:1}
 
+/* ─── Mobile bottom nav ─── */
+.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:50;background:rgba(9,7,26,.96);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border-top:1px solid rgba(255,255,255,.09);padding-bottom:env(safe-area-inset-bottom,0px)}
+.mob-nav-in{display:flex;align-items:stretch}
+.mob-nav a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px 8px;color:var(--muted);font-family:var(--mono);font-size:9px;letter-spacing:.03em;text-transform:uppercase;transition:.15s;text-decoration:none}
+.mob-nav a.active{color:#C9AEFF}
+.mob-nav a svg{opacity:.45;transition:.15s}
+.mob-nav a.active svg{opacity:1}
+@media(max-width:860px){.mob-nav{display:block}}
+
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.r3d,.r3d.in{transform:none;opacity:1}}
 </style>
 </head>
@@ -252,6 +262,32 @@ input,select,textarea{font-family:inherit}
     </main>
   </div>
 </div>
+
+<!-- Mobile bottom nav -->
+<nav class="mob-nav" id="mobNav">
+  <div class="mob-nav-in">
+    <a href="#" data-view="overview" class="mnav active">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Home
+    </a>
+    <a href="#" data-view="transactions" class="mnav">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      Txns
+    </a>
+    <a href="#" data-view="request-payout" class="mnav">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>
+      Payout
+    </a>
+    <a href="#" data-view="payout-history" class="mnav">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      History
+    </a>
+    <a href="#" data-view="api-keys" class="mnav">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      Keys
+    </a>
+  </div>
+</nav>
 
 <script>
 'use strict';
@@ -654,12 +690,13 @@ async function boot(){
   loadView('overview');
 }
 
-document.querySelectorAll('.nav a[data-view]').forEach(a=>{
+document.querySelectorAll('.nav a[data-view],.mnav').forEach(a=>{
   a.addEventListener('click',e=>{
     e.preventDefault();
-    document.querySelectorAll('.nav a').forEach(x=>x.classList.remove('active'));
-    a.classList.add('active');
-    loadView(a.dataset.view);
+    const v=a.dataset.view;
+    document.querySelectorAll('.nav a,.mnav').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll(`[data-view="${v}"]`).forEach(x=>x.classList.add('active'));
+    loadView(v);
   });
 });
 

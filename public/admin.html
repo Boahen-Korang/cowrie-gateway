@@ -85,7 +85,8 @@ input,select,textarea{font-family:inherit}
 
 /* ─── Grid layout ─── */
 .grid{display:grid;grid-template-columns:214px 1fr;gap:18px;padding:18px 0 70px}
-@media(max-width:860px){.grid{grid-template-columns:1fr}.sidebar{display:none}}
+@media(max-width:860px){.grid{grid-template-columns:1fr;padding-bottom:84px}.sidebar{display:none}.wrap{padding:0 13px}.content{padding:14px;border-radius:14px}.kpis{grid-template-columns:1fr 1fr}.merchant-tag{max-width:100px;font-size:10px}}
+@media(max-width:420px){.kpis{grid-template-columns:1fr}.kpi .v{font-size:22px}.table th,.table td{padding:8px 9px;font-size:12px}input,select,textarea{font-size:16px!important}}
 
 /* ─── Sidebar ─── */
 .sidebar{
@@ -278,6 +279,15 @@ input,select,textarea{font-family:inherit}
   opacity:1;
 }
 
+/* ─── Mobile bottom nav ─── */
+.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:50;background:rgba(9,7,26,.96);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border-top:1px solid rgba(255,255,255,.09);padding-bottom:env(safe-area-inset-bottom,0px)}
+.mob-nav-in{display:flex;align-items:stretch}
+.mob-nav a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px 8px;color:var(--muted);font-family:var(--mono);font-size:9px;letter-spacing:.03em;text-transform:uppercase;transition:.15s;text-decoration:none}
+.mob-nav a.active{color:#C9AEFF}
+.mob-nav a svg{opacity:.45;transition:.15s}
+.mob-nav a.active svg{opacity:1}
+@media(max-width:860px){.mob-nav{display:block}}
+
 @media(prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important}
   .r3d,.r3d.in{transform:none;opacity:1}
@@ -401,6 +411,32 @@ input,select,textarea{font-family:inherit}
     </div>
   </div>
 </div>
+
+<!-- Mobile bottom nav -->
+<nav class="mob-nav">
+  <div class="mob-nav-in">
+    <a href="#" data-view="overview" class="active">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Overview
+    </a>
+    <a href="#" data-view="transactions">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      Txns
+    </a>
+    <a href="#" data-view="payouts">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>
+      Payouts
+    </a>
+    <a href="#" data-view="settlements">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+      Settle
+    </a>
+    <a href="#" data-view="new-payment">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+      New
+    </a>
+  </div>
+</nav>
 
 <script>
 'use strict';

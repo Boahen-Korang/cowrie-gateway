@@ -115,6 +115,7 @@ button{font-family:inherit;cursor:pointer}
 .admin-access{display:block;text-align:center;margin-top:26px;font-family:var(--mono);font-size:11px;color:var(--text-muted);letter-spacing:.04em;transition:color .15s}
 .admin-access:hover{color:rgba(255,255,255,.5)}
 
+@media(max-width:480px){input{font-size:16px!important}.form-box{padding:36px 0}.form-box h1{font-size:28px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -212,7 +213,7 @@ form.addEventListener('submit',async e=>{
   if(!validate())return;
   btn.classList.add('loading');
   try{
-    const res=await fetch('/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:emailEl.value.trim(),password:pw.value})});
+    const res=await fetch('/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:emailEl.value.trim(),password:pw.value,remember:document.getElementById('remember').checked})});
     const data=await res.json();
     if(!res.ok)throw new Error(data.message||'Sign in failed.');
     localStorage.setItem('cowrie_token',data.token);
