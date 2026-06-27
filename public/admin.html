@@ -585,12 +585,12 @@ async function renderOverview(el){
   el.innerHTML = `
     <div class="kpis">
       <div class="kpi r3d">
-        <div class="l">Total collected</div>
+        <div class="l">Live revenue</div>
         <div class="v">${fmt(overview.totalCollected)}</div>
-        <div class="t ok">● All time</div>
+        <div class="t ok">● Live · all time</div>
       </div>
       <div class="kpi r3d">
-        <div class="l">Collected today</div>
+        <div class="l">Live collected today</div>
         <div class="v">${fmt(overview.collectedToday)}</div>
         <div class="t ok">● Live</div>
       </div>
@@ -600,9 +600,9 @@ async function renderOverview(el){
         <div class="t ok">● All time</div>
       </div>
       <div class="kpi r3d">
-        <div class="l">Paid out today</div>
-        <div class="v">${fmt(overview.paidOutToday)}</div>
-        <div class="t ok">● Live</div>
+        <div class="l">Test volume</div>
+        <div class="v">${fmt(overview.testCollected)}</div>
+        <div class="t bad">● Test · all time</div>
       </div>
       <div class="kpi r3d">
         <div class="l">Success rate</div>
@@ -677,9 +677,35 @@ async function renderTransactions(el){
   const {transactions} = await API.get('/api/admin/transactions');
   txCache = transactions;
 
+  let modeFilter = 'all';
+
+  function filtered(){
+    let rows = modeFilter==='all' ? transactions : transactions.filter(t=>(t.mode||'test')===modeFilter);
+    const q = (document.getElementById('txSearch')||{}).value;
+    if(q&&q.trim()){
+      const s=q.toLowerCase().trim();
+      rows=rows.filter(t=>(t.reference||'').toLowerCase().includes(s)||(t.customerEmail||'').toLowerCase().includes(s)||(t.method||'').toLowerCase().includes(s)||(t.status||'').toLowerCase().includes(s));
+    }
+    return rows;
+  }
+  function refresh(){
+    const rows=filtered();
+    document.getElementById('txWrap').innerHTML=txTable(rows,true);
+    document.getElementById('txCount').textContent=`Showing ${rows.length}`;
+    ['all','live','test'].forEach(m=>{
+      const btn=document.getElementById('txTab_'+m);
+      if(btn) btn.classList.toggle('active',modeFilter===m);
+    });
+  }
+
   el.innerHTML = `
-    <div class="search-row">
-      <input id="txSearch" type="text" placeholder="Search by reference, email, method or status…">
+    <div class="search-row" style="display:flex;gap:8px;align-items:center">
+      <input id="txSearch" type="text" placeholder="Search by reference, method or status…" style="flex:1">
+      <div style="display:flex;gap:4px;flex-shrink:0">
+        <button id="txTab_all"  class="btn sm active" style="font-family:var(--mono);font-size:11px">All</button>
+        <button id="txTab_live" class="btn sm" style="font-family:var(--mono);font-size:11px;background:rgba(26,155,110,.15);color:var(--mint);border:1px solid rgba(26,155,110,.3)">Live</button>
+        <button id="txTab_test" class="btn sm" style="font-family:var(--mono);font-size:11px;background:rgba(200,134,10,.1);color:var(--gold);border:1px solid rgba(200,134,10,.25)">Test</button>
+      </div>
     </div>
     <div class="panel r3d">
       <div class="panel-head">
@@ -689,29 +715,26 @@ async function renderTransactions(el){
       <div style="overflow:auto;" id="txWrap">${txTable(transactions,true)}</div>
     </div>`;
 
-  document.getElementById('txSearch').addEventListener('input',e=>{
-    const q = e.target.value.toLowerCase().trim();
-    const filtered = q
-      ? transactions.filter(t=>
-          (t.reference||'').toLowerCase().includes(q)||
-          (t.customerEmail||'').toLowerCase().includes(q)||
-          (t.method||'').toLowerCase().includes(q)||
-          (t.status||'').toLowerCase().includes(q))
-      : transactions;
-    document.getElementById('txWrap').innerHTML = txTable(filtered,true);
-    document.getElementById('txCount').textContent = `Showing ${filtered.length}`;
+  document.getElementById('txSearch').addEventListener('input',refresh);
+  ['all','live','test'].forEach(m=>{
+    document.getElementById('txTab_'+m).addEventListener('click',()=>{modeFilter=m;refresh();});
   });
 }
 
+function modeTag(mode){
+  return mode==='live'
+    ? `<span style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--mint);background:rgba(26,155,110,.12);border:1px solid rgba(26,155,110,.25);border-radius:5px;padding:2px 7px;letter-spacing:.04em">LIVE</span>`
+    : `<span style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--gold);background:rgba(200,134,10,.1);border:1px solid rgba(200,134,10,.22);border-radius:5px;padding:2px 7px;letter-spacing:.04em">TEST</span>`;
+}
 function txTable(rows, viewable=false){
   if(!rows.length) return `<div class="empty-state"><strong>No transactions yet</strong>Make a test payment on the <a href="/checkout" style="color:var(--plum-br)">checkout page</a>, then refresh.</div>`;
   return `<table class="table">
     <thead><tr>
-      <th>Reference</th><th>Email</th><th>Method</th><th>Amount</th><th>Status</th><th>Date</th>${viewable?'<th></th>':''}
+      <th>Reference</th><th>Mode</th><th>Method</th><th>Amount</th><th>Status</th><th>Date</th>${viewable?'<th></th>':''}
     </tr></thead>
     <tbody>${rows.map(r=>`<tr>
       <td style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--ink-soft)">${esc(r.reference||'—')}</td>
-      <td style="font-size:13px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.customerEmail||'—')}</td>
+      <td>${modeTag(r.mode||'test')}</td>
       <td style="font-size:13px">${methodLabel(r.method)}</td>
       <td style="font-family:var(--mono);font-weight:800">${fmt(r.amount||0,r.currency)}</td>
       <td>${statusTag(r.status)}</td>
@@ -814,16 +837,17 @@ async function renderMembers(el){
     return;
   }
   const rows = members
-    .sort((a,b)=>b.totalCollected-a.totalCollected)
+    .sort((a,b)=>b.liveCollected-a.liveCollected)
     .map(m=>`
       <tr>
         <td>
           <div style="font-weight:700;font-size:14px">${esc(m.businessName)}</div>
           <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px">${esc(m.email)}</div>
         </td>
-        <td style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--mint)">${fmt(m.totalCollected,'GHS')}</td>
+        <td style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--mint)">${fmt(m.liveCollected,'GHS')}</td>
+        <td style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--gold)">${fmt(m.testCollected,'GHS')}</td>
         <td style="font-family:var(--mono);font-size:12px">${m.successfulTransactions} / ${m.totalTransactions}</td>
-        <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${m.totalTransactions>0?((m.successfulTransactions/m.totalTransactions)*100).toFixed(0)+'%':'—'}</td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${m.liveTransactions > 0 ? m.liveTransactions+' live' : '—'}</td>
         <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${fmtDate(m.createdAt)}</td>
       </tr>`).join('');
 
@@ -838,9 +862,10 @@ async function renderMembers(el){
           <thead>
             <tr>
               <th>Store</th>
-              <th>Total collected</th>
+              <th><span style="color:var(--mint)">Live</span> collected</th>
+              <th><span style="color:var(--gold)">Test</span> volume</th>
               <th>Transactions (success / total)</th>
-              <th>Success rate</th>
+              <th>Live txns</th>
               <th>Joined</th>
             </tr>
           </thead>

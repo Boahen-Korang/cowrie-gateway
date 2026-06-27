@@ -395,8 +395,11 @@ router.get('/admin/overview', requireAdminAuth, ah(async (req, res) => {
   const todayTs = today.getTime();
 
   const successAll = allCharges.filter((c) => c.status === 'success');
-  const collectedToday = successAll.filter((c) => c.createdAt >= todayTs).reduce((s, c) => s + c.amount, 0);
-  const totalCollected = successAll.reduce((s, c) => s + c.amount, 0);
+  const liveSuccess = successAll.filter((c) => (c.mode || 'test') === 'live');
+  const testSuccess = successAll.filter((c) => (c.mode || 'test') === 'test');
+  const collectedToday = liveSuccess.filter((c) => c.createdAt >= todayTs).reduce((s, c) => s + c.amount, 0);
+  const totalCollected = liveSuccess.reduce((s, c) => s + c.amount, 0);
+  const testCollected  = testSuccess.reduce((s, c) => s + c.amount, 0);
   const allPayouts = await store.payouts.all();
   const paidOutToday = allPayouts.filter((p) => p.createdAt >= todayTs && p.status === 'completed').reduce((s, p) => s + p.amount, 0);
   const total = allCharges.length;
@@ -416,7 +419,7 @@ router.get('/admin/overview', requireAdminAuth, ah(async (req, res) => {
   const byMethod = {};
   successAll.forEach((c) => { const m = c.method || 'unknown'; byMethod[m] = (byMethod[m] || 0) + c.amount; });
 
-  res.json({ overview: { collectedToday, paidOutToday, totalCollected, merchantCount, successRate, pendingCount, last7Days, byMethod } });
+  res.json({ overview: { collectedToday, paidOutToday, totalCollected, testCollected, merchantCount, successRate, pendingCount, last7Days, byMethod } });
 }));
 
 router.get('/admin/members', requireAdminAuth, ah(async (req, res) => {
@@ -425,13 +428,17 @@ router.get('/admin/members', requireAdminAuth, ah(async (req, res) => {
   const members = merchants.map((m) => {
     const charges = allCharges.filter((c) => c.merchantId === m.id);
     const successful = charges.filter((c) => c.status === 'success');
+    const liveOk = successful.filter((c) => (c.mode || 'test') === 'live');
+    const testOk = successful.filter((c) => (c.mode || 'test') === 'test');
     return {
       id: m.id,
       businessName: m.businessName,
       email: m.email,
       createdAt: m.createdAt,
-      totalCollected: successful.reduce((s, c) => s + c.amount, 0),
+      liveCollected: liveOk.reduce((s, c) => s + c.amount, 0),
+      testCollected: testOk.reduce((s, c) => s + c.amount, 0),
       totalTransactions: charges.length,
+      liveTransactions: charges.filter((c) => (c.mode || 'test') === 'live').length,
       successfulTransactions: successful.length,
     };
   });
