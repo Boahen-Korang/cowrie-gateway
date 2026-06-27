@@ -694,22 +694,27 @@ function maskSecret(val) {
 }
 
 router.get('/admin/gateways', requireAdminAuth, ah(async (req, res) => {
-  const gs = (await store.settings.get('gateways')) || { activeGateway: 'paystack', gateways: {} };
-  const result = SUPPORTED_GATEWAYS.map(meta => {
-    const keys = (gs.gateways && gs.gateways[meta.id]) || {};
+  const gs = (await store.settings.get('gateways')) || { activeGateway: null, installed: [], gateways: {} };
+  const installed = (gs.installed || []).map(id => {
+    const meta = SUPPORTED_GATEWAYS.find(g => g.id === id);
+    if (!meta) return null;
+    const keys = (gs.gateways && gs.gateways[id]) || {};
     return {
       ...meta,
-      active: (gs.activeGateway || 'paystack') === meta.id,
-      configured: !!(keys.testSecretKey || keys.liveSecretKey),
+      active: gs.activeGateway === id,
       keys: {
-        testPublicKey:  keys.testPublicKey  || '',
-        testSecretKey:  maskSecret(keys.testSecretKey),
-        livePublicKey:  keys.livePublicKey  || '',
-        liveSecretKey:  maskSecret(keys.liveSecretKey),
+        testPublicKey: keys.testPublicKey || '',
+        testSecretKey: maskSecret(keys.testSecretKey),
+        livePublicKey: keys.livePublicKey || '',
+        liveSecretKey: maskSecret(keys.liveSecretKey),
       },
     };
+  }).filter(Boolean);
+  res.json({
+    activeGateway: gs.activeGateway || null,
+    installed,
+    supported: SUPPORTED_GATEWAYS.map(g => ({ id: g.id, name: g.name, fields: g.fields })),
   });
-  res.json({ activeGateway: gs.activeGateway || 'paystack', gateways: result });
 }));
 
 router.put('/admin/gateways/:id', requireAdminAuth, ah(async (req, res) => {
@@ -718,35 +723,46 @@ router.put('/admin/gateways/:id', requireAdminAuth, ah(async (req, res) => {
     const e = new Error('Unknown gateway.'); e.status = 400; throw e;
   }
   const { testPublicKey = '', testSecretKey = '', livePublicKey = '', liveSecretKey = '' } = req.body || {};
-  const gs = (await store.settings.get('gateways')) || { activeGateway: 'paystack', gateways: {} };
+  const gs = (await store.settings.get('gateways')) || { activeGateway: null, installed: [], gateways: {} };
   const existing = (gs.gateways && gs.gateways[id]) || {};
 
   gs.gateways = gs.gateways || {};
+  gs.installed = gs.installed || [];
+  if (!gs.installed.includes(id)) gs.installed.push(id);
+
   gs.gateways[id] = {
-    testPublicKey:  testPublicKey  || existing.testPublicKey  || '',
-    testSecretKey:  testSecretKey  && !testSecretKey.includes('•')  ? testSecretKey  : (existing.testSecretKey  || ''),
-    livePublicKey:  livePublicKey  || existing.livePublicKey  || '',
-    liveSecretKey:  liveSecretKey  && !liveSecretKey.includes('•')  ? liveSecretKey  : (existing.liveSecretKey  || ''),
+    testPublicKey: testPublicKey || existing.testPublicKey || '',
+    testSecretKey: testSecretKey && !testSecretKey.includes('•') ? testSecretKey : (existing.testSecretKey || ''),
+    livePublicKey: livePublicKey || existing.livePublicKey || '',
+    liveSecretKey: liveSecretKey && !liveSecretKey.includes('•') ? liveSecretKey : (existing.liveSecretKey || ''),
   };
   await store.settings.set('gateways', gs);
-
   if (id === 'paystack') paystack.configureKeys(gs.gateways.paystack);
-
   res.json({ ok: true });
 }));
 
-router.put('/admin/gateways/:id/activate', requireAdminAuth, ah(async (req, res) => {
+router.put('/admin/gateways/:id/toggle', requireAdminAuth, ah(async (req, res) => {
   const { id } = req.params;
   if (!SUPPORTED_GATEWAYS.find(g => g.id === id)) {
     const e = new Error('Unknown gateway.'); e.status = 400; throw e;
   }
-  const gs = (await store.settings.get('gateways')) || { activeGateway: 'paystack', gateways: {} };
-  gs.activeGateway = id;
+  const gs = (await store.settings.get('gateways')) || { activeGateway: null, installed: [], gateways: {} };
+  gs.activeGateway = gs.activeGateway === id ? null : id;
   await store.settings.set('gateways', gs);
-  if (id === 'paystack' && gs.gateways && gs.gateways.paystack) {
-    paystack.configureKeys(gs.gateways.paystack);
-  }
-  res.json({ ok: true, activeGateway: id });
+  if (gs.activeGateway === 'paystack') paystack.configureKeys((gs.gateways || {}).paystack || null);
+  else if (id === 'paystack') paystack.configureKeys(null);
+  res.json({ ok: true, activeGateway: gs.activeGateway });
+}));
+
+router.delete('/admin/gateways/:id', requireAdminAuth, ah(async (req, res) => {
+  const { id } = req.params;
+  const gs = (await store.settings.get('gateways')) || { activeGateway: null, installed: [], gateways: {} };
+  gs.installed = (gs.installed || []).filter(x => x !== id);
+  if (gs.activeGateway === id) gs.activeGateway = null;
+  if (gs.gateways) delete gs.gateways[id];
+  await store.settings.set('gateways', gs);
+  if (id === 'paystack') paystack.configureKeys(null);
+  res.json({ ok: true });
 }));
 
 module.exports = router;

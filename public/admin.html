@@ -493,7 +493,25 @@ const API = {
     if(r.status===401){localStorage.removeItem('cowrie_admin_token');location.href='/admin-login';throw 0;}
     if(!r.ok) throw new Error(d.message||'Request failed');
     return d;
-  }
+  },
+  async put(path,body){
+    const r = await fetch(path,{
+      method:'PUT',
+      headers:{'content-type':'application/json',...this._h()},
+      body:JSON.stringify(body||{})
+    });
+    const d = await r.json().catch(()=>({}));
+    if(r.status===401){localStorage.removeItem('cowrie_admin_token');location.href='/admin-login';throw 0;}
+    if(!r.ok) throw new Error(d.message||'Request failed');
+    return d;
+  },
+  async delete(path){
+    const r = await fetch(path,{method:'DELETE',headers:this._h()});
+    const d = await r.json().catch(()=>({}));
+    if(r.status===401){localStorage.removeItem('cowrie_admin_token');location.href='/admin-login';throw 0;}
+    if(!r.ok) throw new Error(d.message||'Request failed');
+    return d;
+  },
 };
 
 const VIEWS = {
@@ -1024,129 +1042,190 @@ async function renderKyc(el){
 }
 
 /* ========================= Payment Gateways ========================= */
+const GW_LOGOS={
+  paystack:'<svg viewBox="0 0 36 36" width="28" height="28"><rect width="36" height="36" rx="7" fill="#00C3F7"/><text x="18" y="23" text-anchor="middle" font-size="14" font-weight="900" fill="#fff" font-family="sans-serif">P</text></svg>',
+  flutterwave:'<svg viewBox="0 0 36 36" width="28" height="28"><rect width="36" height="36" rx="7" fill="#F5A623"/><text x="18" y="23" text-anchor="middle" font-size="14" font-weight="900" fill="#fff" font-family="sans-serif">F</text></svg>',
+  stripe:'<svg viewBox="0 0 36 36" width="28" height="28"><rect width="36" height="36" rx="7" fill="#635BFF"/><text x="18" y="23" text-anchor="middle" font-size="14" font-weight="900" fill="#fff" font-family="sans-serif">S</text></svg>',
+  monnify:'<svg viewBox="0 0 36 36" width="28" height="28"><rect width="36" height="36" rx="7" fill="#0063F7"/><text x="18" y="23" text-anchor="middle" font-size="14" font-weight="900" fill="#fff" font-family="sans-serif">M</text></svg>',
+};
+
+let _gwState={supported:[],installed:[]};
+
+function gwKeyFields(fields,keys){
+  const v=f=>(keys&&keys[f])||'';
+  return `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px">
+    <div>
+      <div class="gw-sec-lbl">Test keys</div>
+      <div class="field"><div class="lbl">${esc(fields.testPublicKey||'Test public key')}</div>
+        <input data-gf="testPublicKey" placeholder="pk_test_…" value="${esc(v('testPublicKey'))}">
+      </div>
+      <div class="field"><div class="lbl">${esc(fields.testSecretKey||'Test secret key')}</div>
+        <div style="position:relative">
+          <input type="password" data-gf="testSecretKey" placeholder="sk_test_…" value="${esc(v('testSecretKey'))}" style="padding-right:52px">
+          <button type="button" class="gw-show">SHOW</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="gw-sec-lbl">Live keys</div>
+      <div class="field"><div class="lbl">${esc(fields.livePublicKey||'Live public key')}</div>
+        <input data-gf="livePublicKey" placeholder="pk_live_…" value="${esc(v('livePublicKey'))}">
+      </div>
+      <div class="field"><div class="lbl">${esc(fields.liveSecretKey||'Live secret key')}</div>
+        <div style="position:relative">
+          <input type="password" data-gf="liveSecretKey" placeholder="sk_live_…" value="${esc(v('liveSecretKey'))}" style="padding-right:52px">
+          <button type="button" class="gw-show">SHOW</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderInstalledList(listEl,installed){
+  if(!installed.length){
+    listEl.innerHTML='<div style="padding:28px 20px;text-align:center;color:var(--muted);font-size:13px">No gateways added yet. Add one above to get started.</div>';
+    return;
+  }
+  listEl.innerHTML=installed.map(g=>`
+    <div class="gw-row" id="gw-row-${esc(g.id)}">
+      <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+        ${GW_LOGOS[g.id]||''}
+        <div>
+          <div style="font-weight:600;font-size:14px">${esc(g.name)}</div>
+          <div style="font-size:11.5px;font-family:var(--mono);margin-top:2px;color:${g.active?'#1FA877':'rgba(255,255,255,.35)'}">
+            ${g.active?'● Active':'● Inactive'}
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
+        <button class="btn sm" data-gw-edit="${esc(g.id)}">Edit keys</button>
+        <button class="btn sm gw-danger" data-gw-remove="${esc(g.id)}">Remove</button>
+        <label class="gw-toggle" title="${g.active?'Deactivate':'Activate'}">
+          <input type="checkbox" ${g.active?'checked':''} data-gw-toggle="${esc(g.id)}">
+          <span class="gw-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="gw-divider"></div>`).join('');
+}
+
 async function renderGateways(el){
-  const {activeGateway, gateways}=await API.get('/api/admin/gateways');
-  document.getElementById('statusBadge').textContent='Active: '+(gateways.find(g=>g.active)||{name:'—'}).name;
+  const data=await API.get('/api/admin/gateways');
+  _gwState=data;
+  const {supported,installed}=data;
 
-  const logos={
-    paystack:'<svg viewBox="0 0 40 40" width="32" height="32"><rect width="40" height="40" rx="8" fill="#00C3F7"/><text x="20" y="26" text-anchor="middle" font-size="16" font-weight="900" fill="#fff" font-family="sans-serif">P</text></svg>',
-    flutterwave:'<svg viewBox="0 0 40 40" width="32" height="32"><rect width="40" height="40" rx="8" fill="#F5A623"/><text x="20" y="26" text-anchor="middle" font-size="16" font-weight="900" fill="#fff" font-family="sans-serif">F</text></svg>',
-    stripe:'<svg viewBox="0 0 40 40" width="32" height="32"><rect width="40" height="40" rx="8" fill="#635BFF"/><text x="20" y="26" text-anchor="middle" font-size="16" font-weight="900" fill="#fff" font-family="sans-serif">S</text></svg>',
-    monnify:'<svg viewBox="0 0 40 40" width="32" height="32"><rect width="40" height="40" rx="8" fill="#0063F7"/><text x="20" y="26" text-anchor="middle" font-size="16" font-weight="900" fill="#fff" font-family="sans-serif">M</text></svg>',
-  };
+  el.innerHTML=`
+  <style>
+    .gw-sec-lbl{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px}
+    .gw-show{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;font-family:var(--mono);font-size:10px;font-weight:700;color:rgba(255,255,255,.35);cursor:pointer;padding:4px 6px}
+    .gw-show:hover{color:rgba(255,255,255,.7)}
+    .gw-toggle{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;cursor:pointer}
+    .gw-toggle input{opacity:0;width:0;height:0;position:absolute}
+    .gw-slider{position:absolute;inset:0;background:rgba(255,255,255,.14);border-radius:26px;transition:.2s}
+    .gw-slider::before{content:'';position:absolute;height:20px;width:20px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+    .gw-toggle input:checked+.gw-slider{background:#1FA877}
+    .gw-toggle input:checked+.gw-slider::before{transform:translateX(20px)}
+    .gw-row{display:flex;align-items:center;padding:16px 20px;gap:16px;flex-wrap:wrap}
+    .gw-divider{height:1px;background:rgba(255,255,255,.06);margin:0 18px}
+    .gw-divider:last-child{display:none}
+    .gw-danger{background:rgba(239,106,76,.1);color:#EF6A4C;border-color:rgba(239,106,76,.22)}
+    .gw-danger:hover{background:rgba(239,106,76,.2)}
+    #gw-form-area{transition:opacity .15s}
+  </style>
 
-  el.innerHTML=gateways.map(g=>`
-    <div class="panel r3d" style="margin-bottom:20px" id="gw-panel-${esc(g.id)}">
-      <div class="panel-head" style="flex-wrap:wrap;gap:12px">
-        <div style="display:flex;align-items:center;gap:12px">
-          ${logos[g.id]||''}
-          <div>
-            <h2 style="font-size:15px">${esc(g.name)}</h2>
-            <a href="${esc(g.website)}" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:11px;color:var(--muted);text-decoration:none">${esc(g.website.replace('https://',''))}</a>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap">
-          ${g.active?`<span class="badge" style="background:rgba(26,168,119,.18);color:#1FA877;border-color:rgba(26,168,119,.3)">Active</span>`
-            :g.configured?`<span class="badge" style="background:rgba(224,161,46,.12);color:#E0A12E;border-color:rgba(224,161,46,.25)">Configured</span>`
-            :`<span class="badge">Not configured</span>`}
-          ${g.status==='configurable'?`<span class="badge" style="background:rgba(91,44,143,.18);color:#C9AEFF;border-color:rgba(91,44,143,.3)">Integration available</span>`:''}
-          ${!g.active?`<button class="btn sm" data-activate="${esc(g.id)}">${g.status==='integrated'?'Set as active':'Set as active'}</button>`:''}
-        </div>
+  <!-- Panel 1: Add / Configure Gateway -->
+  <div class="panel r3d" style="margin-bottom:22px">
+    <div class="panel-head"><h2>Add Payment Gateway</h2></div>
+    <div style="padding:20px">
+      <div class="field" style="max-width:300px">
+        <div class="lbl">Select gateway</div>
+        <select id="gw-select" style="width:100%;padding:9px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:13.5px;cursor:pointer">
+          <option value="">— choose a gateway —</option>
+          ${supported.filter(s=>!installed.find(i=>i.id===s.id)).map(g=>`<option value="${esc(g.id)}">${esc(g.name)}</option>`).join('')}
+          ${installed.length?`<optgroup label="Update existing">${installed.map(g=>`<option value="${esc(g.id)}">${esc(g.name)}</option>`).join('')}</optgroup>`:''}
+        </select>
       </div>
-
-      ${g.status==='configurable'?`<div style="padding:14px 18px 0;font-size:12.5px;color:rgba(255,255,255,.45);background:rgba(91,44,143,.07);border-bottom:1px solid rgba(255,255,255,.06)">
-        <strong style="color:#C9AEFF">Integration note:</strong> ${esc(g.name)} keys are saved here for future use. To fully activate ${esc(g.name)} payment processing, the gateway module needs to be installed. <a href="${esc(g.website)}" target="_blank" rel="noopener" style="color:#C9AEFF">Learn more →</a>
-      </div>`:''}
-
-      <div style="padding:18px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
-          <div>
-            <div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px">Test keys</div>
-            <div class="field">
-              <div class="lbl">Public key</div>
-              <input class="gw-input" data-gw="${esc(g.id)}" data-field="testPublicKey" placeholder="${esc(g.fields.testPublicKey)}" value="${esc(g.keys.testPublicKey)}">
-            </div>
-            <div class="field">
-              <div class="lbl">Secret key</div>
-              <div style="position:relative">
-                <input class="gw-input" type="password" data-gw="${esc(g.id)}" data-field="testSecretKey" placeholder="${esc(g.fields.testSecretKey)}" value="${esc(g.keys.testSecretKey)}" style="padding-right:56px">
-                <button type="button" class="show-btn" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;font-family:var(--mono);font-size:10px;font-weight:700;color:rgba(255,255,255,.35);cursor:pointer;padding:4px 6px">SHOW</button>
-              </div>
-            </div>
-          </div>
-          <div>
-            <div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px">Live keys</div>
-            <div class="field">
-              <div class="lbl">Public key</div>
-              <input class="gw-input" data-gw="${esc(g.id)}" data-field="livePublicKey" placeholder="${esc(g.fields.livePublicKey)}" value="${esc(g.keys.livePublicKey)}">
-            </div>
-            <div class="field">
-              <div class="lbl">Secret key</div>
-              <div style="position:relative">
-                <input class="gw-input" type="password" data-gw="${esc(g.id)}" data-field="liveSecretKey" placeholder="${esc(g.fields.liveSecretKey)}" value="${esc(g.keys.liveSecretKey)}" style="padding-right:56px">
-                <button type="button" class="show-btn" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;font-family:var(--mono);font-size:10px;font-weight:700;color:rgba(255,255,255,.35);cursor:pointer;padding:4px 6px">SHOW</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
-          <button class="btn sm primary" data-save="${esc(g.id)}">Save keys</button>
-          <span class="gw-fb" id="gw-fb-${esc(g.id)}" style="font-size:12.5px"></span>
-        </div>
+      <div id="gw-form-area" style="opacity:0;pointer-events:none"></div>
+      <div style="margin-top:18px;display:flex;align-items:center;gap:14px" id="gw-btn-row" style="display:none">
+        <button id="gw-add-btn" class="btn primary" style="display:none">Add Gateway</button>
+        <span id="gw-add-fb" style="font-size:12.5px"></span>
       </div>
-    </div>`).join('');
+    </div>
+  </div>
 
-  /* show/hide secret keys */
-  el.querySelectorAll('.show-btn').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const inp=btn.previousElementSibling||btn.parentElement.querySelector('input');
-      if(!inp)return;
-      const show=inp.type==='password';
-      inp.type=show?'text':'password';
-      btn.textContent=show?'HIDE':'SHOW';
-    });
+  <!-- Panel 2: Installed Gateways -->
+  <div class="panel r3d">
+    <div class="panel-head"><h2>Installed Gateways</h2></div>
+    <div id="gw-list"></div>
+  </div>`;
+
+  renderInstalledList(el.querySelector('#gw-list'), installed);
+
+  const sel=el.querySelector('#gw-select');
+  const formArea=el.querySelector('#gw-form-area');
+  const addBtn=el.querySelector('#gw-add-btn');
+  const fb=el.querySelector('#gw-add-fb');
+
+  sel.addEventListener('change',()=>{
+    const id=sel.value;
+    if(!id){formArea.style.opacity='0';formArea.style.pointerEvents='none';addBtn.style.display='none';return;}
+    const meta=supported.find(g=>g.id===id)||{fields:{}};
+    const existing=_gwState.installed.find(g=>g.id===id);
+    formArea.innerHTML=gwKeyFields(meta.fields||{},existing?existing.keys:null);
+    formArea.style.opacity='1';formArea.style.pointerEvents='';
+    addBtn.style.display='';
+    addBtn.textContent=existing?'Update Keys':'Add Gateway';
+    formArea.querySelectorAll('.gw-show').forEach(b=>b.addEventListener('click',()=>{
+      const inp=b.previousElementSibling;
+      const show=inp.type==='password';inp.type=show?'text':'password';b.textContent=show?'HIDE':'SHOW';
+    }));
   });
 
-  /* save keys */
-  el.addEventListener('click',async e=>{
-    const saveBtn=e.target.closest('[data-save]');
-    const activateBtn=e.target.closest('[data-activate]');
+  addBtn.addEventListener('click',async()=>{
+    const id=sel.value; if(!id)return;
+    const gf=f=>(formArea.querySelector(`[data-gf="${f}"]`)||{}).value||'';
+    const body={testPublicKey:gf('testPublicKey'),testSecretKey:gf('testSecretKey'),livePublicKey:gf('livePublicKey'),liveSecretKey:gf('liveSecretKey')};
+    addBtn.disabled=true; addBtn.textContent='Saving…'; fb.textContent='';
+    try{
+      await API.put(`/api/admin/gateways/${encodeURIComponent(id)}`,body);
+      await renderGateways(el);
+    }catch(err){
+      fb.textContent=err.message; fb.style.color='#EF6A4C';
+      addBtn.disabled=false; addBtn.textContent='Add Gateway';
+    }
+  });
 
-    if(saveBtn){
-      const id=saveBtn.dataset.save;
-      const panel=document.getElementById(`gw-panel-${id}`);
-      const fb=document.getElementById(`gw-fb-${id}`);
-      const getVal=f=>panel.querySelector(`[data-field="${f}"]`).value.trim();
-      const body={
-        testPublicKey:getVal('testPublicKey'),
-        testSecretKey:getVal('testSecretKey'),
-        livePublicKey:getVal('livePublicKey'),
-        liveSecretKey:getVal('liveSecretKey'),
-      };
-      saveBtn.disabled=true; saveBtn.textContent='Saving…';
+  /* toggle active / inactive */
+  el.addEventListener('change',async e=>{
+    const tog=e.target.closest('[data-gw-toggle]');
+    if(!tog)return;
+    const id=tog.dataset.gwToggle;
+    tog.disabled=true;
+    try{
+      await API.put(`/api/admin/gateways/${encodeURIComponent(id)}/toggle`,{});
+      await renderGateways(el);
+    }catch(err){alert(err.message); tog.disabled=false;}
+  });
+
+  /* edit / remove */
+  el.addEventListener('click',async e=>{
+    const editBtn=e.target.closest('[data-gw-edit]');
+    const rmBtn=e.target.closest('[data-gw-remove]');
+    if(editBtn){
+      const id=editBtn.dataset.gwEdit;
+      sel.value=id;
+      sel.dispatchEvent(new Event('change'));
+      el.querySelector('.panel').scrollIntoView({behavior:'smooth',block:'start'});
+    } else if(rmBtn){
+      const id=rmBtn.dataset.gwRemove;
+      const meta=(supported.find(g=>g.id===id)||{name:id});
+      if(!confirm(`Remove ${meta.name}?\n\nThis will delete its saved keys.`))return;
+      rmBtn.disabled=true;
       try{
-        await API.put(`/api/admin/gateways/${encodeURIComponent(id)}`,body);
-        fb.textContent='Keys saved.'; fb.style.color='#1FA877';
-        setTimeout(()=>{fb.textContent='';},3000);
-      }catch(err){
-        fb.textContent=err.message; fb.style.color='#EF6A4C';
-      }finally{
-        saveBtn.disabled=false; saveBtn.textContent='Save keys';
-      }
-    } else if(activateBtn){
-      const id=activateBtn.dataset.activate;
-      const meta=gateways.find(g=>g.id===id);
-      if(meta&&meta.status!=='integrated'){
-        if(!confirm(`${meta.name} does not have a full payment processing integration yet.\n\nSetting it as active will not route payments through it until the integration is installed.\n\nContinue?`))return;
-      }
-      activateBtn.disabled=true; activateBtn.textContent='Activating…';
-      try{
-        await API.put(`/api/admin/gateways/${encodeURIComponent(id)}/activate`,{});
-        await loadView('gateways');
-      }catch(err){
-        alert(err.message);
-        activateBtn.disabled=false; activateBtn.textContent='Set as active';
-      }
+        await API.delete(`/api/admin/gateways/${encodeURIComponent(id)}`);
+        await renderGateways(el);
+      }catch(err){alert(err.message); rmBtn.disabled=false;}
     }
   });
 }
