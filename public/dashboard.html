@@ -265,6 +265,10 @@ input,select,textarea{font-family:inherit}
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
           Transactions
         </a>
+        <a href="#" data-view="payment-links">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Payment Links
+        </a>
         <a href="#" data-view="request-payout">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>
           Request Payout
@@ -305,6 +309,10 @@ input,select,textarea{font-family:inherit}
     <a href="#" data-view="transactions" class="mnav">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
       Txns
+    </a>
+    <a href="#" data-view="payment-links" class="mnav">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      Links
     </a>
     <a href="#" data-view="request-payout" class="mnav">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>
@@ -356,6 +364,7 @@ let M=null;
 const VIEWS={
   'overview':       {title:'Overview',            desc:'A summary of your account activity.'},
   'transactions':   {title:'Transactions',        desc:'All payments collected through your checkout.'},
+  'payment-links':  {title:'Payment Links',       desc:'Generate shareable payment links for your customers.'},
   'request-payout': {title:'Request Payout',      desc:'Submit a request to withdraw your collected funds.'},
   'payout-history': {title:'My Payout Requests',  desc:'Track the status of your payout requests.'},
   'webhooks':       {title:'Webhook Deliveries',   desc:'Events delivered to your webhook endpoint.'},
@@ -377,6 +386,7 @@ async function loadView(view){
   try{
     if(view==='overview')             await renderOverview(vc);
     else if(view==='transactions')    await renderTransactions(vc);
+    else if(view==='payment-links')   await renderPaymentLinks(vc);
     else if(view==='request-payout')  renderRequestPayout(vc);
     else if(view==='payout-history')  await renderPayoutHistory(vc);
     else if(view==='webhooks')        await renderWebhooks(vc);
@@ -503,6 +513,105 @@ function txRows(list){
     <td>${statusTag(t.status)}</td>
     <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap">${fmtDate(t.createdAt)}</td>
   </tr>`).join('');
+}
+
+/* ─── Payment Links ─── */
+async function renderPaymentLinks(el){
+  const {links} = await API.get('/api/payment-links');
+  const ipt='width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:9px;padding:9px 12px;color:var(--ink);font-size:14px;box-sizing:border-box';
+  el.innerHTML=`
+    <div class="panel r3d" style="margin-bottom:20px">
+      <div class="panel-head"><h2>Generate payment link</h2></div>
+      <div style="padding:18px;display:grid;gap:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Amount</label>
+            <input type="number" id="plAmt" min="1" step="0.01" placeholder="0.00" style="${ipt}">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Currency</label>
+            <select id="plCcy" style="${ipt}">
+              <option value="GHS">GHS — Cedis</option>
+              <option value="NGN">NGN — Naira</option>
+              <option value="USD">USD — US Dollar</option>
+              <option value="EUR">EUR — Euro</option>
+              <option value="GBP">GBP — Pound</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Description <span style="opacity:.5">(optional)</span></label>
+          <input type="text" id="plDesc" placeholder="e.g. Invoice #001, Product name…" style="${ipt}">
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Customer email <span style="opacity:.5">(optional — pre-fills checkout)</span></label>
+          <input type="email" id="plEmail" placeholder="customer@example.com" style="${ipt}">
+        </div>
+        <div id="plResult" style="display:none;background:rgba(91,44,143,.12);border:1px solid rgba(91,44,143,.35);border-radius:10px;padding:12px 14px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Payment link generated</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <code id="plUrl" style="flex:1;font-size:12px;word-break:break-all;color:#C9AEFF"></code>
+            <button class="btn sm" id="plCopy">Copy</button>
+          </div>
+        </div>
+        <div id="plErr" style="display:none;color:#f87171;font-size:13px"></div>
+        <button class="btn primary" id="plGen" style="justify-self:start;padding:10px 20px">Generate link</button>
+      </div>
+    </div>
+    <div class="panel r3d">
+      <div class="panel-head"><h2>Payment links</h2><span class="badge" id="plBadge">${links.length} total</span></div>
+      <div id="plTable">${plLinksTable(links)}</div>
+    </div>`;
+
+  document.getElementById('plGen').addEventListener('click', async()=>{
+    const errEl=document.getElementById('plErr');
+    const result=document.getElementById('plResult');
+    errEl.style.display='none'; result.style.display='none';
+    const amt=Number(document.getElementById('plAmt').value);
+    if(!amt||amt<=0){errEl.textContent='Enter a valid amount.';errEl.style.display='block';return;}
+    const btn=document.getElementById('plGen');
+    btn.disabled=true; btn.textContent='Generating…';
+    try{
+      const {charge,checkoutUrl}=await API.post('/api/payment-links',{
+        amount: amt,
+        currency: document.getElementById('plCcy').value,
+        description: document.getElementById('plDesc').value.trim(),
+        email: document.getElementById('plEmail').value.trim(),
+      });
+      document.getElementById('plUrl').textContent=checkoutUrl;
+      result.style.display='block';
+      document.getElementById('plCopy').onclick=()=>{
+        navigator.clipboard.writeText(checkoutUrl).then(()=>{
+          document.getElementById('plCopy').textContent='Copied!';
+          setTimeout(()=>{if(document.getElementById('plCopy'))document.getElementById('plCopy').textContent='Copy';},2000);
+        });
+      };
+      links.unshift(charge);
+      document.getElementById('plTable').innerHTML=plLinksTable(links);
+      document.getElementById('plBadge').textContent=links.length+' total';
+    }catch(e){
+      errEl.textContent=e.message; errEl.style.display='block';
+    }finally{
+      btn.disabled=false; btn.textContent='Generate link';
+    }
+  });
+}
+
+function plLinksTable(rows){
+  if(!rows.length)return`<div class="empty-state" style="padding:28px 20px;text-align:center;color:var(--muted)">No payment links yet. Generate one above.</div>`;
+  return`<div style="overflow:auto"><table class="table"><thead><tr>
+    <th>Amount</th><th>Description</th><th>Status</th><th>Created</th><th></th>
+  </tr></thead><tbody>${rows.map(r=>{
+    const url=location.origin+'/checkout?reference='+esc(r.reference);
+    const desc=(r.metadata&&r.metadata.description)||'—';
+    return`<tr>
+      <td style="font-family:var(--mono);font-weight:700">${fmt(r.amount,r.currency)}</td>
+      <td style="color:var(--ink-soft)">${esc(desc)}</td>
+      <td>${statusTag(r.status)}</td>
+      <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap">${fmtDate(r.createdAt)}</td>
+      <td><button class="btn sm" onclick="navigator.clipboard.writeText('${url.replace(/'/g,'&#39;')}').then(()=>{this.textContent='Copied!';setTimeout(()=>{this.textContent='Copy'},2000)})">Copy</button></td>
+    </tr>`;
+  }).join('')}</tbody></table></div>`;
 }
 
 /* ─── Request Payout ─── */

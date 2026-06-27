@@ -311,8 +311,6 @@ input,select,textarea{font-family:inherit}
       <div class="brand"><span class="shell"></span>Cowrie Admin</div>
       <div class="topbar-right">
         <span class="merchant-tag" id="merchantTag">…</span>
-        <a href="/dashboard" class="btn sm">Dashboard</a>
-        <a href="/" class="btn sm">← Site</a>
         <button class="btn sm" id="logoutBtn">Logout</button>
       </div>
     </div>
@@ -758,26 +756,11 @@ async function renderSettlements(el){
   el.innerHTML = `
     <div class="section-actions">
       <span class="badge" style="margin-right:auto">Total settled: ${fmt(total)}</span>
-      <button class="btn primary" id="triggerBtn">Trigger settlement</button>
     </div>
     <div class="panel r3d">
       <div class="panel-head"><h2>Settlements</h2><span class="badge">${settlements.length} total</span></div>
       <div style="overflow:auto;">${settlementsTable(settlements)}</div>
     </div>`;
-
-  document.getElementById('triggerBtn').addEventListener('click',async()=>{
-    const btn=document.getElementById('triggerBtn');
-    if(!confirm('Settle all unsettled successful transactions now?')) return;
-    btn.disabled=true; btn.textContent='Processing…';
-    try{
-      const {settlement}=await API.post('/api/admin/settlements',{});
-      alert(`Settlement complete: ${fmt(settlement.amount,settlement.currency)} across ${settlement.chargeCount} transaction${settlement.chargeCount!==1?'s':''}.`);
-      await renderSettlements(el);
-    }catch(e){
-      alert(e.message);
-      btn.disabled=false; btn.textContent='Trigger settlement';
-    }
-  });
 }
 
 function settlementsTable(rows){

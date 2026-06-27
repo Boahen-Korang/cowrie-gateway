@@ -10,8 +10,18 @@ const paystack = require('./lib/paystack');
 
 const app = express();
 app.set('trust proxy', true);
-app.use(express.json({ limit: '20mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
-app.use(express.urlencoded({ extended: true }));
+
+/* Security headers on every response */
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
+app.use(express.json({ limit: '2mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 app.use('/api', api);
 
@@ -120,7 +130,21 @@ async function loadGatewaySettings() {
   }
 }
 
+function enforceProductionSecurity() {
+  // Only warn on Render (RENDER env var is set automatically by the platform)
+  if (!process.env.RENDER) return;
+  const issues = [];
+  if (cfg.SECRET === 'dev_secret_change_me_in_production') {
+    issues.push('COWRIE_SECRET is the default dev value — set a strong random string in Render env vars.');
+  }
+  if (!issues.length) return;
+  console.warn('\n⚠️  Security misconfiguration:');
+  issues.forEach((i) => console.warn(`   • ${i}`));
+  console.warn('');
+}
+
 async function start() {
+  enforceProductionSecurity();
   await connectWithRetry();
   await seedDemoMerchant();
   await migrateMerchantKeys();

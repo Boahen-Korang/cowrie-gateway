@@ -10,25 +10,37 @@ const { sendOtp } = require('../lib/email');
 const {
   merchantId, apiKey, genId, hashPassword, verifyPassword, signToken, verifyToken,
 } = require('../lib/util');
+const { findAdmin } = require('../lib/admins');
 
 const router = express.Router();
 
-/* ── rate limiter ── */
+/* ── rate limiters ── */
 function rateLimit({ windowMs, max }) {
   const hits = new Map();
+  // Prune expired entries every 5 min to prevent unbounded Map growth
+  setInterval(() => {
+    const now = Date.now();
+    for (const [k, e] of hits) if (now > e.reset) hits.delete(k);
+  }, 5 * 60_000).unref();
+
   return (req, res, next) => {
     const key = req.ip; const now = Date.now();
     const entry = hits.get(key) || { count: 0, reset: now + windowMs };
     if (now > entry.reset) { entry.count = 0; entry.reset = now + windowMs; }
     entry.count += 1; hits.set(key, entry);
     if (entry.count > max) {
+      res.setHeader('Retry-After', Math.ceil((entry.reset - now) / 1000));
       const e = new Error('Too many requests, slow down.'); e.status = 429; return next(e);
     }
     next();
   };
 }
-const authLimiter   = rateLimit({ windowMs: 60_000, max: 20 });
-const chargeLimiter = rateLimit({ windowMs: 60_000, max: 120 });
+const globalLimiter = rateLimit({ windowMs: 60_000, max: 200 }); // all routes
+const authLimiter   = rateLimit({ windowMs: 60_000, max: 10  }); // login / register
+const chargeLimiter = rateLimit({ windowMs: 60_000, max: 60  }); // charge creation
+const payLimiter    = rateLimit({ windowMs: 60_000, max: 20  }); // payment actions
+
+router.use(globalLimiter);
 
 const ah = (fn) => (req, res, next) => fn(req, res, next).catch(next);
 
@@ -221,6 +233,35 @@ router.get('/events', requireAuth, ah(async (req, res) => {
   res.json({ events: await store.events.forMerchant(req.merchant.id) });
 }));
 
+/* ========================= Payment Links ========================= */
+
+router.get('/payment-links', requireAuth, ah(async (req, res) => {
+  const all = await store.charges.forMerchant(req.merchant.id);
+  const mode = req.mode || 'test';
+  const links = all.filter((c) => c.paymentLink && (c.mode || 'test') === mode);
+  res.json({ links });
+}));
+
+router.post('/payment-links', requireAuth, chargeLimiter, ah(async (req, res) => {
+  const { amount, currency, email, description } = req.body || {};
+  const amountMinor = Math.round(Number(amount) * 100);
+  if (!amountMinor || amountMinor < 100) {
+    const e = new Error('Enter a valid amount (minimum 1).'); e.status = 400; throw e;
+  }
+  const charge = await payments.createCharge(req.merchant, {
+    amount: amountMinor,
+    currency: String(currency || 'GHS').toUpperCase(),
+    email: String(email || '').trim() || null,
+    metadata: { description: String(description || '').trim() },
+  });
+  charge.mode = req.mode || 'test';
+  charge.paymentLink = true;
+  await store.charges.update(charge);
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+  const checkoutUrl = `${proto}://${req.get('host')}/checkout?reference=${charge.reference}`;
+  res.status(201).json({ charge, checkoutUrl });
+}));
+
 /* ========================= Charges ========================= */
 
 router.post('/charges', chargeLimiter, resolveMerchantByKey, ah(async (req, res) => {
@@ -274,22 +315,24 @@ function requireAdminAuth(req, res, next) {
   if (!payload || payload.role !== 'admin') {
     const e = new Error('Admin access required.'); e.status = 401; return next(e);
   }
+  req.adminEmail = payload.email || null;
   next();
 }
 
 router.post('/admin/auth/login', authLimiter, (req, res, next) => {
   try {
     const { email, password } = req.body || {};
-    if (!email || !password || email !== cfg.ADMIN_EMAIL || password !== cfg.ADMIN_PASSWORD) {
+    const account = findAdmin(email, password);
+    if (!account) {
       const e = new Error('Invalid admin credentials.'); e.status = 401; throw e;
     }
-    const token = signToken({ sub: 'admin', role: 'admin', exp: Date.now() + cfg.TOKEN_TTL_MS });
-    res.json({ token, admin: { email: cfg.ADMIN_EMAIL, role: 'admin' } });
+    const token = signToken({ sub: 'admin', email: account.email, role: 'admin', exp: Date.now() + cfg.TOKEN_TTL_MS });
+    res.json({ token, admin: { email: account.email, role: 'admin' } });
   } catch (e) { next(e); }
 });
 
 router.get('/admin/auth/me', requireAdminAuth, (req, res) => {
-  res.json({ admin: { email: cfg.ADMIN_EMAIL, role: 'admin' } });
+  res.json({ admin: { email: req.adminEmail, role: 'admin' } });
 });
 
 router.get('/admin/overview', requireAdminAuth, ah(async (req, res) => {
@@ -465,7 +508,7 @@ function resolvePaystackStatus(charge, tx) {
   }
 }
 
-router.post('/charges/:reference/pay', loadCharge, ah(async (req, res) => {
+router.post('/charges/:reference/pay', payLimiter, loadCharge, ah(async (req, res) => {
   const charge = req.charge;
   if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge, next: charge.status });
 
@@ -505,7 +548,7 @@ router.post('/charges/:reference/pay', loadCharge, ah(async (req, res) => {
   res.json({ charge, next: result.next, detail: result.detail });
 }));
 
-router.post('/charges/:reference/submit-otp', loadCharge, ah(async (req, res) => {
+router.post('/charges/:reference/submit-otp', payLimiter, loadCharge, ah(async (req, res) => {
   const { otp } = req.body || {};
   if (!req.charge.paystackRef) throw Object.assign(new Error('No pending transaction.'), { status: 400 });
   const data = await paystack.submitOtp(req.charge.paystackRef, String(otp || ''), req.charge.mode || 'test');
@@ -516,7 +559,7 @@ router.post('/charges/:reference/submit-otp', loadCharge, ah(async (req, res) =>
   res.json({ charge: req.charge, next: result.next, detail: result.detail });
 }));
 
-router.post('/charges/:reference/submit-pin', loadCharge, ah(async (req, res) => {
+router.post('/charges/:reference/submit-pin', payLimiter, loadCharge, ah(async (req, res) => {
   const { pin } = req.body || {};
   if (!req.charge.paystackRef) throw Object.assign(new Error('No pending transaction.'), { status: 400 });
   const data = await paystack.submitPin(req.charge.paystackRef, String(pin || ''), req.charge.mode || 'test');
@@ -527,7 +570,7 @@ router.post('/charges/:reference/submit-pin', loadCharge, ah(async (req, res) =>
   res.json({ charge: req.charge, next: result.next, detail: result.detail });
 }));
 
-router.get('/charges/:reference/poll', loadCharge, ah(async (req, res) => {
+router.get('/charges/:reference/poll', payLimiter, loadCharge, ah(async (req, res) => {
   const charge = req.charge;
   if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge, next: charge.status });
   if (!charge.paystackRef) return res.json({ charge, next: 'pending' });
@@ -539,7 +582,7 @@ router.get('/charges/:reference/poll', loadCharge, ah(async (req, res) => {
   res.json({ charge, next: result.next, detail: result.detail });
 }));
 
-router.post('/charges/:reference/paystack-init', loadCharge, ah(async (req, res) => {
+router.post('/charges/:reference/paystack-init', payLimiter, loadCharge, ah(async (req, res) => {
   const chargeMode = req.charge.mode || 'test';
   const paystackSk = paystack.secretKey(chargeMode);
   if (!paystackSk) {
@@ -557,7 +600,7 @@ router.post('/charges/:reference/paystack-init', loadCharge, ah(async (req, res)
   res.json({ accessCode: data.access_code, publicKey: paystack.publicKey(chargeMode), paystackRef });
 }));
 
-router.get('/charges/:reference/verify', loadCharge, ah(async (req, res) => {
+router.get('/charges/:reference/verify', payLimiter, loadCharge, ah(async (req, res) => {
   const charge = req.charge;
   if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge });
   if (!charge.paystackRef) return res.json({ charge });
