@@ -730,6 +730,7 @@ const SUPPORTED_GATEWAYS = [
   { id: 'moolre',        name: 'Moolre',          status: 'configurable', website: 'https://moolre.com',             fields: { testPublicKey: 'Test public key',                    testSecretKey: 'Test secret key',                     livePublicKey: 'Live public key',                    liveSecretKey: 'Live secret key' } },
   { id: 'fincra',        name: 'Fincra',          status: 'configurable', website: 'https://fincra.com',             fields: { testPublicKey: 'Test public key',                    testSecretKey: 'Test secret key',                     livePublicKey: 'Live public key',                    liveSecretKey: 'Live secret key' } },
   { id: 'bani',          name: 'Bani',            status: 'configurable', website: 'https://getbani.com',            fields: { testPublicKey: 'Test public key',                    testSecretKey: 'Test secret key',                     livePublicKey: 'Live public key',                    liveSecretKey: 'Live secret key' } },
+  { id: 'korapay',       name: 'Korapay',         status: 'configurable', website: 'https://korapay.com',            fields: { testPublicKey: 'Test public key (pk_test_…)',        testSecretKey: 'Test secret key (sk_test_…)',          livePublicKey: 'Live public key (pk_live_…)',         liveSecretKey: 'Live secret key (sk_live_…)' } },
 ];
 
 function maskSecret(val) {
