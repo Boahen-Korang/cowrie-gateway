@@ -86,7 +86,7 @@ input,select,textarea{font-family:inherit}
 /* ─── Grid layout ─── */
 .grid{display:grid;grid-template-columns:214px 1fr;gap:18px;padding:18px 0 70px}
 @media(max-width:860px){.grid{grid-template-columns:1fr;padding-bottom:84px}.sidebar{display:none}.wrap{padding:0 13px}.content{padding:14px;border-radius:14px}.kpis{grid-template-columns:1fr 1fr}.merchant-tag{max-width:100px;font-size:10px}}
-@media(max-width:420px){.kpis{grid-template-columns:1fr}.kpi .v{font-size:22px}.table th,.table td{padding:8px 9px;font-size:12px}input,select,textarea{font-size:16px!important}}
+@media(max-width:420px){.kpis{grid-template-columns:1fr}.kpi .v{font-size:22px}.table th,.table td{padding:8px 9px;font-size:12px}input,select,textarea{font-size:16px!important}.panel-head{flex-wrap:wrap;row-gap:6px}.panel-head h2{flex:1;min-width:0}.vhdr h1{font-size:20px}.topbar-in{padding:11px 0}}
 
 /* ─── Sidebar ─── */
 .sidebar{
@@ -702,9 +702,9 @@ async function renderTransactions(el){
     <div class="search-row" style="display:flex;gap:8px;align-items:center">
       <input id="txSearch" type="text" placeholder="Search by reference, method or status…" style="flex:1">
       <div style="display:flex;gap:4px;flex-shrink:0">
-        <button id="txTab_all"  class="btn sm active" style="font-family:var(--mono);font-size:11px">All</button>
-        <button id="txTab_live" class="btn sm" style="font-family:var(--mono);font-size:11px;background:rgba(26,155,110,.15);color:var(--mint);border:1px solid rgba(26,155,110,.3)">Live</button>
-        <button id="txTab_test" class="btn sm" style="font-family:var(--mono);font-size:11px;background:rgba(200,134,10,.1);color:var(--gold);border:1px solid rgba(200,134,10,.25)">Test</button>
+        <button id="txTab_all"  class="btn sm active" style="font-family:var(--mono);font-size:11px;min-height:36px;padding:6px 10px">All</button>
+        <button id="txTab_live" class="btn sm" style="font-family:var(--mono);font-size:11px;min-height:36px;padding:6px 10px;background:rgba(26,155,110,.15);color:var(--mint);border:1px solid rgba(26,155,110,.3)">Live</button>
+        <button id="txTab_test" class="btn sm" style="font-family:var(--mono);font-size:11px;min-height:36px;padding:6px 10px;background:rgba(200,134,10,.1);color:var(--gold);border:1px solid rgba(200,134,10,.25)">Test</button>
       </div>
     </div>
     <div class="panel r3d">
@@ -725,10 +725,10 @@ async function renderTransactions(el){
         <h3 style="text-align:center;font-size:18px;margin-bottom:8px">Clear transaction history?</h3>
         <p style="text-align:center;color:var(--muted);font-size:13.5px;line-height:1.6;margin-bottom:22px">Choose what to clear. This cannot be undone.</p>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <button id="clearLiveBtn" class="btn" style="background:rgba(239,106,76,.15);border:1px solid rgba(239,106,76,.3);color:var(--coral)">Clear live transactions only</button>
-          <button id="clearTestBtn" class="btn" style="background:rgba(200,134,10,.1);border:1px solid rgba(200,134,10,.25);color:var(--gold)">Clear test transactions only</button>
-          <button id="clearAllBtn"  class="btn" style="background:rgba(239,106,76,.25);border:1px solid rgba(239,106,76,.5);color:#fff">Clear everything</button>
-          <button id="clearCancelBtn" class="btn ghost" style="margin-top:4px">Cancel</button>
+          <button id="clearLiveBtn" class="btn" style="padding:12px 13px;background:rgba(239,106,76,.15);border:1px solid rgba(239,106,76,.3);color:var(--coral)">Clear live transactions only</button>
+          <button id="clearTestBtn" class="btn" style="padding:12px 13px;background:rgba(200,134,10,.1);border:1px solid rgba(200,134,10,.25);color:var(--gold)">Clear test transactions only</button>
+          <button id="clearAllBtn"  class="btn" style="padding:12px 13px;background:rgba(239,106,76,.25);border:1px solid rgba(239,106,76,.5);color:#fff">Clear everything</button>
+          <button id="clearCancelBtn" class="btn ghost" style="padding:12px 13px;margin-top:4px">Cancel</button>
         </div>
       </div>
     </div>`;
