@@ -456,6 +456,7 @@ function resolvePaystackStatus(charge, tx) {
       return { next: 'failed' };
     case 'send_otp': return { next: 'otp' };
     case 'send_pin': return { next: 'pin' };
+    case 'open_url': return { next: 'open_url', detail: tx.url };
     case 'pay_offline': return { next: 'bank_details', detail: tx.data };
     case 'pending': return { next: 'pending', detail: tx.display_text };
     default: return { next: 'pending' };
@@ -475,6 +476,8 @@ router.post('/charges/:reference/pay', loadCharge, ah(async (req, res) => {
 
   if (method === 'card') {
     body.card = { number: String(number || '').replace(/\s/g, ''), cvv: String(cvv || ''), expiry_month: String(expiry_month || ''), expiry_year: String(expiry_year || '') };
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    body.callback_url = `${proto}://${req.get('host')}/checkout?reference=${charge.reference}`;
   } else if (method === 'mobile_money') {
     const PROV = { MTN: 'mtn', Vodafone: 'vod', AirtelTigo: 'tgo' };
     body.mobile_money = { phone: normalizePhone(phone), provider: PROV[provider] || provider || 'mtn' };

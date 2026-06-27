@@ -340,6 +340,7 @@ function handleNext(next,detail){
   else if(next==='otp')go('otp');
   else if(next==='pin')go('pin');
   else if(next==='bank_details'){S.bankDetail=detail;go('bank');}
+  else if(next==='open_url'&&detail){window.location.href=detail;}
   else{go('approve');startPolling();}
 }
 
@@ -490,6 +491,10 @@ async function boot(){
       try{
         const {charge}=await API.get('/api/charges/'+encodeURIComponent(ref));
         S.charge=charge;
+        /* returning from Paystack 3DS redirect — Paystack appends trxref to the URL */
+        if(params.get('trxref')&&charge.paystackRef&&charge.status!=='success'&&charge.status!=='failed'){
+          try{const {charge:v}=await API.get('/api/charges/'+encodeURIComponent(ref)+'/verify');S.charge=v;}catch(e){}
+        }
       }catch(e){
         const isDemoReload=document.referrer.includes(location.host)||!document.referrer;
         if(isDemoReload){
