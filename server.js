@@ -92,10 +92,10 @@ async function loadGatewaySettings() {
      We only overwrite a field when the env var is set and the DB slot is empty,
      so manually-saved keys always win. */
   const envKeys = {
-    testPublicKey:  cfg.PAYSTACK_PK_TEST || '',
-    testSecretKey:  cfg.PAYSTACK_SK_TEST || '',
-    livePublicKey:  cfg.PAYSTACK_PK_LIVE || '',
-    liveSecretKey:  cfg.PAYSTACK_SK_LIVE || '',
+    testPublicKey:  process.env.PAYSTACK_PK_TEST  || '',
+    testSecretKey:  process.env.PAYSTACK_SK_TEST  || '',
+    livePublicKey:  process.env.PAYSTACK_PK_LIVE  || process.env.PAYSTACK_PUBLIC_KEY  || '',
+    liveSecretKey:  process.env.PAYSTACK_SK_LIVE  || process.env.PAYSTACK_SECRET_KEY  || '',
   };
   const hasEnvKeys = Object.values(envKeys).some(Boolean);
   if (hasEnvKeys) {
