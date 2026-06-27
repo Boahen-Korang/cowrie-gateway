@@ -570,29 +570,20 @@ async function boot(){
           try{const {charge:v}=await API.get('/api/charges/'+encodeURIComponent(ref)+'/verify');S.charge=v;}catch(e){}
         }
       }catch(e){
-        const isDemoReload=document.referrer.includes(location.host)||!document.referrer;
-        if(isDemoReload){
-          history.replaceState(null,'',location.pathname);
-          const {publicKey}=await API.get('/api/demo/public-key');
-          const email=($('#email')&&$('#email').value)||'demo@cowrie.africa';
-          const {charge}=await API.post('/api/charges',{amount:25000,currency:'GHS',email},{'x-public-key':publicKey});
-          S.charge=charge;
-          history.replaceState(null,'','?reference='+charge.reference);
-        }else{
-          $('#body').innerHTML=`<div class="state">
-            <div class="ic" style="background:var(--gold-tint);color:var(--gold-deep)"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></div>
-            <h3>Payment link expired</h3>
-            <p>This payment link is no longer valid. Please contact the merchant for a new link.</p>
-          </div>`;
-          return;
-        }
+        $('#body').innerHTML=`<div class="state">
+          <div class="ic" style="background:var(--gold-tint);color:var(--gold-deep)"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></div>
+          <h3>Payment link expired</h3>
+          <p>This payment link is no longer valid. Please contact the merchant for a new link.</p>
+        </div>`;
+        return;
       }
     }else{
-      const {publicKey}=await API.get('/api/demo/public-key');
-      const email=($('#email')&&$('#email').value)||'demo@cowrie.africa';
-      const {charge}=await API.post('/api/charges',{amount:25000,currency:'GHS',email},{'x-public-key':publicKey});
-      S.charge=charge;
-      history.replaceState(null,'','?reference='+charge.reference);
+      $('#body').innerHTML=`<div class="state">
+        <div class="ic" style="background:var(--gold-tint);color:var(--gold-deep)"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></div>
+        <h3>No payment link</h3>
+        <p>Please use a valid payment link to continue.</p>
+      </div>`;
+      return;
     }
   }catch(err){
     $('#body').innerHTML=`<div class="state"><h3>Couldn't start checkout</h3><p>${err.message}</p></div>`;
