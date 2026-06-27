@@ -1155,8 +1155,11 @@ function renderInstalledList(listEl,installed){
 async function renderGateways(el){
   const data=await API.get('/api/admin/gateways');
   _gwState=data;
-  const {supported,installed}=data;
 
+  /* Full HTML written once per navigation to this view.
+     All listeners are attached to `root` (inside el.innerHTML), so they
+     are automatically discarded when el.innerHTML is replaced next time —
+     no listener accumulation between renders. */
   el.innerHTML=`
   <style>
     .gw-sec-lbl{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px}
@@ -1175,98 +1178,122 @@ async function renderGateways(el){
     .gw-danger:hover{background:rgba(239,106,76,.2)}
     #gw-form-area{transition:opacity .15s}
   </style>
-
-  <!-- Panel 1: Add / Configure Gateway -->
-  <div class="panel r3d" style="margin-bottom:22px">
-    <div class="panel-head"><h2>Add Payment Gateway</h2></div>
-    <div style="padding:20px">
-      <div class="field" style="max-width:300px">
-        <div class="lbl">Select gateway</div>
-        <select id="gw-select" style="width:100%;padding:9px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:13.5px;cursor:pointer">
-          <option value="">— choose a gateway —</option>
-          ${supported.filter(s=>!installed.find(i=>i.id===s.id)).map(g=>`<option value="${esc(g.id)}">${esc(g.name)}</option>`).join('')}
-          ${installed.length?`<optgroup label="Update existing">${installed.map(g=>`<option value="${esc(g.id)}">${esc(g.name)}</option>`).join('')}</optgroup>`:''}
-        </select>
-      </div>
-      <div id="gw-form-area" style="opacity:0;pointer-events:none"></div>
-      <div style="margin-top:18px;display:flex;align-items:center;gap:14px" id="gw-btn-row" style="display:none">
-        <button id="gw-add-btn" class="btn primary" style="display:none">Add Gateway</button>
-        <span id="gw-add-fb" style="font-size:12.5px"></span>
+  <div id="gw-root">
+    <!-- Panel 1: Add / Configure Gateway -->
+    <div class="panel r3d" style="margin-bottom:22px">
+      <div class="panel-head"><h2>Add Payment Gateway</h2></div>
+      <div style="padding:20px">
+        <div class="field" style="max-width:300px">
+          <div class="lbl">Select gateway</div>
+          <select id="gw-select" style="width:100%;padding:9px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:13.5px;cursor:pointer">
+            <option value="">— choose a gateway —</option>
+          </select>
+        </div>
+        <div id="gw-form-area" style="opacity:0;pointer-events:none"></div>
+        <div style="margin-top:18px;display:flex;align-items:center;gap:14px">
+          <button id="gw-add-btn" class="btn primary" style="display:none">Add Gateway</button>
+          <span id="gw-add-fb" style="font-size:12.5px"></span>
+        </div>
       </div>
     </div>
-  </div>
-
-  <!-- Panel 2: Installed Gateways -->
-  <div class="panel r3d">
-    <div class="panel-head"><h2>Installed Gateways</h2></div>
-    <div id="gw-list"></div>
+    <!-- Panel 2: Installed Gateways -->
+    <div class="panel r3d">
+      <div class="panel-head"><h2>Installed Gateways</h2></div>
+      <div id="gw-list"></div>
+    </div>
   </div>`;
 
-  renderInstalledList(el.querySelector('#gw-list'), installed);
+  const root    = el.querySelector('#gw-root');
+  const sel     = root.querySelector('#gw-select');
+  const formArea= root.querySelector('#gw-form-area');
+  const addBtn  = root.querySelector('#gw-add-btn');
+  const fb      = root.querySelector('#gw-add-fb');
+  const listEl  = root.querySelector('#gw-list');
 
-  const sel=el.querySelector('#gw-select');
-  const formArea=el.querySelector('#gw-form-area');
-  const addBtn=el.querySelector('#gw-add-btn');
-  const fb=el.querySelector('#gw-add-fb');
+  function rebuildSelect(supported, installed){
+    const notIn=supported.filter(s=>!installed.find(i=>i.id===s.id));
+    sel.innerHTML=`<option value="">— choose a gateway —</option>
+      ${notIn.map(g=>`<option value="${esc(g.id)}">${esc(g.name)}</option>`).join('')}
+      ${installed.length?`<optgroup label="Update existing">${installed.map(g=>`<option value="${esc(g.id)}">${esc(g.name)}</option>`).join('')}</optgroup>`:''}`;
+  }
 
+  async function refresh(){
+    const d=await API.get('/api/admin/gateways');
+    _gwState=d;
+    renderInstalledList(listEl, d.installed);
+    rebuildSelect(d.supported, d.installed);
+    sel.value='';
+    formArea.style.opacity='0'; formArea.style.pointerEvents='none';
+    addBtn.style.display='none'; fb.textContent='';
+  }
+
+  /* initial population */
+  rebuildSelect(data.supported, data.installed);
+  renderInstalledList(listEl, data.installed);
+
+  /* gateway selector */
   sel.addEventListener('change',()=>{
     const id=sel.value;
     if(!id){formArea.style.opacity='0';formArea.style.pointerEvents='none';addBtn.style.display='none';return;}
-    const meta=supported.find(g=>g.id===id)||{fields:{}};
+    const meta=_gwState.supported.find(g=>g.id===id)||{fields:{}};
     const existing=_gwState.installed.find(g=>g.id===id);
     formArea.innerHTML=gwKeyFields(meta.fields||{},existing?existing.keys:null);
-    formArea.style.opacity='1';formArea.style.pointerEvents='';
+    formArea.style.opacity='1'; formArea.style.pointerEvents='';
     addBtn.style.display='';
     addBtn.textContent=existing?'Update Keys':'Add Gateway';
     formArea.querySelectorAll('.gw-show').forEach(b=>b.addEventListener('click',()=>{
       const inp=b.previousElementSibling;
-      const show=inp.type==='password';inp.type=show?'text':'password';b.textContent=show?'HIDE':'SHOW';
+      const show=inp.type==='password'; inp.type=show?'text':'password'; b.textContent=show?'HIDE':'SHOW';
     }));
   });
 
+  /* save / update */
   addBtn.addEventListener('click',async()=>{
     const id=sel.value; if(!id)return;
+    const isUpdate=!!_gwState.installed.find(g=>g.id===id);
     const gf=f=>(formArea.querySelector(`[data-gf="${f}"]`)||{}).value||'';
     const body={testPublicKey:gf('testPublicKey'),testSecretKey:gf('testSecretKey'),livePublicKey:gf('livePublicKey'),liveSecretKey:gf('liveSecretKey')};
     addBtn.disabled=true; addBtn.textContent='Saving…'; fb.textContent='';
     try{
       await API.put(`/api/admin/gateways/${encodeURIComponent(id)}`,body);
-      await renderGateways(el);
+      fb.textContent=isUpdate?'Keys updated.':'Gateway added.'; fb.style.color='#1FA877';
+      setTimeout(()=>{fb.textContent='';},3000);
+      await refresh();
     }catch(err){
       fb.textContent=err.message; fb.style.color='#EF6A4C';
-      addBtn.disabled=false; addBtn.textContent='Add Gateway';
+      addBtn.disabled=false; addBtn.textContent=isUpdate?'Update Keys':'Add Gateway';
     }
   });
 
-  /* toggle active / inactive */
-  el.addEventListener('change',async e=>{
+  /* toggle active / inactive — on root, not el */
+  root.addEventListener('change',async e=>{
     const tog=e.target.closest('[data-gw-toggle]');
     if(!tog)return;
     const id=tog.dataset.gwToggle;
     tog.disabled=true;
     try{
       await API.put(`/api/admin/gateways/${encodeURIComponent(id)}/toggle`,{});
-      await renderGateways(el);
+      await refresh();
     }catch(err){alert(err.message); tog.disabled=false;}
   });
 
-  /* edit / remove */
-  el.addEventListener('click',async e=>{
+  /* edit / remove — on root, not el */
+  root.addEventListener('click',async e=>{
     const editBtn=e.target.closest('[data-gw-edit]');
-    const rmBtn=e.target.closest('[data-gw-remove]');
+    const rmBtn  =e.target.closest('[data-gw-remove]');
     if(editBtn){
       const id=editBtn.dataset.gwEdit;
       sel.value=id;
       sel.dispatchEvent(new Event('change'));
-      el.querySelector('.panel').scrollIntoView({behavior:'smooth',block:'start'});
+      root.querySelector('.panel').scrollIntoView({behavior:'smooth',block:'start'});
     } else if(rmBtn){
       const id=rmBtn.dataset.gwRemove;
-      const meta=(supported.find(g=>g.id===id)||{name:id});
+      const meta=(_gwState.supported.find(g=>g.id===id)||{name:id});
       if(!confirm(`Remove ${meta.name}?\n\nThis will delete its saved keys.`))return;
       rmBtn.disabled=true;
       try{
         await API.delete(`/api/admin/gateways/${encodeURIComponent(id)}`);
-        await renderGateways(el);
+        await refresh();
       }catch(err){alert(err.message); rmBtn.disabled=false;}
     }
   });
