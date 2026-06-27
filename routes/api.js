@@ -269,6 +269,16 @@ router.get('/transactions', requireAuth, ah(async (req, res) => {
   res.json({ transactions });
 }));
 
+router.delete('/transactions', requireAuth, ah(async (req, res) => {
+  const { mode } = req.query;
+  if (mode === 'live' || mode === 'test') {
+    await store.charges.clearForMerchantByMode(req.merchant.id, mode);
+  } else {
+    await store.charges.clearForMerchant(req.merchant.id);
+  }
+  res.json({ ok: true });
+}));
+
 router.get('/events', requireAuth, ah(async (req, res) => {
   res.json({ events: await store.events.forMerchant(req.merchant.id) });
 }));

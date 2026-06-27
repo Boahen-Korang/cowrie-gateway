@@ -349,6 +349,7 @@ const API={
   async get(p){const r=await fetch(p,{headers:modeHeaders()});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed');return d;},
   async post(p,b){const r=await fetch(p,{method:'POST',headers:{...modeHeaders(),'content-type':'application/json'},body:JSON.stringify(b||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed');return d;},
   async put(p,b){const r=await fetch(p,{method:'PUT',headers:{...modeHeaders(),'content-type':'application/json'},body:JSON.stringify(b||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed');return d;},
+  async delete(p){const r=await fetch(p,{method:'DELETE',headers:modeHeaders()});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed');return d;},
 };
 
 function statusTag(s){
@@ -486,13 +487,39 @@ async function renderOverview(el){
 /* ─── Transactions ─── */
 async function renderTransactions(el){
   const {transactions}=await API.get('/api/transactions');
-  if(!transactions.length){el.innerHTML=`<div class="empty"><strong>No transactions yet</strong>Open <a href="/checkout" style="color:#C9AEFF;font-weight:600">/checkout</a> and complete a test payment to see it here.</div>`;return;}
+
+  if(!transactions.length){
+    el.innerHTML=`
+      <div class="empty"><strong>No transactions yet</strong>Open <a href="/checkout" style="color:#C9AEFF;font-weight:600">/checkout</a> and complete a test payment to see it here.</div>`;
+    return;
+  }
+
   el.innerHTML=`
-    <div class="search-row"><input id="txSearch" placeholder="Search reference, method, status…"></div>
-    <div class="panel r3d"><div style="overflow:auto;"><table class="table" id="txTable">
-      <thead><tr><th>Reference</th><th>Method</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
-      <tbody>${txRows(transactions)}</tbody>
-    </table></div></div>`;
+    <div class="search-row" style="display:flex;gap:8px;align-items:center">
+      <input id="txSearch" placeholder="Search reference, method, status…" style="flex:1">
+      <button id="clearTxBtn" class="btn sm" style="flex-shrink:0;min-height:36px;background:rgba(239,106,76,.12);color:var(--coral,#EF6A4C);border:1px solid rgba(239,106,76,.3);font-family:var(--mono);font-size:11px;white-space:nowrap">Clear history</button>
+    </div>
+    <div class="panel r3d">
+      <div style="overflow:auto;"><table class="table" id="txTable">
+        <thead><tr><th>Reference</th><th>Method</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>${txRows(transactions)}</tbody>
+      </table></div>
+    </div>
+
+    <div id="clearModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:20px">
+      <div style="background:#1C1335;border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:32px 24px;max-width:360px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.5)">
+        <div style="width:48px;height:48px;border-radius:50%;background:rgba(239,106,76,.15);border:1.5px solid rgba(239,106,76,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#EF6A4C" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </div>
+        <h3 style="text-align:center;font-size:17px;margin-bottom:8px;font-family:var(--display)">Clear transaction history?</h3>
+        <p style="text-align:center;color:var(--muted,#888);font-size:13px;line-height:1.6;margin-bottom:20px">Choose what to delete. This cannot be undone.</p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button id="clearAllBtn"  style="padding:12px;border-radius:10px;border:1px solid rgba(239,106,76,.5);background:rgba(239,106,76,.2);color:#fff;font-family:var(--display);font-weight:700;font-size:14px;cursor:pointer">Delete all transactions</button>
+          <button id="clearCancelBtn" style="padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:rgba(255,255,255,.5);font-family:var(--display);font-weight:600;font-size:14px;cursor:pointer;margin-top:4px">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+
   $('#txSearch').addEventListener('input',function(){
     const q=this.value.toLowerCase();
     const rows=transactions.filter(t=>
@@ -501,6 +528,16 @@ async function renderTransactions(el){
       t.status.toLowerCase().includes(q)
     );
     $('#txTable').querySelector('tbody').innerHTML=txRows(rows);
+  });
+
+  const modal=$('#clearModal');
+  $('#clearTxBtn').addEventListener('click',()=>{ modal.style.display='flex'; });
+  $('#clearCancelBtn').addEventListener('click',()=>{ modal.style.display='none'; });
+  modal.addEventListener('click',e=>{ if(e.target===modal) modal.style.display='none'; });
+  $('#clearAllBtn').addEventListener('click',async()=>{
+    modal.style.display='none';
+    await API.delete('/api/transactions');
+    await renderTransactions(el);
   });
 }
 
