@@ -484,7 +484,12 @@ router.post('/charges/:reference/pay', loadCharge, ah(async (req, res) => {
 
   const data = await paystack.charge(body, charge.mode || 'test');
   console.log('[Paystack /charge]', JSON.stringify({ method, mode: charge.mode, status: data.status, message: data.message, data_status: data.data && data.data.status, gateway_response: data.data && data.data.gateway_response }));
-  if (!data.status) throw Object.assign(new Error(data.message || 'Charge failed'), { status: 400 });
+  /* Paystack returns status:false both for API errors (no data.data) and for
+     legitimate charge failures (data.data.status === 'failed', message === 'Charge attempted').
+     Only throw on true API errors — let resolvePaystackStatus handle charge failures. */
+  if (!data.status && (!data.data || !data.data.status)) {
+    throw Object.assign(new Error(data.message || 'Charge failed'), { status: 400 });
+  }
 
   charge.paystackRef = paystackRef;
   const result = resolvePaystackStatus(charge, data.data);
