@@ -343,6 +343,10 @@ input,select,textarea{font-family:inherit}
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
           Settlements
         </a>
+        <a href="#" data-view="members">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Members
+        </a>
         <div class="nav-sep"></div>
         <a href="#" data-view="kyc">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.4 7.7 8 10 4.6-2.3 8-5 8-10V6z"/></svg>
@@ -444,6 +448,10 @@ input,select,textarea{font-family:inherit}
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
       Settle
     </a>
+    <a href="#" data-view="members">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Members
+    </a>
     <a href="#" data-view="new-payment">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
       New
@@ -525,6 +533,7 @@ const VIEWS = {
   payouts:      {title:'Payouts',      desc:'Review and process payout requests submitted by merchants.'},
   settlements:  {title:'Settlements',  desc:'Reconcile and trigger settlements to your bank account.'},
   'new-payment':{title:'New payment',  desc:'Create a hosted payment link and share it with a customer.'},
+  'members':    {title:'Members',     desc:'All registered merchants, their stores and total collections.'},
   'kyc':        {title:'KYC Review',        desc:'Review and approve merchant identity verification submissions.'},
   'gateways':   {title:'Payment Gateways',  desc:'Configure API keys for your payment processing providers.'},
 };
@@ -547,6 +556,7 @@ async function loadView(view){
     else if(view==='payouts')      await renderPayouts(el);
     else if(view==='settlements')  await renderSettlements(el);
     else if(view==='new-payment')  renderNewPayment(el);
+    else if(view==='members')      await renderMembers(el);
     else if(view==='kyc')          await renderKyc(el);
     else if(view==='gateways')     await renderGateways(el);
     document.getElementById('statusBadge').textContent =
@@ -794,6 +804,50 @@ function settlementsTable(rows){
       <td style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap">${fmtDate(r.createdAt)}</td>
     </tr>`).join('')}</tbody>
   </table>`;
+}
+
+/* ========================= Members ========================= */
+async function renderMembers(el){
+  const {members} = await API.get('/api/admin/members');
+  if(!members.length){
+    el.innerHTML=`<div class="state-box"><p style="color:var(--muted)">No registered merchants yet.</p></div>`;
+    return;
+  }
+  const rows = members
+    .sort((a,b)=>b.totalCollected-a.totalCollected)
+    .map(m=>`
+      <tr>
+        <td>
+          <div style="font-weight:700;font-size:14px">${esc(m.businessName)}</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px">${esc(m.email)}</div>
+        </td>
+        <td style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--mint)">${fmt(m.totalCollected,'GHS')}</td>
+        <td style="font-family:var(--mono);font-size:12px">${m.successfulTransactions} / ${m.totalTransactions}</td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${m.totalTransactions>0?((m.successfulTransactions/m.totalTransactions)*100).toFixed(0)+'%':'—'}</td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${fmtDate(m.createdAt)}</td>
+      </tr>`).join('');
+
+  el.innerHTML=`
+    <div class="panel r3d">
+      <div class="panel-head">
+        <h2>Registered merchants</h2>
+        <span class="badge">${members.length} total</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Store</th>
+              <th>Total collected</th>
+              <th>Transactions (success / total)</th>
+              <th>Success rate</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
 }
 
 /* ========================= New Payment ========================= */

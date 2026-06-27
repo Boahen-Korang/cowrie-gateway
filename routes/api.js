@@ -419,6 +419,25 @@ router.get('/admin/overview', requireAdminAuth, ah(async (req, res) => {
   res.json({ overview: { collectedToday, paidOutToday, totalCollected, merchantCount, successRate, pendingCount, last7Days, byMethod } });
 }));
 
+router.get('/admin/members', requireAdminAuth, ah(async (req, res) => {
+  const merchants = (await store.merchants.all()).filter((m) => !m.demo);
+  const allCharges = await store.charges.all();
+  const members = merchants.map((m) => {
+    const charges = allCharges.filter((c) => c.merchantId === m.id);
+    const successful = charges.filter((c) => c.status === 'success');
+    return {
+      id: m.id,
+      businessName: m.businessName,
+      email: m.email,
+      createdAt: m.createdAt,
+      totalCollected: successful.reduce((s, c) => s + c.amount, 0),
+      totalTransactions: charges.length,
+      successfulTransactions: successful.length,
+    };
+  });
+  res.json({ members });
+}));
+
 router.get('/admin/transactions', requireAdminAuth, ah(async (req, res) => {
   const all = await store.merchants.all();
   const merchantMap = {};
