@@ -243,9 +243,10 @@ router.get('/payment-links', requireAuth, ah(async (req, res) => {
 }));
 
 router.post('/payment-links', requireAuth, chargeLimiter, ah(async (req, res) => {
-  const { amount, currency, email, description } = req.body || {};
-  const amountMinor = Math.round(Number(amount) * 100);
-  if (!amountMinor || amountMinor < 100) {
+  const { amount, currency, email, description, openAmount } = req.body || {};
+  const isOpen = Boolean(openAmount);
+  const amountMinor = isOpen ? 0 : Math.round(Number(amount) * 100);
+  if (!isOpen && (!amountMinor || amountMinor < 100)) {
     const e = new Error('Enter a valid amount (minimum 1).'); e.status = 400; throw e;
   }
   const charge = await payments.createCharge(req.merchant, {
@@ -253,6 +254,7 @@ router.post('/payment-links', requireAuth, chargeLimiter, ah(async (req, res) =>
     currency: String(currency || 'GHS').toUpperCase(),
     email: String(email || '').trim() || null,
     metadata: { description: String(description || '').trim() },
+    openAmount: isOpen,
   });
   charge.mode = req.mode || 'test';
   charge.paymentLink = true;
@@ -260,6 +262,18 @@ router.post('/payment-links', requireAuth, chargeLimiter, ah(async (req, res) =>
   const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
   const checkoutUrl = `${proto}://${req.get('host')}/checkout?reference=${charge.reference}`;
   res.status(201).json({ charge, checkoutUrl });
+}));
+
+router.post('/charges/:reference/set-amount', payLimiter, loadCharge, ah(async (req, res) => {
+  const charge = req.charge;
+  if (!charge.openAmount) { const e = new Error('This charge has a fixed amount.'); e.status = 400; throw e; }
+  if (charge.status !== 'pending') { const e = new Error('Charge is no longer pending.'); e.status = 409; throw e; }
+  const amount = Math.round(Number(req.body.amount) * 100);
+  if (!amount || amount < 100) { const e = new Error('Enter a valid amount (minimum 1).'); e.status = 400; throw e; }
+  charge.amount = amount;
+  charge.openAmount = false;
+  await store.charges.update(charge);
+  res.json({ charge });
 }));
 
 /* ========================= Charges ========================= */
@@ -455,12 +469,16 @@ router.post('/admin/settlements', requireAdminAuth, ah(async (req, res) => {
 }));
 
 router.post('/admin/new-payment', requireAdminAuth, ah(async (req, res) => {
-  const { amount, currency, email, mode } = req.body || {};
+  const { amount, currency, email, mode, openAmount } = req.body || {};
+  const isOpen = Boolean(openAmount);
   const all = await store.merchants.all();
   const merchant = all.find((m) => m.demo) || all[0];
   if (!merchant) { const e = new Error('No merchant available.'); e.status = 400; throw e; }
   const charge = await payments.createCharge(merchant, {
-    amount: Number(amount) || 0, currency: currency || 'GHS', email: String(email || '').trim(),
+    amount: isOpen ? 0 : Number(amount) || 0,
+    currency: currency || 'GHS',
+    email: String(email || '').trim(),
+    openAmount: isOpen,
   });
   charge.mode = (mode === 'live') ? 'live' : 'test';
   await store.charges.update(charge);

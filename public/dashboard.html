@@ -524,8 +524,8 @@ async function renderPaymentLinks(el){
       <div class="panel-head"><h2>Generate payment link</h2></div>
       <div style="padding:18px;display:grid;gap:14px">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div>
-            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Amount</label>
+          <div id="plAmtWrap">
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Fixed amount</label>
             <input type="number" id="plAmt" min="1" step="0.01" placeholder="0.00" style="${ipt}">
           </div>
           <div>
@@ -539,6 +539,10 @@ async function renderPaymentLinks(el){
             </select>
           </div>
         </div>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--muted);user-select:none;margin-top:-4px">
+          <input type="checkbox" id="plOpenAmount" style="width:15px;height:15px;cursor:pointer">
+          Customer enters their own amount at checkout
+        </label>
         <div>
           <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Description <span style="opacity:.5">(optional)</span></label>
           <input type="text" id="plDesc" placeholder="e.g. Invoice #001, Product name…" style="${ipt}">
@@ -563,12 +567,20 @@ async function renderPaymentLinks(el){
       <div id="plTable">${plLinksTable(links)}</div>
     </div>`;
 
+  document.getElementById('plOpenAmount').addEventListener('change',function(){
+    const wrap=document.getElementById('plAmtWrap');
+    wrap.style.opacity=this.checked?'0.35':'1';
+    wrap.style.pointerEvents=this.checked?'none':'';
+    document.getElementById('plAmt').value='';
+  });
+
   document.getElementById('plGen').addEventListener('click', async()=>{
     const errEl=document.getElementById('plErr');
     const result=document.getElementById('plResult');
     errEl.style.display='none'; result.style.display='none';
+    const openAmount=document.getElementById('plOpenAmount').checked;
     const amt=Number(document.getElementById('plAmt').value);
-    if(!amt||amt<=0){errEl.textContent='Enter a valid amount.';errEl.style.display='block';return;}
+    if(!openAmount&&(!amt||amt<=0)){errEl.textContent='Enter a valid amount, or tick "Customer enters their own amount".';errEl.style.display='block';return;}
     const btn=document.getElementById('plGen');
     btn.disabled=true; btn.textContent='Generating…';
     try{
@@ -577,6 +589,7 @@ async function renderPaymentLinks(el){
         currency: document.getElementById('plCcy').value,
         description: document.getElementById('plDesc').value.trim(),
         email: document.getElementById('plEmail').value.trim(),
+        openAmount,
       });
       document.getElementById('plUrl').textContent=checkoutUrl;
       result.style.display='block';
