@@ -445,6 +445,16 @@ router.get('/admin/members', requireAdminAuth, ah(async (req, res) => {
   res.json({ members });
 }));
 
+router.delete('/admin/transactions', requireAdminAuth, ah(async (req, res) => {
+  const { mode } = req.query; // ?mode=live or ?mode=test — omit for all
+  if (mode === 'live' || mode === 'test') {
+    await store.charges.clearByMode(mode);
+  } else {
+    await store.charges.clearAll();
+  }
+  res.json({ ok: true });
+}));
+
 router.get('/admin/transactions', requireAdminAuth, ah(async (req, res) => {
   const all = await store.merchants.all();
   const merchantMap = {};

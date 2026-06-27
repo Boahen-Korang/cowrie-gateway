@@ -711,14 +711,47 @@ async function renderTransactions(el){
       <div class="panel-head">
         <h2>All transactions</h2>
         <span class="badge" id="txCount">Showing ${transactions.length}</span>
+        <button id="clearTxBtn" class="btn sm" style="margin-left:auto;background:rgba(239,106,76,.12);color:var(--coral);border:1px solid rgba(239,106,76,.3);font-family:var(--mono);font-size:11px">Clear history</button>
       </div>
       <div style="overflow:auto;" id="txWrap">${txTable(transactions,true)}</div>
+    </div>
+
+    <!-- confirm modal -->
+    <div id="clearModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;align-items:center;justify-content:center;padding:20px">
+      <div style="background:#1C1335;border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:32px 28px;max-width:380px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.5)">
+        <div style="width:48px;height:48px;border-radius:50%;background:rgba(239,106,76,.15);border:1.5px solid rgba(239,106,76,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 18px">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--coral)" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </div>
+        <h3 style="text-align:center;font-size:18px;margin-bottom:8px">Clear transaction history?</h3>
+        <p style="text-align:center;color:var(--muted);font-size:13.5px;line-height:1.6;margin-bottom:22px">Choose what to clear. This cannot be undone.</p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button id="clearLiveBtn" class="btn" style="background:rgba(239,106,76,.15);border:1px solid rgba(239,106,76,.3);color:var(--coral)">Clear live transactions only</button>
+          <button id="clearTestBtn" class="btn" style="background:rgba(200,134,10,.1);border:1px solid rgba(200,134,10,.25);color:var(--gold)">Clear test transactions only</button>
+          <button id="clearAllBtn"  class="btn" style="background:rgba(239,106,76,.25);border:1px solid rgba(239,106,76,.5);color:#fff">Clear everything</button>
+          <button id="clearCancelBtn" class="btn ghost" style="margin-top:4px">Cancel</button>
+        </div>
+      </div>
     </div>`;
 
   document.getElementById('txSearch').addEventListener('input',refresh);
   ['all','live','test'].forEach(m=>{
     document.getElementById('txTab_'+m).addEventListener('click',()=>{modeFilter=m;refresh();});
   });
+
+  const modal = document.getElementById('clearModal');
+  document.getElementById('clearTxBtn').addEventListener('click',()=>{ modal.style.display='flex'; });
+  document.getElementById('clearCancelBtn').addEventListener('click',()=>{ modal.style.display='none'; });
+  modal.addEventListener('click',e=>{ if(e.target===modal) modal.style.display='none'; });
+
+  async function doClear(mode){
+    modal.style.display='none';
+    const url = mode ? `/api/admin/transactions?mode=${mode}` : '/api/admin/transactions';
+    await API.delete(url);
+    await renderTransactions(el);
+  }
+  document.getElementById('clearLiveBtn').addEventListener('click',()=>doClear('live'));
+  document.getElementById('clearTestBtn').addEventListener('click',()=>doClear('test'));
+  document.getElementById('clearAllBtn').addEventListener('click',()=>doClear(''));
 }
 
 function modeTag(mode){
