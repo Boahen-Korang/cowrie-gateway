@@ -206,10 +206,16 @@ const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $=s=>document.querySelector(s);
 const SYMS={GHS:'₵',NGN:'₦',KES:'KSh',ZAR:'R',USD:'$',EUR:'€',GBP:'£'};
 const fmt=(minor,ccy)=>(SYMS[ccy]||(ccy+' '))+' '+(minor/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-const S={method:'card',step:'form',provider:'MTN',charge:null,bankDetail:null};
+const S={method:'card',step:'form',provider:'MTN',charge:null,bankDetail:null,ussdDetail:null};
 const amount=()=>S.charge?S.charge.amount:0;
 const ccy=()=>S.charge?S.charge.currency:'GHS';
 const merchantName=()=>(S.charge&&S.charge.merchantName)||'Cowrie';
+function getMethods(){
+  const c=ccy();
+  if(c==='NGN') return [['card','Card'],['bank','Bank transfer'],['ussd','USSD']];
+  if(c==='GHS') return [['card','Card'],['momo','Mobile money']];
+  return [['card','Card'],['bank','Bank transfer']];
+}
 
 const API={
   async get(path){const r=await fetch(path);const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Request failed.');return d;},
@@ -224,11 +230,10 @@ const ICONS={
   momo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>',
   ussd:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3h14M5 21h14M7 3v18M17 3v18M9 8h6M9 12h6"/></svg>'
 };
-const METHODS=[['card','Card'],['momo','Mobile money']];
 let TEST_MODE=true;
 
 function tabs(){
-  return `<div class="methods">${METHODS.map(([id,lbl])=>`<button class="mtab ${S.method===id?'on':''}" data-m="${id}"><span class="mi">${ICONS[id]}</span>${lbl}</button>`).join('')}</div>`;
+  return `<div class="methods" style="grid-template-columns:repeat(${getMethods().length},1fr)">${getMethods().map(([id,lbl])=>`<button class="mtab ${S.method===id?'on':''}" data-m="${id}"><span class="mi">${ICONS[id]||ICONS.card}</span>${lbl}</button>`).join('')}</div>`;
 }
 function payBtn(label){return `<button class="pay" id="pay"><span class="spin"></span><span class="lbl">${label}</span></button>`;}
 
@@ -272,6 +277,21 @@ function formFor(m){
       <div class="err" id="phoneErr">Enter a valid 10-digit number</div></div>
     <div class="hint">${info}You will receive a prompt on your phone to approve this payment.</div>
     ${payBtn(payLabel)}`;
+  if(m==='bank') return `
+    <div class="hint">${info}A one-time virtual bank account will be generated. Transfer the exact amount to complete your payment.</div>
+    ${payBtn('Get account number')}`;
+  if(m==='ussd'){
+    const NG_BANKS=[['737','GTBank'],['966','Zenith Bank'],['919','UBA'],['894','First Bank'],['901','Access Bank'],['822','Sterling Bank'],['833','Polaris Bank']];
+    return `
+    <div class="field">
+      <label>Select your bank</label>
+      <select id="ussdBank">
+        ${NG_BANKS.map(([code,name])=>`<option value="${code}">${name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="hint">${info}You will receive a USSD code to dial on your phone to authorise ${fmt(amount(),ccy())}.</div>
+    ${payBtn('Get USSD code')}`;
+  }
 }
 
 function bindForm(){
@@ -317,6 +337,13 @@ function bindForm(){
       if(d.length<10){phone.classList.add('bad');$('#phoneErr').classList.add('show');return;}
       submitPay($('#pay'),'mobile_money',{phone:d,provider:S.provider});
     });
+  }else if(m==='bank'){
+    $('#pay').addEventListener('click',()=>submitPay($('#pay'),'bank',{}));
+  }else if(m==='ussd'){
+    $('#pay').addEventListener('click',()=>{
+      const ussd_type=$('#ussdBank').value;
+      submitPay($('#pay'),'ussd',{ussd_type});
+    });
   }
 }
 
@@ -340,6 +367,7 @@ function handleNext(next,detail){
   else if(next==='otp')go('otp');
   else if(next==='pin')go('pin');
   else if(next==='bank_details'){S.bankDetail=detail;go('bank');}
+  else if(next==='ussd_code'){S.ussdDetail=detail;go('ussd_wait');}
   else if(next==='open_url'&&detail){window.location.href=detail;}
   else{go('approve');startPolling();}
 }
@@ -364,13 +392,19 @@ function render(){
     $('#amtLbl').textContent='Pay '+merchantName();
     $('#amtV').textContent=fmt(amount(),ccy());
     b.innerHTML=tabs()+formFor(S.method);
-    b.querySelectorAll('.mtab').forEach(t=>t.addEventListener('click',()=>{S.method=t.dataset.m;render();}));
+    b.querySelectorAll('.mtab').forEach(t=>t.addEventListener('click',()=>{
+      S.method=t.dataset.m;
+      /* reset default for momo provider when switching tabs */
+      if(S.method==='momo')S.provider='MTN';
+      render();
+    }));
     bindForm();
   }
   else if(S.step==='otp')renderOtp(b);
   else if(S.step==='pin')renderPin(b);
   else if(S.step==='approve')b.innerHTML=stateApprove();
   else if(S.step==='bank')renderBankDetails(b);
+  else if(S.step==='ussd_wait')renderUssdWait(b);
   else if(S.step==='success')b.innerHTML=stateSuccess();
   else if(S.step==='failed')b.innerHTML=stateFailed();
 }
@@ -433,6 +467,17 @@ function renderBankDetails(b){
   </div>
   <div class="hint" style="justify-content:center"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Transfer the exact amount above. Waiting for confirmation…</div>`;
   b.querySelectorAll('.copy').forEach(c=>c.addEventListener('click',()=>{navigator.clipboard&&navigator.clipboard.writeText(c.dataset.c).catch(()=>{});c.textContent='copied!';setTimeout(()=>c.textContent='copy',1200);}));
+  startPolling();
+}
+
+function renderUssdWait(b){
+  const u=S.ussdDetail||{};
+  b.innerHTML=`
+    <div class="ussd-code">${u.code||'—'}</div>
+    <div class="hint" style="justify-content:center;flex-direction:column;gap:6px;text-align:center">
+      <span>${u.text||'Dial the code above on your registered phone number to complete payment.'}</span>
+      <span style="color:var(--faint)">Waiting for confirmation…</span>
+    </div>`;
   startPolling();
 }
 

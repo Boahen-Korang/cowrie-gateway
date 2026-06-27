@@ -457,7 +457,9 @@ function resolvePaystackStatus(charge, tx) {
     case 'send_otp': return { next: 'otp' };
     case 'send_pin': return { next: 'pin' };
     case 'open_url': return { next: 'open_url', detail: tx.url };
-    case 'pay_offline': return { next: 'bank_details', detail: tx.data };
+    case 'pay_offline':
+      if (tx.channel === 'ussd') return { next: 'ussd_code', detail: { code: tx.ussd_code, text: tx.display_text } };
+      return { next: 'bank_details', detail: tx.data || {} };
     case 'pending': return { next: 'pending', detail: tx.display_text };
     default: return { next: 'pending' };
   }
@@ -467,7 +469,7 @@ router.post('/charges/:reference/pay', loadCharge, ah(async (req, res) => {
   const charge = req.charge;
   if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge, next: charge.status });
 
-  const { method, email: bodyEmail, phone, provider, number, cvv, expiry_month, expiry_year } = req.body || {};
+  const { method, email: bodyEmail, phone, provider, number, cvv, expiry_month, expiry_year, ussd_type } = req.body || {};
   const email = (bodyEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bodyEmail) ? bodyEmail : null)
     || charge.customerEmail || 'customer@cowrie.africa';
   const paystackRef = `cwr_${charge.reference}_${Date.now()}`;
@@ -484,7 +486,7 @@ router.post('/charges/:reference/pay', loadCharge, ah(async (req, res) => {
   } else if (method === 'bank') {
     body.bank_transfer = { account_expires_at: new Date(Date.now() + 3_600_000).toISOString() };
   } else if (method === 'ussd') {
-    body.ussd = { type: '737' };
+    body.ussd = { type: String(ussd_type || '737') };
   }
 
   const data = await paystack.charge(body, charge.mode || 'test');
