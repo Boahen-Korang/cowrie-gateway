@@ -412,13 +412,15 @@ router.post('/admin/settlements', requireAdminAuth, ah(async (req, res) => {
 }));
 
 router.post('/admin/new-payment', requireAdminAuth, ah(async (req, res) => {
-  const { amount, currency, email } = req.body || {};
+  const { amount, currency, email, mode } = req.body || {};
   const all = await store.merchants.all();
   const merchant = all.find((m) => m.demo) || all[0];
   if (!merchant) { const e = new Error('No merchant available.'); e.status = 400; throw e; }
   const charge = await payments.createCharge(merchant, {
     amount: Number(amount) || 0, currency: currency || 'GHS', email: String(email || '').trim(),
   });
+  charge.mode = (mode === 'live') ? 'live' : 'test';
+  await store.charges.update(charge);
   res.status(201).json({ charge, checkoutUrl: `/checkout?reference=${charge.reference}` });
 }));
 

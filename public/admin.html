@@ -823,6 +823,21 @@ function renderNewPayment(el){
               </select>
             </div>
           </div>
+          <div class="field">
+            <div class="lbl">Payment mode</div>
+            <div style="display:flex;gap:8px">
+              <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1.5px solid rgba(255,255,255,.1);cursor:pointer;transition:.15s" id="npModeLiveLabel">
+                <input type="radio" name="npMode" value="live" id="npModeLive" style="accent-color:var(--mint)">
+                <span style="font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.04em">LIVE</span>
+                <span style="font-size:11.5px;color:var(--ink-soft)">Real payment</span>
+              </label>
+              <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1.5px solid rgba(255,255,255,.1);cursor:pointer;transition:.15s" id="npModeTestLabel">
+                <input type="radio" name="npMode" value="test" id="npModeTest" style="accent-color:#E0A12E">
+                <span style="font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.04em">TEST</span>
+                <span style="font-size:11.5px;color:var(--ink-soft)">Sandbox only</span>
+              </label>
+            </div>
+          </div>
           <button class="btn primary" id="npSubmit" style="width:100%">Generate link</button>
           <div id="npResult" class="np-result"></div>
         </div>
@@ -841,17 +856,29 @@ function renderNewPayment(el){
       </div>
     </div>`;
 
+  /* default to LIVE mode */
+  document.getElementById('npModeLive').checked = true;
+  ['npModeLive','npModeTest'].forEach(id=>{
+    document.getElementById(id).addEventListener('change',()=>{
+      const live = document.getElementById('npModeLive').checked;
+      document.getElementById('npModeLiveLabel').style.borderColor = live ? 'var(--mint)' : 'rgba(255,255,255,.1)';
+      document.getElementById('npModeTestLabel').style.borderColor = !live ? '#E0A12E' : 'rgba(255,255,255,.1)';
+    });
+  });
+  document.getElementById('npModeLiveLabel').style.borderColor = 'var(--mint)';
+
   document.getElementById('npSubmit').addEventListener('click',async()=>{
     const email  = document.getElementById('npEmail').value.trim();
     const amount = parseFloat(document.getElementById('npAmount').value);
     const currency=document.getElementById('npCurrency').value;
+    const mode   = document.getElementById('npModeLive').checked ? 'live' : 'test';
     const btn    = document.getElementById('npSubmit');
     const res    = document.getElementById('npResult');
     if(!email||!amount||amount<=0){ alert('Please enter a valid email and amount.'); return; }
     btn.disabled=true; btn.textContent='Creating…';
     try{
       const {charge,checkoutUrl}=await API.post('/api/admin/new-payment',{
-        email, amount:Math.round(amount*100), currency
+        email, amount:Math.round(amount*100), currency, mode
       });
       const fullUrl = location.origin+checkoutUrl;
       res.style.display='block';
