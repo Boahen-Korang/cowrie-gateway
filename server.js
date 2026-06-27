@@ -86,9 +86,36 @@ async function connectWithRetry(maxAttempts = 6, delayMs = 3000) {
 }
 
 async function loadGatewaySettings() {
-  const gs = await store.settings.get('gateways');
-  if (gs && gs.paystack) {
-    paystack.configureKeys(gs.paystack);
+  const gs = (await store.settings.get('gateways')) || { activeGateway: null, installed: [], gateways: {} };
+
+  /* Sync Paystack env-var keys into DB so they appear in the admin dashboard.
+     We only overwrite a field when the env var is set and the DB slot is empty,
+     so manually-saved keys always win. */
+  const envKeys = {
+    testPublicKey:  cfg.PAYSTACK_PK_TEST || '',
+    testSecretKey:  cfg.PAYSTACK_SK_TEST || '',
+    livePublicKey:  cfg.PAYSTACK_PK_LIVE || '',
+    liveSecretKey:  cfg.PAYSTACK_SK_LIVE || '',
+  };
+  const hasEnvKeys = Object.values(envKeys).some(Boolean);
+  if (hasEnvKeys) {
+    gs.gateways = gs.gateways || {};
+    const existing = gs.gateways.paystack || {};
+    gs.gateways.paystack = {
+      testPublicKey: existing.testPublicKey || envKeys.testPublicKey,
+      testSecretKey: existing.testSecretKey || envKeys.testSecretKey,
+      livePublicKey: existing.livePublicKey || envKeys.livePublicKey,
+      liveSecretKey: existing.liveSecretKey || envKeys.liveSecretKey,
+    };
+    gs.installed = gs.installed || [];
+    if (!gs.installed.includes('paystack')) gs.installed.push('paystack');
+    if (!gs.activeGateway) gs.activeGateway = 'paystack';
+    await store.settings.set('gateways', gs);
+    console.log('  ✓ Paystack env-var keys synced to dashboard');
+  }
+
+  if (gs.gateways && gs.gateways.paystack) {
+    paystack.configureKeys(gs.gateways.paystack);
     console.log('  ✓ Gateway keys loaded from database');
   }
 }
