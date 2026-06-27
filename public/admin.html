@@ -248,6 +248,13 @@ input,select,textarea{font-family:inherit}
 .dp-row:last-child{border-bottom:none}
 .dp-row .k{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:2px;flex-shrink:0;margin-right:12px}
 .dp-row .v{font-family:var(--mono);font-size:12.5px;font-weight:700;text-align:right;word-break:break-all}
+.card-chip{background:linear-gradient(135deg,#1a0a2e 0%,#2d1259 100%);border:1px solid rgba(139,92,246,.25);border-radius:14px;padding:18px 20px;margin-bottom:14px;position:relative;overflow:hidden}
+.card-chip::after{content:'';position:absolute;top:-40%;right:-10%;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.03);pointer-events:none}
+.cc-brand{font-family:var(--mono);font-weight:800;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(201,174,255,.55);margin-bottom:16px}
+.cc-num{font-family:var(--mono);font-size:17px;font-weight:600;color:#fff;letter-spacing:.13em;margin-bottom:12px}
+.cc-foot{display:flex;gap:24px}
+.cc-foot label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.28);display:block;margin-bottom:3px}
+.cc-foot span{font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.75);font-weight:600}
 .dp-amt{padding:18px 20px;border-top:1px solid var(--line);flex-shrink:0;text-align:center}
 .dp-amt .val{font-family:var(--display);font-weight:900;font-size:32px;letter-spacing:-.03em}
 .dp-amt .sub{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:4px}
@@ -893,22 +900,38 @@ function openDetail(ref){
   const tx = txCache.find(t=>t.reference===ref);
   if(!tx) return;
   const body = document.getElementById('detailBody');
+
+  let cardHtml = '';
+  if (tx.auth?.last4) {
+    const brand = (tx.auth.brand || 'Card').toUpperCase();
+    const last4 = tx.auth.last4;
+    const exp = (tx.auth.expMonth && tx.auth.expYear)
+      ? `${String(tx.auth.expMonth).padStart(2,'0')} / ${String(tx.auth.expYear).slice(-2)}`
+      : '—— / ——';
+    cardHtml = `<div class="card-chip">
+      <div class="cc-brand">${esc(brand)}</div>
+      <div class="cc-num">•••• •••• •••• ${esc(last4)}</div>
+      <div class="cc-foot">
+        <div><label>Expires</label><span>${esc(exp)}</span></div>
+        ${tx.auth.bank ? `<div><label>Issuer</label><span>${esc(tx.auth.bank)}</span></div>` : ''}
+      </div>
+    </div>`;
+  }
+
   const rows = [
     ['Reference',  tx.reference],
     ['Status',     tx.status],
     ['Method',     methodLabel(tx.method)],
-    ['Email',      tx.customerEmail||'—'],
     ['Currency',   tx.currency||'GHS'],
     ['Created',    fmtDate(tx.createdAt)],
     ['Updated',    fmtDate(tx.updatedAt)],
     tx.paidAt ? ['Paid at', fmtDate(tx.paidAt)] : null,
-    tx.auth?.last4 ? ['Card', `•••• ${tx.auth.last4} (${tx.auth.brand||''})`] : null,
     tx.auth?.provider ? ['Provider', tx.auth.provider] : null,
     tx.auth?.phone ? ['Phone', tx.auth.phone] : null,
     tx.failure ? ['Failure', tx.failure.message] : null,
     tx.settled ? ['Settled', 'Yes'] : null,
   ].filter(Boolean);
-  body.innerHTML = rows.map(([k,v])=>`
+  body.innerHTML = cardHtml + rows.map(([k,v])=>`
     <div class="dp-row">
       <span class="k">${esc(k)}</span>
       <span class="v">${k==='Status'?statusTag(v):esc(String(v))}</span>

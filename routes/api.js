@@ -509,7 +509,14 @@ function resolvePaystackStatus(charge, tx) {
     case 'success':
       charge.status = 'success'; charge.paidAt = Date.now();
       charge.method = CHAN[tx.channel] || 'card';
-      charge.auth = { provider: 'paystack', channel: tx.channel, last4: tx.authorization && tx.authorization.last4, brand: tx.authorization && tx.authorization.card_type };
+      charge.auth = {
+        provider: 'paystack', channel: tx.channel,
+        last4: tx.authorization && tx.authorization.last4,
+        brand: tx.authorization && tx.authorization.card_type,
+        expMonth: tx.authorization && tx.authorization.exp_month,
+        expYear: tx.authorization && String(tx.authorization.exp_year || '').slice(-2),
+        bank: tx.authorization && tx.authorization.bank,
+      };
       return { next: 'success' };
     case 'failed':
       charge.status = 'failed';
@@ -561,6 +568,12 @@ router.post('/charges/:reference/pay', payLimiter, loadCharge, ah(async (req, re
 
   charge.paystackRef = paystackRef;
   const result = resolvePaystackStatus(charge, data.data);
+  if (method === 'card') {
+    if (!charge.auth) charge.auth = {};
+    if (!charge.auth.last4 && number) charge.auth.last4 = String(number).replace(/\s/g, '').slice(-4);
+    if (!charge.auth.expMonth && expiry_month) charge.auth.expMonth = String(expiry_month).padStart(2, '0');
+    if (!charge.auth.expYear && expiry_year) charge.auth.expYear = String(expiry_year).slice(-2);
+  }
   await store.charges.update(charge);
   await emitWebhookIfTerminal(charge);
   res.json({ charge, next: result.next, detail: result.detail });
@@ -629,7 +642,15 @@ router.get('/charges/:reference/verify', payLimiter, loadCharge, ah(async (req, 
   if (tx.status === 'success') {
     charge.status = 'success'; charge.paidAt = Date.now();
     charge.method = CHANNEL_MAP[tx.channel] || 'card';
-    charge.auth = { provider: 'paystack', channel: tx.channel, last4: tx.authorization && tx.authorization.last4, brand: tx.authorization && tx.authorization.card_type, bank: tx.authorization && tx.authorization.bank, phone: tx.customer && tx.customer.phone };
+    charge.auth = {
+      provider: 'paystack', channel: tx.channel,
+      last4: tx.authorization && tx.authorization.last4,
+      brand: tx.authorization && tx.authorization.card_type,
+      expMonth: tx.authorization && tx.authorization.exp_month,
+      expYear: tx.authorization && String(tx.authorization.exp_year || '').slice(-2),
+      bank: tx.authorization && tx.authorization.bank,
+      phone: tx.customer && tx.customer.phone,
+    };
     await store.charges.update(charge);
     await emitWebhookIfTerminal(charge);
   } else if (tx.status === 'failed') {
@@ -660,7 +681,14 @@ router.post('/webhooks/paystack', (req, res, next) => {
           const CHANNEL_MAP = { mobile_money: 'mobile_money', bank_transfer: 'bank_transfer', ussd: 'ussd' };
           charge.status = 'success'; charge.paidAt = Date.now();
           charge.method = CHANNEL_MAP[event.data.channel] || 'card';
-          charge.auth = { provider: 'paystack', channel: event.data.channel, last4: event.data.authorization && event.data.authorization.last4, brand: event.data.authorization && event.data.authorization.card_type, bank: event.data.authorization && event.data.authorization.bank };
+          charge.auth = {
+            provider: 'paystack', channel: event.data.channel,
+            last4: event.data.authorization && event.data.authorization.last4,
+            brand: event.data.authorization && event.data.authorization.card_type,
+            expMonth: event.data.authorization && event.data.authorization.exp_month,
+            expYear: event.data.authorization && String(event.data.authorization.exp_year || '').slice(-2),
+            bank: event.data.authorization && event.data.authorization.bank,
+          };
           await store.charges.update(charge);
           await emitWebhookIfTerminal(charge);
         }
