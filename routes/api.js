@@ -396,11 +396,14 @@ router.get('/admin/overview', requireAdminAuth, ah(async (req, res) => {
 
   const successAll = allCharges.filter((c) => c.status === 'success');
   const collectedToday = successAll.filter((c) => c.createdAt >= todayTs).reduce((s, c) => s + c.amount, 0);
+  const totalCollected = successAll.reduce((s, c) => s + c.amount, 0);
   const allPayouts = await store.payouts.all();
   const paidOutToday = allPayouts.filter((p) => p.createdAt >= todayTs && p.status === 'completed').reduce((s, p) => s + p.amount, 0);
   const total = allCharges.length;
   const successRate = total > 0 ? ((successAll.length / total) * 100).toFixed(1) : '100.0';
   const pendingCount = allCharges.filter((c) => !['success', 'failed'].includes(c.status)).length;
+  const allMerchants = await store.merchants.all();
+  const merchantCount = allMerchants.filter((m) => !m.demo).length;
 
   const last7Days = [];
   for (let i = 6; i >= 0; i--) {
@@ -413,7 +416,7 @@ router.get('/admin/overview', requireAdminAuth, ah(async (req, res) => {
   const byMethod = {};
   successAll.forEach((c) => { const m = c.method || 'unknown'; byMethod[m] = (byMethod[m] || 0) + c.amount; });
 
-  res.json({ overview: { collectedToday, paidOutToday, successRate, pendingCount, last7Days, byMethod } });
+  res.json({ overview: { collectedToday, paidOutToday, totalCollected, merchantCount, successRate, pendingCount, last7Days, byMethod } });
 }));
 
 router.get('/admin/transactions', requireAdminAuth, ah(async (req, res) => {

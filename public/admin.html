@@ -122,7 +122,7 @@ input,select,textarea{font-family:inherit}
 .hdr-actions{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
 /* ─── KPI cards ─── */
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
 @media(max-width:860px){.kpis{grid-template-columns:1fr 1fr}}
 .kpi{
   border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px 20px;
@@ -575,9 +575,19 @@ async function renderOverview(el){
   el.innerHTML = `
     <div class="kpis">
       <div class="kpi r3d">
+        <div class="l">Total collected</div>
+        <div class="v">${fmt(overview.totalCollected)}</div>
+        <div class="t ok">● All time</div>
+      </div>
+      <div class="kpi r3d">
         <div class="l">Collected today</div>
         <div class="v">${fmt(overview.collectedToday)}</div>
         <div class="t ok">● Live</div>
+      </div>
+      <div class="kpi r3d">
+        <div class="l">Registered merchants</div>
+        <div class="v">${overview.merchantCount}</div>
+        <div class="t ok">● All time</div>
       </div>
       <div class="kpi r3d">
         <div class="l">Paid out today</div>
