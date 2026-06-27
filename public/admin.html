@@ -1191,7 +1191,7 @@ async function renderGateways(el){
         </div>
         <div id="gw-form-area" style="opacity:0;pointer-events:none"></div>
         <div style="margin-top:18px;display:flex;align-items:center;gap:14px">
-          <button id="gw-add-btn" class="btn primary" style="display:none">Add Gateway</button>
+          <button type="button" id="gw-add-btn" class="btn primary" style="display:none">Add Gateway</button>
           <span id="gw-add-fb" style="font-size:12.5px"></span>
         </div>
       </div>
@@ -1217,14 +1217,28 @@ async function renderGateways(el){
       ${installed.length?`<optgroup label="Update existing">${installed.map(g=>`<option value="${esc(g.id)}">${esc(g.name)}</option>`).join('')}</optgroup>`:''}`;
   }
 
-  async function refresh(){
+  async function refresh(keepForm){
     const d=await API.get('/api/admin/gateways');
     _gwState=d;
     renderInstalledList(listEl, d.installed);
     rebuildSelect(d.supported, d.installed);
-    sel.value='';
-    formArea.style.opacity='0'; formArea.style.pointerEvents='none';
-    addBtn.style.display='none'; fb.textContent='';
+    if(!keepForm){
+      sel.value='';
+      formArea.style.opacity='0'; formArea.style.pointerEvents='none';
+      addBtn.style.display='none'; fb.textContent='';
+    } else {
+      /* re-select the same gateway so the form shows the saved (masked) keys */
+      const id=sel.value;
+      if(id){
+        const meta=d.supported.find(g=>g.id===id)||{fields:{}};
+        const existing=d.installed.find(g=>g.id===id);
+        formArea.innerHTML=gwKeyFields(meta.fields||{},existing?existing.keys:null);
+        formArea.querySelectorAll('.gw-show').forEach(b=>b.addEventListener('click',()=>{
+          const inp=b.previousElementSibling;
+          const show=inp.type==='password'; inp.type=show?'text':'password'; b.textContent=show?'HIDE':'SHOW';
+        }));
+      }
+    }
   }
 
   /* initial population */
@@ -1256,11 +1270,15 @@ async function renderGateways(el){
     addBtn.disabled=true; addBtn.textContent='Saving…'; fb.textContent='';
     try{
       await API.put(`/api/admin/gateways/${encodeURIComponent(id)}`,body);
-      fb.textContent=isUpdate?'Keys updated.':'Gateway added.'; fb.style.color='#1FA877';
-      setTimeout(()=>{fb.textContent='';},3000);
-      await refresh();
+      /* for updates: keep form open, show keys as they were saved (masked) */
+      await refresh(isUpdate);
+      addBtn.disabled=false;
+      addBtn.textContent=isUpdate?'Update Keys':'Add Gateway';
+      fb.style.color='#1FA877';
+      fb.textContent=isUpdate?'✓ Keys updated successfully.':'✓ Gateway added.';
+      setTimeout(()=>{fb.textContent='';},4000);
     }catch(err){
-      fb.textContent=err.message; fb.style.color='#EF6A4C';
+      fb.textContent='Error: '+err.message; fb.style.color='#EF6A4C';
       addBtn.disabled=false; addBtn.textContent=isUpdate?'Update Keys':'Add Gateway';
     }
   });
