@@ -37,7 +37,6 @@ body::after{content:'';position:fixed;bottom:-25%;right:-20%;width:60%;height:60
   backdrop-filter:blur(20px);
   box-shadow:0 32px 80px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08);
 }
-
 .card-top{display:flex;align-items:center;gap:10px;margin-bottom:32px}
 .brand-name{font-weight:800;font-size:19px;letter-spacing:-.02em}
 
@@ -47,7 +46,7 @@ h1{font-size:27px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-b
 .field{margin-bottom:18px}
 .field-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
 .field label{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.38)}
-.forgot{font-size:11px;font-weight:700;color:rgba(200,134,10,.85);font-family:var(--mono);letter-spacing:.04em;text-decoration:none}
+.forgot{font-size:11px;font-weight:700;color:rgba(200,134,10,.85);font-family:var(--mono);letter-spacing:.04em;text-decoration:none;cursor:pointer}
 .forgot:hover{color:#F5C464}
 .field input{
   width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);
@@ -62,6 +61,11 @@ h1{font-size:27px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-b
 .toggle-pw:hover{color:rgba(255,255,255,.7)}
 .err{color:#F87171;font-size:12.5px;margin-top:5px;display:none;font-family:var(--mono)}
 .err.show{display:block}
+
+.otp-wrap{display:flex;gap:8px;justify-content:center;margin-top:10px}
+.otp-wrap input{width:46px;height:54px;text-align:center;font-family:var(--mono);font-size:22px;font-weight:700;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;outline:none;transition:.15s;padding:0;-webkit-appearance:none}
+.otp-wrap input:focus{border-color:rgba(139,92,246,.65);background:rgba(255,255,255,.08);box-shadow:0 0 0 3px rgba(91,44,143,.22)}
+.otp-wrap input.bad{border-color:rgba(239,106,76,.65)}
 
 .remember-row{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none;font-size:14px;color:rgba(255,255,255,.45);margin:4px 0 24px}
 .remember-row input{position:absolute;opacity:0;width:0;height:0}
@@ -82,18 +86,26 @@ h1{font-size:27px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-b
 .btn .spin{position:absolute;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none}
 .btn.loading .spin{display:block}
 .btn.done{background:var(--mint);pointer-events:none}
+.btn.ghost{background:transparent;border:1.5px solid rgba(255,255,255,.12);color:rgba(255,255,255,.55);margin-top:10px}
+.btn.ghost:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.2);color:#fff;transform:none;box-shadow:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 .card-foot{margin-top:26px;text-align:center;font-size:14px;color:rgba(255,255,255,.3)}
 .card-foot a{color:rgba(200,134,10,.85);font-weight:700;text-decoration:none}
 .card-foot a:hover{color:#F5C464}
 .secure-badge{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:16px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.25)}
-.admin-link{display:block;text-align:center;margin-top:18px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.22);letter-spacing:.04em;text-decoration:none;transition:color .15s}
-.admin-link:hover{color:rgba(255,255,255,.5)}
-.back-btn{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:rgba(255,255,255,.35);font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.03em;margin-bottom:22px;transition:color .15s}
+.back-btn{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:rgba(255,255,255,.35);font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.03em;margin-bottom:22px;transition:color .15s;background:none;border:none;cursor:pointer;padding:0}
 .back-btn:hover{color:rgba(255,255,255,.75)}
+.resend-row{text-align:center;margin-top:14px;font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.3)}
+.resend-row button{background:none;border:none;color:rgba(200,134,10,.85);font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;padding:0}
+.resend-row button:hover{color:#F5C464}
+.resend-row button:disabled{color:rgba(255,255,255,.25);cursor:default}
+.success-ic{width:56px;height:56px;border-radius:50%;background:rgba(26,155,110,.15);border:2px solid rgba(26,155,110,.35);display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
 
-@media(max-width:480px){input{font-size:16px!important}.card{padding:32px 24px 28px}}
+[data-view]{display:none}
+[data-view].active{display:block}
+
+@media(max-width:480px){input{font-size:16px!important}.card{padding:32px 24px 28px}.otp-wrap input{width:40px;height:48px;font-size:18px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -106,63 +118,152 @@ h1{font-size:27px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-b
     <span class="brand-name">Cowrie</span>
   </div>
 
-  <a href="/" class="back-btn">
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
-    Back to home
-  </a>
-  <h1>Welcome back.</h1>
-  <p class="sub">Sign in to your merchant dashboard to manage payments, payouts and settlements.</p>
-
-  <form id="loginForm" novalidate>
-    <div class="field">
-      <label for="email">Email address</label>
-      <input type="email" id="email" placeholder="you@company.com" autocomplete="email">
-      <div class="err" id="emailErr">Enter a valid email address</div>
-    </div>
-    <div class="field">
-      <div class="field-top">
-        <label for="pw" style="margin-bottom:0">Password</label>
-        <a href="#" class="forgot">Forgot password?</a>
+  <!-- ── View: login ── -->
+  <div data-view="login" class="active">
+    <a href="/" class="back-btn">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+      Back to home
+    </a>
+    <h1>Welcome back.</h1>
+    <p class="sub">Sign in to your merchant dashboard to manage payments, payouts and settlements.</p>
+    <form id="loginForm" novalidate>
+      <div class="field">
+        <label for="email">Email address</label>
+        <input type="email" id="email" placeholder="you@company.com" autocomplete="email">
+        <div class="err" id="emailErr">Enter a valid email address</div>
       </div>
-      <div class="inp-wrap" style="margin-top:9px">
-        <input type="password" id="pw" placeholder="••••••••" autocomplete="current-password">
-        <button type="button" class="toggle-pw" id="togglePw">SHOW</button>
+      <div class="field">
+        <div class="field-top">
+          <label for="pw" style="margin-bottom:0">Password</label>
+          <span class="forgot" id="forgotLink">Forgot password?</span>
+        </div>
+        <div class="inp-wrap" style="margin-top:9px">
+          <input type="password" id="pw" placeholder="••••••••" autocomplete="current-password">
+          <button type="button" class="toggle-pw" id="togglePw">SHOW</button>
+        </div>
+        <div class="err" id="pwErr">Enter your password</div>
       </div>
-      <div class="err" id="pwErr">Enter your password</div>
+      <label class="remember-row">
+        <input type="checkbox" id="remember">
+        <span class="cb-box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+        Keep me signed in
+      </label>
+      <div class="err" id="formErr" style="margin-bottom:12px"></div>
+      <button type="submit" class="btn" id="signinBtn">
+        <span class="lbl">Sign in</span><span class="spin"></span>
+      </button>
+    </form>
+    <div class="card-foot">New to Cowrie? <a href="/register">Create a free account</a></div>
+    <div class="secure-badge">
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      Protected by bank-grade encryption
     </div>
-    <label class="remember-row">
-      <input type="checkbox" id="remember">
-      <span class="cb-box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
-      Keep me signed in
-    </label>
-    <div class="err" id="formErr" style="margin-bottom:12px"></div>
-    <button type="submit" class="btn" id="signinBtn">
-      <span class="lbl">Sign in</span><span class="spin"></span>
-    </button>
-  </form>
-
-  <div class="card-foot">
-    New to Cowrie? <a href="/register">Create a free account</a>
   </div>
-  <div class="secure-badge">
-    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-    Protected by bank-grade encryption
+
+  <!-- ── View: forgot (enter email) ── -->
+  <div data-view="forgot">
+    <button class="back-btn" id="backToLogin">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+      Back to sign in
+    </button>
+    <h1>Forgot password?</h1>
+    <p class="sub">Enter your account email and we'll send you a 6-digit reset code.</p>
+    <div class="field">
+      <label for="resetEmail">Email address</label>
+      <input type="email" id="resetEmail" placeholder="you@company.com" autocomplete="email">
+      <div class="err" id="resetEmailErr">Enter a valid email address</div>
+    </div>
+    <div class="err" id="forgotErr" style="margin-bottom:12px"></div>
+    <button class="btn" id="sendCodeBtn"><span class="lbl">Send reset code</span><span class="spin"></span></button>
+  </div>
+
+  <!-- ── View: otp (enter code) ── -->
+  <div data-view="otp">
+    <button class="back-btn" id="backToForgot">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+      Back
+    </button>
+    <h1>Check your email.</h1>
+    <p class="sub">We sent a 6-digit code to <strong id="otpEmailDisplay" style="color:#fff"></strong>. It expires in 15 minutes.</p>
+    <div class="otp-wrap" id="otpWrap">
+      <input type="text" inputmode="numeric" maxlength="1" data-i="0">
+      <input type="text" inputmode="numeric" maxlength="1" data-i="1">
+      <input type="text" inputmode="numeric" maxlength="1" data-i="2">
+      <input type="text" inputmode="numeric" maxlength="1" data-i="3">
+      <input type="text" inputmode="numeric" maxlength="1" data-i="4">
+      <input type="text" inputmode="numeric" maxlength="1" data-i="5">
+    </div>
+    <div class="err" id="otpErr" style="margin-top:10px;text-align:center"></div>
+    <button class="btn" id="verifyOtpBtn" style="margin-top:20px"><span class="lbl">Continue</span><span class="spin"></span></button>
+    <div class="resend-row">Didn't get it? <button id="resendBtn">Resend code</button></div>
+  </div>
+
+  <!-- ── View: reset (new password) ── -->
+  <div data-view="reset">
+    <h1>New password.</h1>
+    <p class="sub">Choose a strong password — at least 8 characters.</p>
+    <div class="field">
+      <label for="newPw">New password</label>
+      <div class="inp-wrap">
+        <input type="password" id="newPw" placeholder="••••••••" autocomplete="new-password">
+        <button type="button" class="toggle-pw" id="toggleNew">SHOW</button>
+      </div>
+      <div class="err" id="newPwErr">Must be at least 8 characters</div>
+    </div>
+    <div class="field">
+      <label for="confirmPw">Confirm password</label>
+      <div class="inp-wrap">
+        <input type="password" id="confirmPw" placeholder="••••••••" autocomplete="new-password">
+        <button type="button" class="toggle-confirm">SHOW</button>
+      </div>
+      <div class="err" id="confirmPwErr">Passwords do not match</div>
+    </div>
+    <div class="err" id="resetErr" style="margin-bottom:12px"></div>
+    <button class="btn" id="resetPwBtn"><span class="lbl">Reset password</span><span class="spin"></span></button>
+  </div>
+
+  <!-- ── View: done ── -->
+  <div data-view="done">
+    <div class="success-ic">
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#1A9B6E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+    </div>
+    <h1 style="text-align:center">Password reset!</h1>
+    <p class="sub" style="text-align:center;margin-bottom:24px">Your password has been updated. Sign in with your new password.</p>
+    <button class="btn" id="goSignInBtn"><span class="lbl">Sign in</span></button>
   </div>
 </div>
 
 <script>
 'use strict';
+
+/* ── view switcher ── */
+function show(name){
+  document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===name));
+}
+
+/* ── login ── */
 const pw=document.getElementById('pw'),togglePw=document.getElementById('togglePw');
 togglePw.addEventListener('click',()=>{const s=pw.type==='password';pw.type=s?'text':'password';togglePw.textContent=s?'HIDE':'SHOW';});
-const form=document.getElementById('loginForm'),btn=document.getElementById('signinBtn');
-const emailEl=document.getElementById('email'),emailErr=document.getElementById('emailErr'),pwErr=document.getElementById('pwErr'),formErr=document.getElementById('formErr');
-[emailEl,pw].forEach(el=>el.addEventListener('input',()=>{el.classList.remove('bad');(el===emailEl?emailErr:pwErr).classList.remove('show');formErr.classList.remove('show');}));
-form.addEventListener('submit',async e=>{
-  e.preventDefault();formErr.classList.remove('show');
+
+const loginForm=document.getElementById('loginForm');
+const emailEl=document.getElementById('email');
+const emailErr=document.getElementById('emailErr');
+const pwErr=document.getElementById('pwErr');
+const formErr=document.getElementById('formErr');
+
+[emailEl,pw].forEach(el=>el.addEventListener('input',()=>{
+  el.classList.remove('bad');
+  (el===emailEl?emailErr:pwErr).classList.remove('show');
+  formErr.classList.remove('show');
+}));
+
+loginForm.addEventListener('submit',async e=>{
+  e.preventDefault(); formErr.classList.remove('show');
   let ok=true;
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value.trim())){emailEl.classList.add('bad');emailErr.classList.add('show');ok=false;}
   if(!pw.value){pw.classList.add('bad');pwErr.classList.add('show');ok=false;}
   if(!ok)return;
+  const btn=document.getElementById('signinBtn');
   btn.classList.add('loading');
   try{
     const res=await fetch('/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:emailEl.value.trim(),password:pw.value,remember:document.getElementById('remember').checked})});
@@ -176,6 +277,138 @@ form.addEventListener('submit',async e=>{
   }catch(err){
     btn.classList.remove('loading');formErr.textContent=err.message;formErr.classList.add('show');
   }
+});
+
+document.getElementById('forgotLink').addEventListener('click',()=>{
+  document.getElementById('resetEmail').value=emailEl.value.trim();
+  show('forgot');
+});
+
+/* ── forgot — step 1: send code ── */
+let resetEmail='';
+
+document.getElementById('backToLogin').addEventListener('click',()=>show('login'));
+
+const resetEmailEl=document.getElementById('resetEmail');
+const resetEmailErr=document.getElementById('resetEmailErr');
+const forgotErr=document.getElementById('forgotErr');
+
+resetEmailEl.addEventListener('input',()=>{resetEmailEl.classList.remove('bad');resetEmailErr.classList.remove('show');forgotErr.classList.remove('show');});
+
+document.getElementById('sendCodeBtn').addEventListener('click',async()=>{
+  forgotErr.classList.remove('show');
+  const val=resetEmailEl.value.trim();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)){resetEmailEl.classList.add('bad');resetEmailErr.classList.add('show');return;}
+  const btn=document.getElementById('sendCodeBtn');
+  btn.classList.add('loading');
+  try{
+    const res=await fetch('/api/auth/forgot-password',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:val})});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.message||'Something went wrong.');
+    resetEmail=val;
+    document.getElementById('otpEmailDisplay').textContent=val;
+    clearOtp();
+    show('otp');
+    document.querySelector('#otpWrap input').focus();
+  }catch(err){
+    forgotErr.textContent=err.message; forgotErr.classList.add('show');
+  }finally{btn.classList.remove('loading');}
+});
+
+/* ── otp inputs — auto-advance & backspace ── */
+function clearOtp(){document.querySelectorAll('#otpWrap input').forEach(i=>{i.value='';i.classList.remove('bad');});}
+function getOtp(){return [...document.querySelectorAll('#otpWrap input')].map(i=>i.value).join('');}
+
+document.querySelectorAll('#otpWrap input').forEach((inp,idx,all)=>{
+  inp.addEventListener('input',()=>{
+    inp.value=inp.value.replace(/\D/g,'').slice(-1);
+    inp.classList.remove('bad');
+    document.getElementById('otpErr').classList.remove('show');
+    if(inp.value&&idx<all.length-1)all[idx+1].focus();
+  });
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Backspace'&&!inp.value&&idx>0)all[idx-1].focus();
+  });
+  inp.addEventListener('paste',e=>{
+    e.preventDefault();
+    const digits=(e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,6);
+    [...digits].forEach((d,i)=>{if(all[i])all[i].value=d;});
+    if(all[Math.min(digits.length,5)])all[Math.min(digits.length,5)].focus();
+  });
+});
+
+document.getElementById('backToForgot').addEventListener('click',()=>show('forgot'));
+
+document.getElementById('verifyOtpBtn').addEventListener('click',async()=>{
+  const otp=getOtp();
+  const otpErr=document.getElementById('otpErr');
+  otpErr.classList.remove('show');
+  if(otp.length<6){
+    document.querySelectorAll('#otpWrap input').forEach(i=>{if(!i.value)i.classList.add('bad');});
+    otpErr.textContent='Enter all 6 digits of the code.';otpErr.classList.add('show');return;
+  }
+  const btn=document.getElementById('verifyOtpBtn');
+  btn.classList.add('loading');
+  try{
+    // We just verify the code is correct by attempting reset with a dummy password check
+    // Instead, we move forward and let reset-password validate everything together
+    show('reset');
+    document.getElementById('newPw').focus();
+  }finally{btn.classList.remove('loading');}
+});
+
+/* ── resend ── */
+let resendTimer=0;
+function startResendTimer(){
+  const btn=document.getElementById('resendBtn');
+  let secs=30; btn.disabled=true; btn.textContent=`Resend (${secs}s)`;
+  resendTimer=setInterval(()=>{
+    secs--;
+    if(secs<=0){clearInterval(resendTimer);btn.disabled=false;btn.textContent='Resend code';}
+    else btn.textContent=`Resend (${secs}s)`;
+  },1000);
+}
+document.getElementById('resendBtn').addEventListener('click',async()=>{
+  const res=await fetch('/api/auth/forgot-password',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:resetEmail})});
+  if(res.ok){clearOtp();document.querySelector('#otpWrap input').focus();startResendTimer();}
+});
+
+/* ── reset — step 2: set new password ── */
+const newPw=document.getElementById('newPw'),confirmPw=document.getElementById('confirmPw');
+document.getElementById('toggleNew').addEventListener('click',()=>{const s=newPw.type==='password';newPw.type=s?'text':'password';document.getElementById('toggleNew').textContent=s?'HIDE':'SHOW';});
+document.querySelector('.toggle-confirm').addEventListener('click',()=>{const s=confirmPw.type==='password';confirmPw.type=s?'text':'password';document.querySelector('.toggle-confirm').textContent=s?'HIDE':'SHOW';});
+
+[newPw,confirmPw].forEach(el=>el.addEventListener('input',()=>{el.classList.remove('bad');document.getElementById(el===newPw?'newPwErr':'confirmPwErr').classList.remove('show');document.getElementById('resetErr').classList.remove('show');}));
+
+document.getElementById('resetPwBtn').addEventListener('click',async()=>{
+  const resetErr=document.getElementById('resetErr');
+  resetErr.classList.remove('show');
+  let ok=true;
+  if(newPw.value.length<8){newPw.classList.add('bad');document.getElementById('newPwErr').classList.add('show');ok=false;}
+  if(newPw.value!==confirmPw.value){confirmPw.classList.add('bad');document.getElementById('confirmPwErr').classList.add('show');ok=false;}
+  if(!ok)return;
+  const btn=document.getElementById('resetPwBtn');
+  btn.classList.add('loading');
+  try{
+    const res=await fetch('/api/auth/reset-password',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:resetEmail,otp:getOtp(),password:newPw.value})});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.message||'Reset failed.');
+    show('done');
+  }catch(err){
+    resetErr.textContent=err.message; resetErr.classList.add('show');
+    if(err.message.toLowerCase().includes('code')){
+      // Invalid code — send them back to OTP step
+      setTimeout(()=>{clearOtp();show('otp');document.querySelector('#otpWrap input').focus();},1200);
+    }
+  }finally{btn.classList.remove('loading');}
+});
+
+/* ── done ── */
+document.getElementById('goSignInBtn').addEventListener('click',()=>{
+  newPw.value=''; confirmPw.value='';
+  show('login');
+  emailEl.value=resetEmail;
+  emailEl.focus();
 });
 </script>
 </body>

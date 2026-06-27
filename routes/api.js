@@ -190,6 +190,46 @@ router.post('/auth/resend-otp', authLimiter, ah(async (req, res) => {
   res.json({ status: 'verify_email', email, message: 'A new code has been sent to your email.' });
 }));
 
+/* Forgot password — step 1: request reset code */
+router.post('/auth/forgot-password', authLimiter, ah(async (req, res) => {
+  const lc = String(req.body?.email || '').trim().toLowerCase();
+  if (!lc || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lc)) {
+    const e = new Error('Enter a valid email address.'); e.status = 400; throw e;
+  }
+  const merchant = await store.merchants.byEmail(lc);
+  if (merchant) {
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const key = '__reset__' + lc;
+    await store.verifications.set(key, otp, { type: 'reset', email: lc }, Date.now() + 15 * 60 * 1000);
+    await sendOtp(lc, otp, merchant.businessName);
+  }
+  // Always respond the same way to prevent email enumeration
+  res.json({ message: 'If an account exists for that email, a reset code has been sent.' });
+}));
+
+/* Forgot password — step 2: verify code + set new password */
+router.post('/auth/reset-password', authLimiter, ah(async (req, res) => {
+  const { email, otp, password } = req.body || {};
+  const lc = String(email || '').trim().toLowerCase();
+  if (!lc || !otp || !password) {
+    const e = new Error('email, otp and password are required.'); e.status = 400; throw e;
+  }
+  if (String(password).length < 8) {
+    const e = new Error('Password must be at least 8 characters.'); e.status = 400; throw e;
+  }
+  const key = '__reset__' + lc;
+  const pending = await store.verifications.get(key);
+  if (!pending || pending.otp !== String(otp).trim() || Date.now() > Number(pending.expires_at)) {
+    const e = new Error('Invalid or expired reset code.'); e.status = 400; throw e;
+  }
+  const merchant = await store.merchants.byEmail(lc);
+  if (!merchant) { const e = new Error('Account not found.'); e.status = 404; throw e; }
+  merchant.passwordHash = hashPassword(password);
+  await store.merchants.update(merchant);
+  await store.verifications.del(key);
+  res.json({ message: 'Password updated. Please sign in.' });
+}));
+
 /* Login */
 router.post('/auth/login', authLimiter, ah(async (req, res) => {
   const { email, password, remember } = req.body || {};
