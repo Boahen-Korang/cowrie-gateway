@@ -621,8 +621,15 @@ document.getElementById('closeBtn').addEventListener('click',()=>{
 });
 
 document.addEventListener('click',e=>{
-  if(e.target&&e.target.id==='ret')location.href='/';
-  if(e.target&&e.target.id==='retry')location.reload();
+  if(e.target&&e.target.id==='ret'){
+    const url=(S.charge&&S.charge.callbackUrl)||'/';
+    location.href=url;
+  }
+  if(e.target&&e.target.id==='retry'){
+    S.charge.status='pending';
+    S.charge.failure=null;
+    go('form');
+  }
 });
 boot();
 </script>
