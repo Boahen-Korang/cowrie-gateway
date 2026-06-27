@@ -1042,11 +1042,49 @@ async function renderKyc(el){
 }
 
 /* ========================= Payment Gateways ========================= */
+function _gwLogo(abbr,bg,fg='#fff',sz=14){
+  return `<svg viewBox="0 0 36 36" width="28" height="28"><rect width="36" height="36" rx="7" fill="${bg}"/><text x="18" y="${sz<=11?22:23}" text-anchor="middle" font-size="${sz}" font-weight="900" fill="${fg}" font-family="sans-serif">${abbr}</text></svg>`;
+}
 const GW_LOGOS={
-  paystack:'<svg viewBox="0 0 36 36" width="28" height="28"><rect width="36" height="36" rx="7" fill="#00C3F7"/><text x="18" y="23" text-anchor="middle" font-size="14" font-weight="900" fill="#fff" font-family="sans-serif">P</text></svg>',
-  flutterwave:'<svg viewBox="0 0 36 36" width="28" height="28"><rect width="36" height="36" rx="7" fill="#F5A623"/><text x="18" y="23" text-anchor="middle" font-size="14" font-weight="900" fill="#fff" font-family="sans-serif">F</text></svg>',
-  stripe:'<svg viewBox="0 0 36 36" width="28" height="28"><rect width="36" height="36" rx="7" fill="#635BFF"/><text x="18" y="23" text-anchor="middle" font-size="14" font-weight="900" fill="#fff" font-family="sans-serif">S</text></svg>',
-  monnify:'<svg viewBox="0 0 36 36" width="28" height="28"><rect width="36" height="36" rx="7" fill="#0063F7"/><text x="18" y="23" text-anchor="middle" font-size="14" font-weight="900" fill="#fff" font-family="sans-serif">M</text></svg>',
+  /* Global */
+  paystack:      _gwLogo('P',  '#00C3F7'),
+  stripe:        _gwLogo('S',  '#635BFF'),
+  paypal:        _gwLogo('PP', '#003087', '#fff', 11),
+  braintree:     _gwLogo('Bt', '#3D95CE', '#fff', 11),
+  adyen:         _gwLogo('A',  '#0ABF53'),
+  checkoutcom:   _gwLogo('Co', '#0B1E2D', '#fff', 11),
+  worldpay:      _gwLogo('W',  '#0055A5'),
+  authorizenet:  _gwLogo('AN', '#5C5C5C', '#fff', 11),
+  square:        _gwLogo('Sq', '#3E4348', '#fff', 11),
+  twocheckout:   _gwLogo('2C', '#FB2329', '#fff', 11),
+  klarna:        _gwLogo('Kl', '#FFB3C7', '#000', 11),
+  mollie:        _gwLogo('Mo', '#FF6600', '#fff', 11),
+  nuvei:         _gwLogo('Nu', '#E30613', '#fff', 11),
+  paysafe:       _gwLogo('Py', '#005F9E', '#fff', 11),
+  aeropay:       _gwLogo('Ae', '#00B5E2', '#fff', 11),
+  amazonpay:     _gwLogo('AP', '#FF9900', '#131A22', 10),
+  /* Africa */
+  flutterwave:   _gwLogo('F',  '#F5A623'),
+  monnify:       _gwLogo('M',  '#0063F7'),
+  interswitch:   _gwLogo('IS', '#FFC72C', '#1A1A1A', 10),
+  peachpayments: _gwLogo('Pe', '#F04E23', '#fff', 11),
+  payfast:       _gwLogo('PF', '#0094D2', '#fff', 11),
+  ozow:          _gwLogo('Oz', '#FF6B00', '#fff', 11),
+  dpopay:        _gwLogo('DP', '#1E90FF', '#fff', 11),
+  pesapal:       _gwLogo('Ps', '#039BE5', '#fff', 11),
+  cellulant:     _gwLogo('Ce', '#0066CC', '#fff', 11),
+  fawry:         _gwLogo('Fw', '#40A829', '#fff', 11),
+  vodapay:       _gwLogo('VP', '#E60000', '#fff', 10),
+  ipay:          _gwLogo('iP', '#1A1A72', '#fff', 11),
+  /* Middle East */
+  tap:           _gwLogo('Tp', '#2A2A6F', '#fff', 11),
+  paytabs:       _gwLogo('PT', '#26B89A', '#fff', 10),
+  /* Asia / India */
+  razorpay:      _gwLogo('Rz', '#2D81F7', '#fff', 11),
+  payu:          _gwLogo('PU', '#FF0066', '#fff', 11),
+  ccavenue:      _gwLogo('CC', '#CC2229', '#fff', 11),
+  cashfree:      _gwLogo('Cf', '#1A1A2E', '#fff', 11),
+  paymongo:      _gwLogo('Pm', '#4F39F6', '#fff', 11),
 };
 
 let _gwState={supported:[],installed:[]};
