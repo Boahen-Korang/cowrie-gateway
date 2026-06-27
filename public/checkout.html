@@ -74,10 +74,6 @@ button{font-family:inherit;cursor:pointer}
 .co-amt{margin-top:16px;display:flex;align-items:baseline;gap:8px}
 .co-amt .l{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
 .co-amt .v{font-family:var(--display);font-weight:800;font-size:30px;letter-spacing:-.02em;margin-left:auto;background:linear-gradient(135deg,#fff,rgba(255,255,255,.7));-webkit-background-clip:text;background-clip:text;color:transparent}
-.co-email{margin-top:12px;width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:10px;padding:10px 13px;font-family:var(--body);font-size:13.5px;color:var(--ink);outline:none;transition:.18s;-webkit-backdrop-filter:blur(8px)}
-.co-email:focus{border-color:rgba(107,56,168,.6);background:rgba(255,255,255,.08);box-shadow:0 0 0 3px rgba(91,44,143,.18)}
-.co-email::placeholder{color:var(--faint)}
-.co-email.bad{border-color:rgba(239,106,76,.6);box-shadow:0 0 0 3px rgba(239,106,76,.12)}
 
 /* ─── Test badge ─── */
 .testbadge{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--gold);background:rgba(224,161,46,.14);border:1px solid rgba(224,161,46,.28);padding:3px 8px;border-radius:6px;margin-top:14px}
@@ -203,7 +199,6 @@ button{font-family:inherit;cursor:pointer}
     </div>
     <div class="co-timer" id="timer">14:59</div>
     <div class="co-amt"><span class="l" id="amtLbl">Pay</span><span class="v" id="amtV">₵ 250.00</span></div>
-    <input class="co-email" id="email" type="email" placeholder="Email address">
     <span class="testbadge"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> TEST MODE</span>
   </div>
   <div class="co-body" id="body"></div>
@@ -323,12 +318,6 @@ function bindForm(){
     });
     cvv.addEventListener('input',()=>cvv.classList.remove('bad'));
     $('#pay').addEventListener('click',()=>{
-      const emailEl=$('#email');
-      const emailVal=emailEl?emailEl.value.trim():'';
-      if(!emailVal||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)){
-        if(emailEl){emailEl.classList.add('bad');emailEl.focus();}
-        return;
-      }
       const num=cn.value.replace(/\s/g,'');
       const expRaw=exp.value.replace(/\D/g,'');
       const c=cvv.value.trim();
@@ -362,9 +351,8 @@ function bindForm(){
 
 async function submitPay(btn,method,details){
   btn.classList.add('loading');
-  const email=($('#email')&&$('#email').value.trim())||'';
   try{
-    const {charge,next,detail}=await API.post(`/api/charges/${S.charge.reference}/pay`,{method,email,...details});
+    const {charge,next,detail}=await API.post(`/api/charges/${S.charge.reference}/pay`,{method,...details});
     S.charge=charge;
     btn.classList.remove('loading');
     handleNext(next,detail);
@@ -647,8 +635,6 @@ function updateMerchantDisplay(){
   document.title='Cowrie Checkout — '+name;
 }
 
-const emailEl=document.getElementById('email');
-if(emailEl)emailEl.addEventListener('input',()=>emailEl.classList.remove('bad'));
 
 document.getElementById('closeBtn').addEventListener('click',()=>{
   const url=(S.charge&&S.charge.callbackUrl)||document.referrer||'/';

@@ -787,10 +787,6 @@ function renderNewPayment(el){
         <div class="np-card-head">Create payment link</div>
         <div class="np-card-body">
           <div class="field">
-            <div class="lbl">Customer email</div>
-            <input id="npEmail" type="email" placeholder="customer@example.com">
-          </div>
-          <div class="field">
             <div class="lbl">Currency</div>
             <select id="npCurrency">
               <option value="GHS">GHS — Ghana Cedi</option>
@@ -860,19 +856,17 @@ function renderNewPayment(el){
   });
 
   document.getElementById('npSubmit').addEventListener('click',async()=>{
-    const email     = document.getElementById('npEmail').value.trim();
     const openAmount= document.getElementById('npOpenAmount').checked;
     const amount    = parseFloat(document.getElementById('npAmount').value);
     const currency  = document.getElementById('npCurrency').value;
     const mode      = document.getElementById('npModeLive').checked ? 'live' : 'test';
     const btn       = document.getElementById('npSubmit');
     const res       = document.getElementById('npResult');
-    if(!email){ alert('Please enter a customer email.'); return; }
     if(!openAmount&&(!amount||amount<=0)){ alert('Please enter a valid amount, or tick "Customer enters their own amount".'); return; }
     btn.disabled=true; btn.textContent='Creating…';
     try{
       const {charge,checkoutUrl}=await API.post('/api/admin/new-payment',{
-        email, amount: openAmount ? 0 : Math.round(amount*100), currency, mode, openAmount
+        amount: openAmount ? 0 : Math.round(amount*100), currency, mode, openAmount
       });
       const fullUrl = location.origin+checkoutUrl;
       res.style.display='block';
