@@ -196,7 +196,7 @@ router.get('/me', requireAuth, (req, res) => {
 
 /* Public config — tells the checkout whether we're in live or test mode */
 router.get('/info', (req, res) => {
-  const key = cfg.PAYSTACK_SECRET_KEY || '';
+  const key = paystack.secretKey('live') || paystack.secretKey('test') || '';
   res.json({ testMode: !key || key.startsWith('sk_test_') });
 });
 
@@ -536,7 +536,7 @@ router.get('/charges/:reference/poll', loadCharge, ah(async (req, res) => {
 
 router.post('/charges/:reference/paystack-init', loadCharge, ah(async (req, res) => {
   const chargeMode = req.charge.mode || 'test';
-  const paystackSk = chargeMode === 'live' ? cfg.PAYSTACK_SK_LIVE : cfg.PAYSTACK_SK_TEST;
+  const paystackSk = paystack.secretKey(chargeMode);
   if (!paystackSk) {
     const e = new Error(`Paystack ${chargeMode} key not configured.`); e.status = 503; throw e;
   }
