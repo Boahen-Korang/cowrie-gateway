@@ -271,16 +271,14 @@ async function payWithInline(){
     const handler=PaystackPop.setup({
       key:publicKey,
       access_code:accessCode,
-      callback:async()=>{
+      callback:function(){
         const b=$('#body');
         if(b)b.innerHTML=`<div class="state"><div class="spinbig"></div><p style="color:var(--muted);margin-top:8px;font-size:13.5px">Confirming payment…</p></div>`;
-        try{
-          const {charge}=await API.get(`/api/charges/${S.charge.reference}/verify`);
-          S.charge=charge;
-          go(charge.status==='success'?'success':'failed');
-        }catch(e){go('failed');}
+        API.get(`/api/charges/${S.charge.reference}/verify`)
+          .then(function(d){S.charge=d.charge;go(d.charge.status==='success'?'success':'failed');})
+          .catch(function(){go('failed');});
       },
-      onClose:()=>{btn.classList.remove('loading');}
+      onClose:function(){btn.classList.remove('loading');}
     });
     handler.openIframe();
   }catch(err){
