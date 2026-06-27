@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://js.paystack.co/v1/inline.js"></script>
 <style>
 /* ─── Tokens (dark) ─── */
 :root{
@@ -78,6 +77,7 @@ button{font-family:inherit;cursor:pointer}
 .co-email{margin-top:12px;width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:10px;padding:10px 13px;font-family:var(--body);font-size:13.5px;color:var(--ink);outline:none;transition:.18s;-webkit-backdrop-filter:blur(8px)}
 .co-email:focus{border-color:rgba(107,56,168,.6);background:rgba(255,255,255,.08);box-shadow:0 0 0 3px rgba(91,44,143,.18)}
 .co-email::placeholder{color:var(--faint)}
+.co-email.bad{border-color:rgba(239,106,76,.6);box-shadow:0 0 0 3px rgba(239,106,76,.12)}
 
 /* ─── Test badge ─── */
 .testbadge{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--gold);background:rgba(224,161,46,.14);border:1px solid rgba(224,161,46,.28);padding:3px 8px;border-radius:6px;margin-top:14px}
@@ -237,12 +237,25 @@ function formFor(m){
   const info='<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>';
   if(m==='card') return `
     ${TEST_MODE?`<div class="test-creds">
-      <strong>⚡ TEST CARD — enter in Paystack popup</strong>
+      <strong>⚡ TEST CARD</strong>
       <div class="tcrow"><span>4084 0840 8408 4081</span><small>Verve</small></div>
-      <div class="tcrow"><span>CVV: 408</span><small>Expiry: 01 / 99</small></div>
-      <div class="tcrow"><span>PIN: 0000</span><small>OTP: 123456</small></div>
+      <div class="tcrow"><span>CVV: 408 · Expiry: 01 / 99</span></div>
+      <div class="tcrow"><span>PIN: 0000 · OTP: 123456</span></div>
     </div>`:''}
-    <div class="hint">${info}Tap Pay — a secure Paystack form will open to process your card. We never see your card details.</div>
+    <div class="field">
+      <label>Card number</label>
+      <input class="mono" id="cardNum" placeholder="0000 0000 0000 0000" maxlength="19" inputmode="numeric" autocomplete="cc-number">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field">
+        <label>Expiry date</label>
+        <input class="mono" id="cardExp" placeholder="MM / YY" maxlength="7" inputmode="numeric" autocomplete="cc-exp">
+      </div>
+      <div class="field">
+        <label>CVV</label>
+        <input class="mono" id="cardCvv" placeholder="•••" maxlength="4" type="password" inputmode="numeric" autocomplete="cc-csc">
+      </div>
+    </div>
     ${payBtn(payLabel)}`;
   if(m==='momo') return `
     ${TEST_MODE?`<div class="test-creds">
@@ -261,36 +274,40 @@ function formFor(m){
     ${payBtn(payLabel)}`;
 }
 
-async function payWithInline(){
-  const btn=$('#pay');
-  btn.classList.add('loading');
-  const email=($('#email')&&$('#email').value.trim())||'';
-  try{
-    const {accessCode,publicKey}=await API.post(`/api/charges/${S.charge.reference}/paystack-init`,{email,channels:['card']});
-    btn.classList.remove('loading');
-    const handler=PaystackPop.setup({
-      key:publicKey,
-      access_code:accessCode,
-      callback:function(){
-        const b=$('#body');
-        if(b)b.innerHTML=`<div class="state"><div class="spinbig"></div><p style="color:var(--muted);margin-top:8px;font-size:13.5px">Confirming payment…</p></div>`;
-        API.get(`/api/charges/${S.charge.reference}/verify`)
-          .then(function(d){S.charge=d.charge;go(d.charge.status==='success'?'success':'failed');})
-          .catch(function(){go('failed');});
-      },
-      onClose:function(){btn.classList.remove('loading');}
-    });
-    handler.openIframe();
-  }catch(err){
-    btn.classList.remove('loading');
-    alert(err.message);
-  }
-}
-
 function bindForm(){
   const m=S.method;
   if(m==='card'){
-    $('#pay').addEventListener('click',payWithInline);
+    const cn=$('#cardNum'),exp=$('#cardExp'),cvv=$('#cardCvv');
+    cn.addEventListener('input',()=>{
+      const v=cn.value.replace(/\D/g,'').slice(0,16);
+      cn.value=v.replace(/(.{4})(?=.)/g,'$1 ');
+      cn.classList.remove('bad');
+    });
+    exp.addEventListener('input',()=>{
+      const v=exp.value.replace(/\D/g,'').slice(0,4);
+      exp.value=v.length>2?v.slice(0,2)+' / '+v.slice(2):v;
+      exp.classList.remove('bad');
+    });
+    cvv.addEventListener('input',()=>cvv.classList.remove('bad'));
+    $('#pay').addEventListener('click',()=>{
+      const emailEl=$('#email');
+      const emailVal=emailEl?emailEl.value.trim():'';
+      if(!emailVal||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)){
+        if(emailEl){emailEl.classList.add('bad');emailEl.focus();}
+        return;
+      }
+      const num=cn.value.replace(/\s/g,'');
+      const expRaw=exp.value.replace(/\D/g,'');
+      const c=cvv.value.trim();
+      if(num.length<15){cn.classList.add('bad');cn.focus();return;}
+      if(expRaw.length<4){exp.classList.add('bad');exp.focus();return;}
+      if(!c){cvv.classList.add('bad');cvv.focus();return;}
+      submitPay($('#pay'),'card',{
+        number:num,cvv:c,
+        expiry_month:expRaw.slice(0,2),
+        expiry_year:'20'+expRaw.slice(2,4)
+      });
+    });
   }else if(m==='momo'){
     $('#prov').querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{S.provider=btn.dataset.p;$('#prov').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===btn));}));
     const phone=$('#phone');
@@ -515,6 +532,9 @@ function updateMerchantDisplay(){
   if(av)av.textContent=name.charAt(0).toUpperCase();
   document.title='Cowrie Checkout — '+name;
 }
+
+const emailEl=document.getElementById('email');
+if(emailEl)emailEl.addEventListener('input',()=>emailEl.classList.remove('bad'));
 
 document.getElementById('closeBtn').addEventListener('click',()=>{
   const url=(S.charge&&S.charge.callbackUrl)||document.referrer||'/';
