@@ -726,6 +726,10 @@ const SUPPORTED_GATEWAYS = [
   { id: 'ccavenue',      name: 'CCAvenue',        status: 'configurable', website: 'https://ccavenue.com',           fields: { testPublicKey: 'Test merchant ID',                  testSecretKey: 'Test working key',                    livePublicKey: 'Live merchant ID',                    liveSecretKey: 'Live working key' } },
   { id: 'cashfree',      name: 'Cashfree',        status: 'configurable', website: 'https://cashfree.com',           fields: { testPublicKey: 'Test app ID',                       testSecretKey: 'Test secret key',                     livePublicKey: 'Live app ID',                         liveSecretKey: 'Live secret key' } },
   { id: 'paymongo',      name: 'PayMongo',        status: 'configurable', website: 'https://paymongo.com',           fields: { testPublicKey: 'Test public key (pk_test_…)',       testSecretKey: 'Test secret key (sk_test_…)',         livePublicKey: 'Live public key (pk_live_…)',        liveSecretKey: 'Live secret key (sk_live_…)' } },
+  /* ── Additional Africa ─────────────────────────────────────────────── */
+  { id: 'moolre',        name: 'Moolre',          status: 'configurable', website: 'https://moolre.com',             fields: { testPublicKey: 'Test public key',                    testSecretKey: 'Test secret key',                     livePublicKey: 'Live public key',                    liveSecretKey: 'Live secret key' } },
+  { id: 'fincra',        name: 'Fincra',          status: 'configurable', website: 'https://fincra.com',             fields: { testPublicKey: 'Test public key',                    testSecretKey: 'Test secret key',                     livePublicKey: 'Live public key',                    liveSecretKey: 'Live secret key' } },
+  { id: 'bani',          name: 'Bani',            status: 'configurable', website: 'https://getbani.com',            fields: { testPublicKey: 'Test public key',                    testSecretKey: 'Test secret key',                     livePublicKey: 'Live public key',                    liveSecretKey: 'Live secret key' } },
 ];
 
 function maskSecret(val) {
