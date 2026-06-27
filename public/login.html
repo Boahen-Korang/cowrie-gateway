@@ -90,6 +90,8 @@ h1{font-size:27px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-b
 .secure-badge{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:16px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.25)}
 .admin-link{display:block;text-align:center;margin-top:18px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.22);letter-spacing:.04em;text-decoration:none;transition:color .15s}
 .admin-link:hover{color:rgba(255,255,255,.5)}
+.back-btn{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:rgba(255,255,255,.35);font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.03em;margin-bottom:22px;transition:color .15s}
+.back-btn:hover{color:rgba(255,255,255,.75)}
 
 @media(max-width:480px){input{font-size:16px!important}.card{padding:32px 24px 28px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -104,6 +106,10 @@ h1{font-size:27px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-b
     <span class="brand-name">Cowrie</span>
   </div>
 
+  <a href="/" class="back-btn">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+    Back to home
+  </a>
   <h1>Welcome back.</h1>
   <p class="sub">Sign in to your merchant dashboard to manage payments, payouts and settlements.</p>
 
