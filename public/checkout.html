@@ -219,7 +219,7 @@ const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $=s=>document.querySelector(s);
 const SYMS={GHS:'₵',NGN:'₦',KES:'KSh',ZAR:'R',USD:'$',EUR:'€',GBP:'£'};
 const fmt=(minor,ccy)=>(SYMS[ccy]||(ccy+' '))+' '+(minor/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-const S={method:'card',step:'form',provider:'MTN',charge:null,bankDetail:null,ussdDetail:null,threeDsUrl:null};
+const S={method:'card',step:'form',provider:'MTN',charge:null,bankDetail:null,ussdDetail:null,threeDsUrl:null,popup:null};
 const amount=()=>S.charge?S.charge.amount:0;
 const ccy=()=>S.charge?S.charge.currency:'GHS';
 const merchantName=()=>(S.charge&&S.charge.merchantName)||'Cowrie';
@@ -363,12 +363,33 @@ function bindForm(){
 async function submitPay(btn,method,details){
   btn.classList.add('loading');
   const email=($('#email')&&$('#email').value.trim())||'';
+
+  /* Open a blank popup NOW while we still have the user-gesture context.
+     Popup blockers only allow window.open() when called synchronously inside
+     a click handler. We navigate it to the 3DS URL later if needed; if 3DS
+     is not triggered we close it immediately. */
+  let pendingPopup=null;
+  try{
+    const pw=Math.min(520,screen.width-40), ph=Math.min(680,screen.height-80);
+    pendingPopup=window.open('','',' width='+pw+',height='+ph+
+      ',left='+Math.round((screen.width-pw)/2)+',top='+Math.round((screen.height-ph)/2));
+  }catch(e){}
+
   try{
     const {charge,next,detail}=await API.post(`/api/charges/${S.charge.reference}/pay`,{method,email,...details});
     S.charge=charge;
     btn.classList.remove('loading');
-    handleNext(next,detail);
+    if(next==='open_url'&&detail){
+      S.threeDsUrl=detail;
+      S.popup=pendingPopup;
+      if(pendingPopup&&!pendingPopup.closed) pendingPopup.location.href=detail;
+      go('verify_3ds');
+    }else{
+      try{if(pendingPopup&&!pendingPopup.closed)pendingPopup.close();}catch(e){}
+      handleNext(next,detail);
+    }
   }catch(err){
+    try{if(pendingPopup&&!pendingPopup.closed)pendingPopup.close();}catch(e){}
     btn.classList.remove('loading');
     alert(err.message);
   }
@@ -381,7 +402,11 @@ function handleNext(next,detail){
   else if(next==='pin')go('pin');
   else if(next==='bank_details'){S.bankDetail=detail;go('bank');}
   else if(next==='ussd_code'){S.ussdDetail=detail;go('ussd_wait');}
-  else if(next==='open_url'&&detail){S.threeDsUrl=detail;go('verify_3ds');}
+  else if(next==='open_url'&&detail){
+    S.threeDsUrl=detail;
+    if(S.popup&&!S.popup.closed){S.popup.location.href=detail;go('verify_3ds');}
+    else{window.location.href=detail;} // fallback if popup was blocked
+  }
   else{go('approve');startPolling();}
 }
 
@@ -496,6 +521,12 @@ function renderUssdWait(b){
 }
 
 function renderVerify3ds(b){
+  /* Popup was blocked — fall back to redirecting the main window */
+  if(!S.popup||S.popup.closed){
+    if(S.threeDsUrl)window.location.href=S.threeDsUrl;
+    return;
+  }
+
   b.innerHTML=`
     <div class="state" style="padding:30px 6px 24px">
       <div class="splash-wrap">
@@ -503,11 +534,50 @@ function renderVerify3ds(b){
         <div class="splash-ring splash-ring-2"></div>
         <div class="splash-ic"></div>
       </div>
-      <h3>Securing your payment</h3>
-      <p style="margin-top:10px">Your bank requires a quick verification step.<br>You'll be redirected automatically.</p>
+      <h3>Completing your payment</h3>
+      <p style="margin-top:10px">Complete the verification in the secure window that just opened. This page will update automatically when done.</p>
       <div class="splash-dots"><span></span><span></span><span></span></div>
     </div>`;
-  setTimeout(()=>{ if(S.threeDsUrl) window.location.href=S.threeDsUrl; }, 1800);
+
+  function finish(next){
+    window.removeEventListener('message',msgHandler);
+    clearInterval(pollTimer);
+    clearInterval(closedTimer);
+    try{if(S.popup&&!S.popup.closed)S.popup.close();}catch(e){}
+    go(next);
+  }
+
+  /* postMessage from the popup after it calls /verify */
+  const msgHandler=(e)=>{
+    if(e.origin!==location.origin||!e.data||e.data.type!=='COWRIE_3DS_DONE')return;
+    API.get(`/api/charges/${S.charge.reference}/verify`).then(({charge})=>{
+      S.charge=charge;
+      finish(charge.status==='success'?'success':'failed');
+    }).catch(()=>finish('failed'));
+  };
+  window.addEventListener('message',msgHandler);
+
+  /* Poll backend every 3 s as backup in case postMessage is missed */
+  const pollTimer=setInterval(async()=>{
+    try{
+      const {charge,next}=await API.get(`/api/charges/${S.charge.reference}/poll`);
+      S.charge=charge;
+      if(next==='success'||next==='failed')finish(next);
+    }catch(e){}
+  },3000);
+
+  /* Detect manual popup close by user */
+  const closedTimer=setInterval(()=>{
+    if(!S.popup||S.popup.closed){
+      clearInterval(closedTimer);
+      clearInterval(pollTimer);
+      window.removeEventListener('message',msgHandler);
+      API.get(`/api/charges/${S.charge.reference}/verify`).then(({charge})=>{
+        S.charge=charge;
+        go(charge.status==='success'?'success':charge.status==='failed'?'failed':'form');
+      }).catch(()=>go('form'));
+    }
+  },900);
 }
 
 function stateApprove(){
@@ -568,6 +638,12 @@ async function boot(){
         /* returning from Paystack 3DS redirect — Paystack appends trxref to the URL */
         if(params.get('trxref')&&charge.paystackRef&&charge.status!=='success'&&charge.status!=='failed'){
           try{const {charge:v}=await API.get('/api/charges/'+encodeURIComponent(ref)+'/verify');S.charge=v;}catch(e){}
+        }
+        /* If we're inside the 3DS popup, tell the parent page and close */
+        if(params.get('trxref')&&window.opener){
+          try{window.opener.postMessage({type:'COWRIE_3DS_DONE'},location.origin);}catch(e){}
+          window.close();
+          return;
         }
       }catch(e){
         const isDemoReload=document.referrer.includes(location.host)||!document.referrer;
