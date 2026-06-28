@@ -6,7 +6,7 @@ const cfg = require('../lib/config');
 const payments = require('../lib/payments');
 const paystack = require('../lib/paystack');
 const webhooks = require('../lib/webhooks');
-const { sendOtp } = require('../lib/email');
+const { sendOtp, sendKycApproved, sendKycRejected } = require('../lib/email');
 const {
   merchantId, apiKey, genId, hashPassword, verifyPassword, signToken, verifyToken,
 } = require('../lib/util');
@@ -855,6 +855,7 @@ router.post('/admin/kyc/:merchantId/approve', requireAdminAuth, ah(async (req, r
   merchant.kycReviewedAt = Date.now();
   merchant.kycRejectionReason = null;
   await store.merchants.update(merchant);
+  sendKycApproved(merchant.email, merchant.businessName).catch(() => {});
   res.json({ merchant: publicMerchant(merchant) });
 }));
 
@@ -866,6 +867,7 @@ router.post('/admin/kyc/:merchantId/reject', requireAdminAuth, ah(async (req, re
   merchant.kycReviewedAt = Date.now();
   merchant.kycRejectionReason = reason;
   await store.merchants.update(merchant);
+  sendKycRejected(merchant.email, merchant.businessName, reason).catch(() => {});
   res.json({ merchant: publicMerchant(merchant) });
 }));
 
