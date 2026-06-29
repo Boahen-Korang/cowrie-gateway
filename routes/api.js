@@ -207,6 +207,19 @@ router.post('/auth/forgot-password', authLimiter, ah(async (req, res) => {
   res.json({ message: 'If an account exists for that email, a reset code has been sent.' });
 }));
 
+/* Forgot password — step 1b: verify OTP only (no password change yet) */
+router.post('/auth/verify-reset-otp', authLimiter, ah(async (req, res) => {
+  const { email, otp } = req.body || {};
+  const lc = String(email || '').trim().toLowerCase();
+  if (!lc || !otp) { const e = new Error('email and otp are required.'); e.status = 400; throw e; }
+  const key = '__reset__' + lc;
+  const pending = await store.verifications.get(key);
+  if (!pending || pending.otp !== String(otp).trim() || Date.now() > Number(pending.expires_at)) {
+    const e = new Error('Invalid or expired reset code.'); e.status = 400; throw e;
+  }
+  res.json({ ok: true });
+}));
+
 /* Forgot password — step 2: verify code + set new password */
 router.post('/auth/reset-password', authLimiter, ah(async (req, res) => {
   const { email, otp, password } = req.body || {};

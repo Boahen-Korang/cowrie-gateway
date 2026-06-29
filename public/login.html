@@ -351,10 +351,14 @@ document.getElementById('verifyOtpBtn').addEventListener('click',async()=>{
   const btn=document.getElementById('verifyOtpBtn');
   btn.classList.add('loading');
   try{
-    // We just verify the code is correct by attempting reset with a dummy password check
-    // Instead, we move forward and let reset-password validate everything together
+    const res=await fetch('/api/auth/verify-reset-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:resetEmail,otp})});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.message||'Invalid code.');
     show('reset');
     document.getElementById('newPw').focus();
+  }catch(err){
+    document.querySelectorAll('#otpWrap input').forEach(i=>i.classList.add('bad'));
+    otpErr.textContent=err.message;otpErr.classList.add('show');
   }finally{btn.classList.remove('loading');}
 });
 

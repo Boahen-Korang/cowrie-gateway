@@ -1081,32 +1081,32 @@ async function renderVerification(el){
   function stepContent(){
     if(kycStep===0) return `
       <div class="field"><div class="lbl">Full name (account owner / director)</div>
-        <input id="kFullName" placeholder="e.g. Kwame Mensah" value="${esc(kycData?.fullName||'')}">
+        <input id="kFullName" placeholder="e.g. Kwame Mensah" value="${esc(_kycDraft.fullName)}">
       </div>
       <div class="field"><div class="lbl">Phone number</div>
-        <input id="kPhone" placeholder="e.g. 0241234567" value="${esc(kycData?.phone||'')}">
+        <input id="kPhone" placeholder="e.g. 0241234567" value="${esc(_kycDraft.phone)}">
       </div>
       <div class="field"><div class="lbl">ID type</div>
         <select id="kIdType">
           <option value="">Select ID type</option>
-          ${['Ghana Card','Passport','Driver\'s License','Voter\'s ID'].map(t=>`<option${kycData?.idType===t?' selected':''}>${t}</option>`).join('')}
+          ${['Ghana Card','Passport','Driver\'s License','Voter\'s ID'].map(t=>`<option${_kycDraft.idType===t?' selected':''}>${t}</option>`).join('')}
         </select>
       </div>
       <div class="field"><div class="lbl">ID number</div>
-        <input id="kIdNumber" placeholder="e.g. GHA-123456789-0" value="${esc(kycData?.idNumber||'')}">
+        <input id="kIdNumber" placeholder="e.g. GHA-123456789-0" value="${esc(_kycDraft.idNumber)}">
       </div>`;
     if(kycStep===1) return `
       <div class="field"><div class="lbl">Business type</div>
         <select id="kBizType">
-          <option value="individual"${kycData?.businessType==='individual'||!kycData?' selected':''}>Individual / Sole proprietor</option>
-          <option value="company"${kycData?.businessType==='company'?' selected':''}>Registered company</option>
+          <option value="individual"${_kycDraft.businessType==='individual'?' selected':''}>Individual / Sole proprietor</option>
+          <option value="company"${_kycDraft.businessType==='company'?' selected':''}>Registered company</option>
         </select>
       </div>
       <div class="field"><div class="lbl">Business registration number</div>
-        <input id="kRegNum" placeholder="e.g. CS-12345" value="${esc(kycData?.businessRegNumber||'')}">
+        <input id="kRegNum" placeholder="e.g. CS-12345" value="${esc(_kycDraft.businessRegNumber)}">
       </div>
       <div class="field"><div class="lbl">Business address</div>
-        <input id="kAddress" placeholder="e.g. 12 Cantonments Road, Accra, Ghana" value="${esc(kycData?.address||'')}">
+        <input id="kAddress" placeholder="e.g. 12 Cantonments Road, Accra, Ghana" value="${esc(_kycDraft.address)}">
       </div>`;
     return `
       <div style="margin-bottom:16px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.38)">ID Documents</div>
@@ -1242,7 +1242,15 @@ async function renderVerification(el){
     });
   }
 
-  let _kycDraft={};
+  let _kycDraft={
+    fullName:kycData?.fullName||'',
+    phone:kycData?.phone||'',
+    idType:kycData?.idType||'',
+    idNumber:kycData?.idNumber||'',
+    businessType:kycData?.businessType||'individual',
+    businessRegNumber:kycData?.businessRegNumber||'',
+    address:kycData?.address||'',
+  };
   renderStep();
 }
 
