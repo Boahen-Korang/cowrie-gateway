@@ -494,16 +494,54 @@ async function renderTransactions(el){
     return;
   }
 
+  const PAGE=10;
+  let page=0;
+
+  function filtered(){
+    const q=($('#txSearch')||{}).value;
+    if(!q||!q.trim()) return transactions;
+    const s=q.toLowerCase().trim();
+    return transactions.filter(t=>
+      t.reference.toLowerCase().includes(s)||
+      (t.method||'').toLowerCase().includes(s)||
+      t.status.toLowerCase().includes(s)
+    );
+  }
+
+  function renderPage(){
+    const rows=filtered();
+    const total=rows.length;
+    const pages=Math.max(1,Math.ceil(total/PAGE));
+    if(page>=pages) page=pages-1;
+    if(page<0) page=0;
+    const slice=rows.slice(page*PAGE,page*PAGE+PAGE);
+    const from=total?page*PAGE+1:0;
+    const to=Math.min(page*PAGE+PAGE,total);
+    $('#txCount').textContent=total?`${from}–${to} of ${total}`:'0';
+    $('#txWrap').querySelector('tbody').innerHTML=txRows(slice);
+    $('#txPagerInner').innerHTML=`
+      <button data-pg="prev" class="btn sm" style="min-width:76px;min-height:36px" ${page===0?'disabled':''}>← Prev</button>
+      <span style="font-family:var(--mono);font-size:12px;color:var(--muted)">Page ${page+1} of ${pages}</span>
+      <button data-pg="next" class="btn sm" style="min-width:76px;min-height:36px" ${page>=pages-1?'disabled':''}>Next →</button>`;
+  }
+
   el.innerHTML=`
     <div class="search-row" style="display:flex;gap:8px;align-items:center">
       <input id="txSearch" placeholder="Search reference, method, status…" style="flex:1">
       <button id="clearTxBtn" class="btn sm" style="flex-shrink:0;min-height:36px;background:rgba(239,106,76,.12);color:var(--coral,#EF6A4C);border:1px solid rgba(239,106,76,.3);font-family:var(--mono);font-size:11px;white-space:nowrap">Clear history</button>
     </div>
     <div class="panel r3d">
-      <div style="overflow:auto;"><table class="table" id="txTable">
+      <div class="panel-head">
+        <h2>Transactions</h2>
+        <span class="badge" id="txCount">…</span>
+      </div>
+      <div style="overflow-x:auto"><table class="table" id="txWrap">
         <thead><tr><th>Reference</th><th>Method</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
-        <tbody>${txRows(transactions)}</tbody>
+        <tbody></tbody>
       </table></div>
+      <div id="txPager" style="border-top:1px solid var(--line,rgba(255,255,255,.09))">
+        <div id="txPagerInner" style="display:flex;align-items:center;gap:10px;justify-content:center;padding:14px 16px;flex-wrap:wrap"></div>
+      </div>
     </div>
 
     <div id="clearModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:20px">
@@ -514,21 +552,23 @@ async function renderTransactions(el){
         <h3 style="text-align:center;font-size:17px;margin-bottom:8px;font-family:var(--display)">Clear transaction history?</h3>
         <p style="text-align:center;color:var(--muted,#888);font-size:13px;line-height:1.6;margin-bottom:20px">Choose what to delete. This cannot be undone.</p>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <button id="clearAllBtn"  style="padding:12px;border-radius:10px;border:1px solid rgba(239,106,76,.5);background:rgba(239,106,76,.2);color:#fff;font-family:var(--display);font-weight:700;font-size:14px;cursor:pointer">Delete all transactions</button>
+          <button id="clearAllBtn" style="padding:12px;border-radius:10px;border:1px solid rgba(239,106,76,.5);background:rgba(239,106,76,.2);color:#fff;font-family:var(--display);font-weight:700;font-size:14px;cursor:pointer">Delete all transactions</button>
           <button id="clearCancelBtn" style="padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:rgba(255,255,255,.5);font-family:var(--display);font-weight:600;font-size:14px;cursor:pointer;margin-top:4px">Cancel</button>
         </div>
       </div>
     </div>`;
 
-  $('#txSearch').addEventListener('input',function(){
-    const q=this.value.toLowerCase();
-    const rows=transactions.filter(t=>
-      t.reference.toLowerCase().includes(q)||
-      (t.method||'').toLowerCase().includes(q)||
-      t.status.toLowerCase().includes(q)
-    );
-    $('#txTable').querySelector('tbody').innerHTML=txRows(rows);
+  renderPage();
+
+  $('#txPager').addEventListener('click',e=>{
+    const btn=e.target.closest('[data-pg]');
+    if(!btn||btn.disabled) return;
+    if(btn.dataset.pg==='prev') page--;
+    if(btn.dataset.pg==='next') page++;
+    renderPage();
   });
+
+  $('#txSearch').addEventListener('input',()=>{ page=0; renderPage(); });
 
   const modal=$('#clearModal');
   $('#clearTxBtn').addEventListener('click',()=>{ modal.style.display='flex'; });
