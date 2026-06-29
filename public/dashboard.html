@@ -1034,140 +1034,195 @@ async function renderVerification(el){
       <strong>Verification rejected</strong> — ${esc(kycRejectionReason||'Your submission did not meet our requirements.')} Please correct the details and resubmit.
     </div>`:'';
 
-  el.innerHTML=`${rejectedBanner}
-    <div class="panel r3d">
-      <div class="panel-head"><h2>Business verification</h2></div>
-      <div style="padding:18px">
-        <div class="field"><div class="lbl">Full name (account owner / director)</div>
-          <input id="kFullName" placeholder="e.g. Kwame Mensah" value="${esc(kycData?.fullName||'')}">
-        </div>
-        <div class="field"><div class="lbl">Phone number</div>
-          <input id="kPhone" placeholder="e.g. 0241234567" value="${esc(kycData?.phone||'')}">
-        </div>
-        <div class="field"><div class="lbl">ID type</div>
-          <select id="kIdType">
-            <option value="">Select ID type</option>
-            ${['Ghana Card','Passport','Driver\'s License','Voter\'s ID'].map(t=>`<option${kycData?.idType===t?' selected':''}>${t}</option>`).join('')}
-          </select>
-        </div>
-        <div class="field"><div class="lbl">ID number</div>
-          <input id="kIdNumber" placeholder="e.g. GHA-123456789-0" value="${esc(kycData?.idNumber||'')}">
-        </div>
-        <div class="field"><div class="lbl">Business type</div>
-          <select id="kBizType">
-            <option value="individual"${kycData?.businessType==='individual'||!kycData?' selected':''}>Individual / Sole proprietor</option>
-            <option value="company"${kycData?.businessType==='company'?' selected':''}>Registered company</option>
-          </select>
-        </div>
-        <div class="field"><div class="lbl">Business registration number</div>
-          <input id="kRegNum" placeholder="e.g. CS-12345" value="${esc(kycData?.businessRegNumber||'')}">
-        </div>
-        <div class="field"><div class="lbl">Business address</div>
-          <input id="kAddress" placeholder="e.g. 12 Cantonments Road, Accra, Ghana" value="${esc(kycData?.address||'')}">
-        </div>
+  const STEPS=[
+    {label:'Personal info'},
+    {label:'Business info'},
+    {label:'Documents'},
+  ];
+  let kycStep=0;
 
-        <div style="margin:24px 0 8px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.38)">ID Documents</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          ${kycUploadZone('idFront','ID — front side','Tap to choose or drag photo')}
-          ${kycUploadZone('idBack','ID — back side','Tap to choose or drag photo')}
-        </div>
-
-        <div style="margin:20px 0 8px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.38)">Business Document</div>
-        ${kycUploadZone('certificate','Business certificate / registration','Certificate of incorporation, business registration or equivalent',true)}
-
-        <div class="fb" id="kycFb"></div>
-        <button class="btn primary" id="kycSubmit" style="margin-top:12px">Submit for verification</button>
-      </div>
+  function stepDots(){
+    return `<div style="display:flex;align-items:center;gap:0;margin-bottom:22px">
+      ${STEPS.map((s,i)=>`
+        <div style="display:flex;align-items:center;flex:${i<STEPS.length-1?1:'none'}">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0">
+            <div style="width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:12px;font-weight:700;border:2px solid;transition:.2s;
+              ${i<kycStep?'background:#1FA877;border-color:#1FA877;color:#fff':i===kycStep?'background:var(--plum);border-color:var(--plum-br);color:#fff':'background:transparent;border-color:rgba(255,255,255,.18);color:rgba(255,255,255,.35)'}">
+              ${i<kycStep?'✓':i+1}
+            </div>
+            <div style="font-size:10px;font-family:var(--mono);white-space:nowrap;color:${i===kycStep?'var(--ink)':'rgba(255,255,255,.35)'};">${s.label}</div>
+          </div>
+          ${i<STEPS.length-1?`<div style="flex:1;height:2px;margin:0 6px;margin-bottom:16px;background:${i<kycStep?'#1FA877':'rgba(255,255,255,.1)'};border-radius:2px"></div>`:''}
+        </div>`).join('')}
     </div>`;
+  }
 
-  /* Wire up file inputs */
-  ['idFront','idBack','certificate'].forEach(key=>{
-    const input=document.getElementById(`fi-${key}`);
-    const camInput=document.getElementById(`cam-fi-${key}`);
-    const camBtn=document.getElementById(`cam-btn-${key}`);
-    const zone=document.getElementById(`uz-${key}`);
-    const preview=document.getElementById(`up-preview-${key}`);
-    const placeholder=document.getElementById(`up-placeholder-${key}`);
+  function stepContent(){
+    if(kycStep===0) return `
+      <div class="field"><div class="lbl">Full name (account owner / director)</div>
+        <input id="kFullName" placeholder="e.g. Kwame Mensah" value="${esc(kycData?.fullName||'')}">
+      </div>
+      <div class="field"><div class="lbl">Phone number</div>
+        <input id="kPhone" placeholder="e.g. 0241234567" value="${esc(kycData?.phone||'')}">
+      </div>
+      <div class="field"><div class="lbl">ID type</div>
+        <select id="kIdType">
+          <option value="">Select ID type</option>
+          ${['Ghana Card','Passport','Driver\'s License','Voter\'s ID'].map(t=>`<option${kycData?.idType===t?' selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><div class="lbl">ID number</div>
+        <input id="kIdNumber" placeholder="e.g. GHA-123456789-0" value="${esc(kycData?.idNumber||'')}">
+      </div>`;
+    if(kycStep===1) return `
+      <div class="field"><div class="lbl">Business type</div>
+        <select id="kBizType">
+          <option value="individual"${kycData?.businessType==='individual'||!kycData?' selected':''}>Individual / Sole proprietor</option>
+          <option value="company"${kycData?.businessType==='company'?' selected':''}>Registered company</option>
+        </select>
+      </div>
+      <div class="field"><div class="lbl">Business registration number</div>
+        <input id="kRegNum" placeholder="e.g. CS-12345" value="${esc(kycData?.businessRegNumber||'')}">
+      </div>
+      <div class="field"><div class="lbl">Business address</div>
+        <input id="kAddress" placeholder="e.g. 12 Cantonments Road, Accra, Ghana" value="${esc(kycData?.address||'')}">
+      </div>`;
+    return `
+      <div style="margin-bottom:16px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.38)">ID Documents</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        ${kycUploadZone('idFront','ID — front side','Tap to choose or drag photo')}
+        ${kycUploadZone('idBack','ID — back side','Tap to choose or drag photo')}
+      </div>
+      <div style="margin:20px 0 8px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.38)">Business Document</div>
+      ${kycUploadZone('certificate','Business certificate / registration','Certificate of incorporation, business registration or equivalent',true)}`;
+  }
 
-    const markDone=()=>{
-      zone.style.borderColor='rgba(91,44,143,.55)';
-      zone.style.background='rgba(91,44,143,.08)';
-      if(camBtn)camBtn.style.background='rgba(91,44,143,.15)';
-    };
+  function stepNav(){
+    const isLast=kycStep===STEPS.length-1;
+    return `<div style="display:flex;gap:10px;margin-top:20px;align-items:center">
+      ${kycStep>0?`<button id="kycBack" class="btn sm" style="min-height:42px;min-width:80px">← Back</button>`:''}
+      <div style="flex:1"></div>
+      <div class="fb" id="kycFb" style="flex:1;text-align:right"></div>
+      ${isLast
+        ?`<button id="kycSubmit" class="btn primary" style="min-height:42px;min-width:120px">Submit →</button>`
+        :`<button id="kycNext" class="btn primary" style="min-height:42px;min-width:80px">Next →</button>`}
+    </div>`;
+  }
 
-    const load=file=>{
-      if(!file)return;
-      if(file.size>5*1024*1024){
-        document.getElementById('kycFb').textContent=`${file.name} exceeds 5 MB.`;
-        document.getElementById('kycFb').className='fb bad';
-        return;
+  function renderStep(){
+    el.innerHTML=`${kycStep===0?rejectedBanner:''}
+      <div class="panel r3d">
+        <div class="panel-head"><h2>Business verification</h2><span class="badge">Step ${kycStep+1} of ${STEPS.length}</span></div>
+        <div style="padding:18px">
+          ${stepDots()}
+          ${stepContent()}
+          ${stepNav()}
+        </div>
+      </div>`;
+
+    if(kycStep===2){
+      /* Wire up file inputs on documents step */
+      ['idFront','idBack','certificate'].forEach(key=>{
+        const input=document.getElementById(`fi-${key}`);
+        const camInput=document.getElementById(`cam-fi-${key}`);
+        const camBtn=document.getElementById(`cam-btn-${key}`);
+        const zone=document.getElementById(`uz-${key}`);
+        const preview=document.getElementById(`up-preview-${key}`);
+        const placeholder=document.getElementById(`up-placeholder-${key}`);
+
+        const markDone=()=>{
+          zone.style.borderColor='rgba(91,44,143,.55)';
+          zone.style.background='rgba(91,44,143,.08)';
+          if(camBtn)camBtn.style.background='rgba(91,44,143,.15)';
+        };
+
+        const loadFile=file=>{
+          if(!file)return;
+          if(file.size>5*1024*1024){
+            document.getElementById('kycFb').textContent=`${file.name} exceeds 5 MB.`;
+            document.getElementById('kycFb').className='fb bad';return;
+          }
+          const reader=new FileReader();
+          reader.onload=ev=>{
+            kycFiles[key]=ev.target.result;
+            const isPdf=file.type==='application/pdf';
+            preview.style.display='block';
+            placeholder.style.display='none';
+            preview.innerHTML=isPdf
+              ?`<div style="padding:10px;font-size:12px;color:#C9AEFF">📄 ${esc(file.name)}</div>`
+              :`<img src="${ev.target.result}" style="max-height:90px;max-width:100%;border-radius:7px;object-fit:contain"><div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:5px">${esc(file.name)}</div>`;
+            if(kycFiles[key]) markDone();
+          };
+          reader.readAsDataURL(file);
+        };
+
+        input.addEventListener('change',()=>loadFile(input.files[0]));
+        camInput.addEventListener('change',()=>loadFile(camInput.files[0]));
+        if(isMobileDevice&&camBtn){camBtn.style.display='flex';camBtn.addEventListener('click',()=>camInput.click());}
+        zone.addEventListener('dragover',e=>{e.preventDefault();zone.style.borderColor='rgba(139,92,246,.6)';});
+        zone.addEventListener('dragleave',()=>zone.style.borderColor='');
+        zone.addEventListener('drop',e=>{e.preventDefault();zone.style.borderColor='';const f=e.dataTransfer.files[0];if(f){input.files=e.dataTransfer.files;loadFile(f);}});
+
+        /* Restore preview if file already chosen */
+        if(kycFiles[key]){
+          preview.style.display='block';placeholder.style.display='none';
+          const isPdf=kycFiles[key].startsWith('data:application/pdf');
+          preview.innerHTML=isPdf
+            ?`<div style="padding:10px;font-size:12px;color:#C9AEFF">📄 File uploaded</div>`
+            :`<img src="${kycFiles[key]}" style="max-height:90px;max-width:100%;border-radius:7px;object-fit:contain">`;
+          markDone();
+        }
+      });
+
+      document.getElementById('kycSubmit').addEventListener('click',async()=>{
+        const fb=document.getElementById('kycFb');fb.className='fb';
+        if(!kycFiles.idFront||!kycFiles.idBack){fb.textContent='Please upload both the front and back of your ID.';fb.className='fb bad';return;}
+        if(!kycFiles.certificate){fb.textContent='Please upload your business certificate or registration document.';fb.className='fb bad';return;}
+        try{
+          const btn=document.getElementById('kycSubmit');
+          btn.disabled=true;btn.textContent='Uploading…';
+          await API.post('/api/kyc',{
+            fullName:_kycDraft.fullName,phone:_kycDraft.phone,idType:_kycDraft.idType,idNumber:_kycDraft.idNumber,
+            businessType:_kycDraft.businessType,businessRegNumber:_kycDraft.businessRegNumber,address:_kycDraft.address,
+            idFront:kycFiles.idFront,idBack:kycFiles.idBack,certificate:kycFiles.certificate,
+          });
+          fb.textContent='Submitted! We\'ll review your documents within 1–2 business days.';fb.className='fb ok';
+          setTimeout(()=>loadView('verification'),1800);
+        }catch(err){
+          const btn=document.getElementById('kycSubmit');
+          btn.disabled=false;btn.textContent='Submit →';
+          fb.textContent=err.message;fb.className='fb bad';
+        }
+      });
+    }
+
+    const backBtn=document.getElementById('kycBack');
+    const nextBtn=document.getElementById('kycNext');
+
+    if(backBtn) backBtn.addEventListener('click',()=>{kycStep--;renderStep();});
+    if(nextBtn) nextBtn.addEventListener('click',()=>{
+      const fb=document.getElementById('kycFb');fb.className='fb';
+      if(kycStep===0){
+        const fn=document.getElementById('kFullName').value.trim();
+        const ph=document.getElementById('kPhone').value.trim();
+        const it=document.getElementById('kIdType').value;
+        const inum=document.getElementById('kIdNumber').value.trim();
+        if(!fn||!ph||!it||!inum){fb.textContent='Please fill in all fields before continuing.';fb.className='fb bad';return;}
+        _kycDraft={..._kycDraft,fullName:fn,phone:ph,idType:it,idNumber:inum};
       }
-      const reader=new FileReader();
-      reader.onload=e=>{
-        kycFiles[key]=e.target.result;
-        const isPdf=file.type==='application/pdf';
-        preview.style.display='block';
-        placeholder.style.display='none';
-        preview.innerHTML=isPdf
-          ?`<div style="padding:10px;font-size:12px;color:#C9AEFF">📄 ${esc(file.name)}</div>`
-          :`<img src="${e.target.result}" style="max-height:90px;max-width:100%;border-radius:7px;object-fit:contain"><div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:5px">${esc(file.name)}</div>`;
-        markDone();
-      };
-      reader.readAsDataURL(file);
-    };
-
-    input.addEventListener('change',()=>load(input.files[0]));
-    camInput.addEventListener('change',()=>load(camInput.files[0]));
-
-    /* Show camera button on touch devices */
-    if(isMobileDevice&&camBtn){
-      camBtn.style.display='flex';
-      camBtn.addEventListener('click',()=>camInput.click());
-    }
-
-    zone.addEventListener('dragover',e=>{e.preventDefault();zone.style.borderColor='rgba(139,92,246,.6)';});
-    zone.addEventListener('dragleave',()=>zone.style.borderColor='');
-    zone.addEventListener('drop',e=>{
-      e.preventDefault();zone.style.borderColor='';
-      const f=e.dataTransfer.files[0];if(f){input.files=e.dataTransfer.files;load(f);}
+      if(kycStep===1){
+        const bt=document.getElementById('kBizType').value;
+        const rn=document.getElementById('kRegNum').value.trim();
+        const addr=document.getElementById('kAddress').value.trim();
+        if(!addr){fb.textContent='Please enter your business address.';fb.className='fb bad';return;}
+        _kycDraft={..._kycDraft,businessType:bt,businessRegNumber:rn,address:addr};
+      }
+      kycStep++;renderStep();
     });
-  });
+  }
 
-  document.getElementById('kycSubmit').addEventListener('click',async()=>{
-    const fb=document.getElementById('kycFb');fb.className='fb';
-    const body={
-      fullName:document.getElementById('kFullName').value.trim(),
-      phone:document.getElementById('kPhone').value.trim(),
-      idType:document.getElementById('kIdType').value,
-      idNumber:document.getElementById('kIdNumber').value.trim(),
-      businessType:document.getElementById('kBizType').value,
-      businessRegNumber:document.getElementById('kRegNum').value.trim(),
-      address:document.getElementById('kAddress').value.trim(),
-      idFront:kycFiles.idFront,
-      idBack:kycFiles.idBack,
-      certificate:kycFiles.certificate,
-    };
-    if(!body.fullName||!body.phone||!body.idType||!body.idNumber||!body.address){
-      fb.textContent='Please fill in all required fields.';fb.className='fb bad';return;
-    }
-    if(!body.idFront||!body.idBack){
-      fb.textContent='Please upload both the front and back of your ID.';fb.className='fb bad';return;
-    }
-    if(!body.certificate){
-      fb.textContent='Please upload your business certificate or registration document.';fb.className='fb bad';return;
-    }
-    try{
-      const btn=document.getElementById('kycSubmit');
-      btn.disabled=true;btn.textContent='Uploading…';
-      await API.post('/api/kyc',body);
-      fb.textContent='Submitted! We\'ll review your documents within 1–2 business days.';fb.className='fb ok';
-      setTimeout(()=>loadView('verification'),1800);
-    }catch(err){
-      const btn=document.getElementById('kycSubmit');
-      btn.disabled=false;btn.textContent='Submit for verification';
-      fb.textContent=err.message;fb.className='fb bad';
-    }
-  });
+  let _kycDraft={};
+  renderStep();
 }
 
 /* ========================= 3D Effects ========================= */
