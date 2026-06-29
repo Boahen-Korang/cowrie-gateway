@@ -880,17 +880,29 @@ async function renderApiKeys(el){
   const modeBannerColor=isLive?'rgba(26,168,119,.12)':'rgba(224,161,46,.1)';
   const modeBorderColor=isLive?'rgba(26,168,119,.25)':'rgba(224,161,46,.25)';
   const modeTxtColor=isLive?'#1FA877':'#E0A12E';
+  const hasWebsite=!!M.websiteUrl;
+
   el.innerHTML=`
+    ${!hasWebsite?`<div style="background:rgba(201,174,255,.08);border:1px solid rgba(201,174,255,.2);border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:flex-start;gap:12px">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#C9AEFF" stroke-width="2" style="flex-shrink:0;margin-top:1px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#C9AEFF;margin-bottom:3px">Website required to access API keys</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.5">Enter and save your website URL below to unlock your public and secret keys.</div>
+      </div>
+    </div>`:''}
+
     <div style="background:${modeBannerColor};border:1px solid ${modeBorderColor};border-radius:12px;padding:12px 18px;margin-bottom:18px;font-size:13px;color:${modeTxtColor};display:flex;align-items:center;gap:10px">
       <strong>${modeLabel} mode keys</strong> — ${isLive?'These keys process real payments.':'These keys are for testing. No real money moves.'}
     </div>
-    <div class="panel r3d">
-      <div class="panel-head"><h2>API keys <span style="font-size:11px;font-family:var(--mono);opacity:.5;margin-left:6px">${modeLabel}</span></h2></div>
+
+    <div class="panel r3d" style="${!hasWebsite?'opacity:.45;pointer-events:none;user-select:none':''}">
+      <div class="panel-head"><h2>API keys <span style="font-size:11px;font-family:var(--mono);opacity:.5;margin-left:6px">${modeLabel}</span></h2>${!hasWebsite?`<span style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.3);display:flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Locked</span>`:''}</div>
       <div style="padding:18px">
         <div class="field">
           <div class="lbl">Public key</div>
           <div class="keyrow">
-            <input readonly value="${esc(pk)}" style="font-family:var(--mono);font-size:12px">
+            <input id="pubKey" type="password" readonly value="${esc(pk)}" style="font-family:var(--mono);font-size:12px">
+            <button class="btn sm" id="revealPub">Show</button>
             <button class="btn sm" data-copy="${esc(pk)}">Copy</button>
           </div>
           <div class="mono-note">Use this in your frontend or client-side code.</div>
@@ -945,12 +957,20 @@ async function renderApiKeys(el){
       </div>
     </div>`;
 
-  document.getElementById('revealSec').addEventListener('click',function(){
-    const i=document.getElementById('secKey');
-    const show=i.type==='text';
-    i.type=show?'password':'text';
-    this.textContent=show?'Show':'Hide';
-  });
+  if(hasWebsite){
+    document.getElementById('revealPub').addEventListener('click',function(){
+      const i=document.getElementById('pubKey');
+      const show=i.type==='text';
+      i.type=show?'password':'text';
+      this.textContent=show?'Show':'Hide';
+    });
+    document.getElementById('revealSec').addEventListener('click',function(){
+      const i=document.getElementById('secKey');
+      const show=i.type==='text';
+      i.type=show?'password':'text';
+      this.textContent=show?'Show':'Hide';
+    });
+  }
   document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',()=>{
     navigator.clipboard&&navigator.clipboard.writeText(b.dataset.copy).catch(()=>{});
     const t=b.textContent;b.textContent='Copied!';setTimeout(()=>b.textContent=t,1200);
@@ -961,6 +981,7 @@ async function renderApiKeys(el){
       const url=document.getElementById('websiteUrl').value.trim();
       await API.put('/api/me/website',{url});
       M.websiteUrl=url;
+      if(!hasWebsite) return renderApiKeys(el);
       fb.textContent='Website URL saved.';fb.className='fb ok';
     }catch(err){fb.textContent=err.message;fb.className='fb bad';}
   });
