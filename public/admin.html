@@ -1130,11 +1130,11 @@ async function renderKyc(el){
     rejected:`<span class="badge" style="background:rgba(239,106,76,.18);color:#EF6A4C;border-color:rgba(239,106,76,.3)">Rejected</span>`,
   }[s]||`<span class="badge">${esc(s)}</span>`);
 
-  const docThumb=src=>src?`<a href="${src}" target="_blank" rel="noopener" style="display:block">
+  const docThumb=src=>src?`<button type="button" data-doc-src="${esc(src)}" style="display:block;width:100%;background:none;border:none;padding:0;cursor:pointer">
     ${src.startsWith('data:application/pdf')
-      ?`<div style="height:90px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);display:grid;place-items:center;font-size:12px;color:rgba(255,255,255,.5)">📄 PDF</div>`
+      ?`<div style="height:90px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);display:grid;place-items:center;font-size:12px;color:rgba(255,255,255,.5)">📄 PDF — tap to view</div>`
       :`<img src="${src}" style="width:100%;height:90px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,.1)">`}
-  </a>`:'<div style="height:90px;border-radius:8px;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.1);display:grid;place-items:center;font-size:12px;color:rgba(255,255,255,.25)">Not provided</div>';
+  </button>`:'<div style="height:90px;border-radius:8px;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.1);display:grid;place-items:center;font-size:12px;color:rgba(255,255,255,.25)">Not provided</div>';
 
   const pending=submitted.filter(m=>m.kycStatus==='pending');
   document.getElementById('statusBadge').textContent=`${pending.length} pending`;
@@ -1188,6 +1188,36 @@ async function renderKyc(el){
         </div>
       </div>`:'<div style="padding:16px;color:var(--muted);font-size:13px">No documents submitted yet.</div>'}
     </div>`).join('');
+
+  /* ── Document lightbox ── */
+  if(!document.getElementById('docLightbox')){
+    const lb=document.createElement('div');
+    lb.id='docLightbox';
+    lb.style.cssText='display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.92);align-items:center;justify-content:center;padding:16px';
+    lb.innerHTML=`
+      <button id="docLbClose" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.12);border:none;border-radius:50%;width:40px;height:40px;color:#fff;font-size:20px;line-height:1;cursor:pointer;z-index:1">✕</button>
+      <div id="docLbContent" style="max-width:100%;max-height:90vh;display:flex;align-items:center;justify-content:center;overflow:auto"></div>`;
+    document.body.appendChild(lb);
+    lb.querySelector('#docLbClose').addEventListener('click',()=>{ lb.style.display='none'; });
+    lb.addEventListener('click',e=>{ if(e.target===lb) lb.style.display='none'; });
+  }
+  function openDoc(src){
+    const lb=document.getElementById('docLightbox');
+    const content=lb.querySelector('#docLbContent');
+    if(src.startsWith('data:application/pdf')){
+      const blob=new Blob([Uint8Array.from(atob(src.split(',')[1]),c=>c.charCodeAt(0))],{type:'application/pdf'});
+      const url=URL.createObjectURL(blob);
+      content.innerHTML=`<iframe src="${url}" style="width:min(700px,90vw);height:85vh;border:none;border-radius:10px"></iframe>`;
+    } else {
+      content.innerHTML=`<img src="${src}" style="max-width:min(700px,90vw);max-height:85vh;border-radius:10px;object-fit:contain">`;
+    }
+    lb.style.display='flex';
+  }
+
+  el.addEventListener('click',e=>{
+    const docBtn=e.target.closest('[data-doc-src]');
+    if(docBtn){ openDoc(docBtn.dataset.docSrc); return; }
+  });
 
   /* ── Reject modal (replaces prompt() which is unreliable on iOS) ── */
   const rejectModal=document.createElement('div');
