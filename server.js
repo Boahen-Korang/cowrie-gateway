@@ -20,7 +20,9 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: '2mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
+/* KYC submissions send up to 3 base64 images (~7 MB each); keep limit generous.
+   rawBody is only consumed by the Paystack webhook route. */
+app.use(express.json({ limit: '20mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 app.use('/api', api);

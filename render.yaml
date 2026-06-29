@@ -18,13 +18,27 @@ services:
           property: connectionString
       - key: COWRIE_SECRET
         generateValue: true
+      - key: NODE_ENV
+        value: production
+
+      # Admin login credentials (set in Render dashboard)
       - key: ADMIN_EMAIL
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
-      - key: NODE_ENV
-        value: production
-      - key: RESEND_API_KEY
+
+      # Gmail SMTP for OTP and KYC notification emails
+      - key: GMAIL_USER
         sync: false
-      - key: EMAIL_FROM
-        value: Cowrie <noreply@cowrie.africa>
+      - key: GMAIL_APP_PASSWORD
+        sync: false
+
+      # Paystack — set test and live keys in Render dashboard
+      - key: PAYSTACK_PK_TEST
+        sync: false
+      - key: PAYSTACK_SK_TEST
+        sync: false
+      - key: PAYSTACK_PK_LIVE
+        sync: false
+      - key: PAYSTACK_SK_LIVE
+        sync: false

@@ -432,7 +432,7 @@ async function renderOverview(el){
   :kycStatus==='rejected'?`
     <div class="kyc-banner r3d" style="background:rgba(239,106,76,.1);border:1px solid rgba(239,106,76,.28);border-radius:13px;padding:14px 20px;margin-bottom:18px;font-size:13px;color:var(--coral);display:flex;align-items:center;gap:12px;cursor:pointer" id="kycBannerBtn">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
-      <span>Verification rejected — <a href="#" id="kycBannerBtn" style="color:inherit;font-weight:700">Resubmit →</a></span>
+      <span>Verification rejected — <span style="font-weight:700">Resubmit →</span></span>
     </div>`:
   kycStatus==='approved'?`
     <div style="background:rgba(26,168,119,.08);border:1px solid rgba(26,168,119,.25);border-radius:13px;padding:12px 20px;margin-bottom:18px;font-size:13px;color:#1FA877;display:flex;align-items:center;gap:10px">
@@ -1182,7 +1182,7 @@ async function renderVerification(el){
         if(isMobileDevice&&camBtn){camBtn.style.display='flex';camBtn.addEventListener('click',()=>camInput.click());}
         zone.addEventListener('dragover',e=>{e.preventDefault();zone.style.borderColor='rgba(139,92,246,.6)';});
         zone.addEventListener('dragleave',()=>zone.style.borderColor='');
-        zone.addEventListener('drop',e=>{e.preventDefault();zone.style.borderColor='';const f=e.dataTransfer.files[0];if(f){input.files=e.dataTransfer.files;loadFile(f);}});
+        zone.addEventListener('drop',e=>{e.preventDefault();zone.style.borderColor='';const f=e.dataTransfer.files[0];if(f)loadFile(f);});
 
         /* Restore preview if file already chosen */
         if(kycFiles[key]){
