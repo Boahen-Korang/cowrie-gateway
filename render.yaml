@@ -20,6 +20,8 @@ services:
         generateValue: true
       - key: NODE_ENV
         value: production
+      - key: BASE_URL
+        value: https://cowrie-gateway.onrender.com
 
       # Admin login credentials (set in Render dashboard)
       - key: ADMIN_EMAIL
