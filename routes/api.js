@@ -262,6 +262,16 @@ router.put('/me/webhook', requireAuth, ah(async (req, res) => {
   res.json({ merchant: publicMerchant(req.merchant) });
 }));
 
+router.put('/me/website', requireAuth, ah(async (req, res) => {
+  const { url } = req.body || {};
+  if (url) {
+    try { new URL(url); } catch { const e = new Error('url must be a valid absolute URL.'); e.status = 400; throw e; }
+  }
+  req.merchant.websiteUrl = url || null;
+  await store.merchants.update(req.merchant);
+  res.json({ merchant: publicMerchant(req.merchant) });
+}));
+
 router.get('/transactions', requireAuth, ah(async (req, res) => {
   const all = await store.charges.forMerchant(req.merchant.id);
   const mode = req.mode || 'test';

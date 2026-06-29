@@ -908,6 +908,21 @@ async function renderApiKeys(el){
     </div>
 
     <div class="panel r3d">
+      <div class="panel-head"><h2>Website</h2></div>
+      <div style="padding:18px">
+        <div class="field">
+          <div class="lbl">Website URL</div>
+          <div class="keyrow">
+            <input id="websiteUrl" placeholder="https://yourwebsite.com" value="${M.websiteUrl?esc(M.websiteUrl):''}">
+            <button class="btn primary sm" id="saveWebsite">Save</button>
+          </div>
+          <div class="mono-note">The URL of your website or storefront where you accept payments.</div>
+        </div>
+        <div class="fb" id="websiteFb"></div>
+      </div>
+    </div>
+
+    <div class="panel r3d">
       <div class="panel-head"><h2>Webhook</h2></div>
       <div style="padding:18px">
         <div class="field">
@@ -940,6 +955,15 @@ async function renderApiKeys(el){
     navigator.clipboard&&navigator.clipboard.writeText(b.dataset.copy).catch(()=>{});
     const t=b.textContent;b.textContent='Copied!';setTimeout(()=>b.textContent=t,1200);
   }));
+  document.getElementById('saveWebsite').addEventListener('click',async()=>{
+    const fb=document.getElementById('websiteFb');fb.className='fb';
+    try{
+      const url=document.getElementById('websiteUrl').value.trim();
+      await API.put('/api/me/website',{url});
+      M.websiteUrl=url;
+      fb.textContent='Website URL saved.';fb.className='fb ok';
+    }catch(err){fb.textContent=err.message;fb.className='fb bad';}
+  });
   document.getElementById('saveWebhook').addEventListener('click',async()=>{
     const fb=document.getElementById('webhookFb');fb.className='fb';
     try{
