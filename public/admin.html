@@ -878,43 +878,87 @@ async function renderMembers(el){
     el.innerHTML=`<div class="state-box"><p style="color:var(--muted)">No registered merchants yet.</p></div>`;
     return;
   }
-  const rows = members
-    .sort((a,b)=>b.liveCollected-a.liveCollected)
-    .map(m=>`
-      <tr>
-        <td>
-          <div style="font-weight:700;font-size:14px">${esc(m.businessName)}</div>
-          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px">${esc(m.email)}</div>
-        </td>
-        <td style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--mint)">${fmt(m.liveCollected,'GHS')}</td>
-        <td style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--gold)">${fmt(m.testCollected,'GHS')}</td>
-        <td style="font-family:var(--mono);font-size:12px">${m.successfulTransactions} / ${m.totalTransactions}</td>
-        <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${m.liveTransactions > 0 ? m.liveTransactions+' live' : '—'}</td>
-        <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${fmtDate(m.createdAt)}</td>
-      </tr>`).join('');
 
-  el.innerHTML=`
-    <div class="panel r3d">
-      <div class="panel-head">
-        <h2>Registered merchants</h2>
-        <span class="badge">${members.length} total</span>
+  const sorted = members.sort((a,b)=>b.liveCollected-a.liveCollected);
+
+  function initials(name){ return name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase(); }
+
+  function showList(){
+    el.innerHTML=`
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${sorted.map(m=>`
+          <button type="button" data-member-id="${esc(m.id)}" style="display:flex;align-items:center;gap:14px;width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer;text-align:left;transition:.15s" onmouseover="this.style.background='rgba(91,44,143,.12)';this.style.borderColor='rgba(91,44,143,.3)'" onmouseout="this.style.background='rgba(255,255,255,.04)';this.style.borderColor='var(--line)'">
+            <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--plum),var(--plum-br));display:grid;place-items:center;font-weight:800;font-size:16px;color:#fff;flex-shrink:0">${esc(initials(m.businessName))}</div>
+            <div style="min-width:0;flex:1">
+              <div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.businessName)}</div>
+              <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.email)}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--mint)">${fmt(m.liveCollected,'GHS')}</div>
+              <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px">live revenue</div>
+            </div>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="2" style="flex-shrink:0"><path d="M9 18l6-6-6-6"/></svg>
+          </button>`).join('')}
+      </div>`;
+
+    el.querySelectorAll('[data-member-id]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const m=sorted.find(x=>x.id===btn.dataset.memberId);
+        if(m) showDetail(m);
+      });
+    });
+  }
+
+  function showDetail(m){
+    const successRate = m.totalTransactions>0 ? ((m.successfulTransactions/m.totalTransactions)*100).toFixed(0)+'%' : '—';
+    el.innerHTML=`
+      <button id="mbBack" style="display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--muted);font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer;padding:0;margin-bottom:18px;transition:color .15s" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--muted)'">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        All members
+      </button>
+
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px">
+        <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--plum),var(--plum-br));display:grid;place-items:center;font-weight:800;font-size:19px;color:#fff;flex-shrink:0">${esc(initials(m.businessName))}</div>
+        <div>
+          <div style="font-weight:800;font-size:18px">${esc(m.businessName)}</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:3px">${esc(m.email)}</div>
+        </div>
+        <div style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right">Joined<br>${fmtDate(m.createdAt)}</div>
       </div>
-      <div style="overflow-x:auto">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Store</th>
-              <th><span style="color:var(--mint)">Live</span> collected</th>
-              <th><span style="color:var(--gold)">Test</span> volume</th>
-              <th>Transactions (success / total)</th>
-              <th>Live txns</th>
-              <th>Joined</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        <div style="background:rgba(31,168,119,.1);border:1px solid rgba(31,168,119,.2);border-radius:14px;padding:16px 18px">
+          <div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--mint);margin-bottom:6px">Live collected</div>
+          <div style="font-family:var(--mono);font-weight:800;font-size:22px;color:var(--mint)">${fmt(m.liveCollected,'GHS')}</div>
+          <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.35);margin-top:4px">${m.liveTransactions} live transaction${m.liveTransactions!==1?'s':''}</div>
+        </div>
+        <div style="background:rgba(224,161,46,.08);border:1px solid rgba(224,161,46,.18);border-radius:14px;padding:16px 18px">
+          <div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gold);margin-bottom:6px">Test volume</div>
+          <div style="font-family:var(--mono);font-weight:800;font-size:22px;color:var(--gold)">${fmt(m.testCollected,'GHS')}</div>
+          <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.35);margin-top:4px">${m.totalTransactions - m.liveTransactions} test transaction${(m.totalTransactions-m.liveTransactions)!==1?'s':''}</div>
+        </div>
       </div>
-    </div>`;
+
+      <div class="panel r3d">
+        <div class="panel-head"><h2>Transaction summary</h2></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+          ${[
+            ['Total transactions', m.totalTransactions],
+            ['Successful', m.successfulTransactions],
+            ['Success rate', successRate],
+            ['Live transactions', m.liveTransactions],
+          ].map(([lbl,val])=>`
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--line-2)">
+              <span style="font-size:13px;color:var(--muted)">${lbl}</span>
+              <span style="font-family:var(--mono);font-size:13px;font-weight:700">${val}</span>
+            </div>`).join('')}
+        </div>
+      </div>`;
+
+    document.getElementById('mbBack').addEventListener('click', showList);
+  }
+
+  showList();
 }
 
 /* ========================= New Payment ========================= */
