@@ -1133,26 +1133,26 @@ async function renderKyc(el){
   el.innerHTML=submitted.map(m=>`
     <div class="panel r3d" style="margin-bottom:20px" data-kyc-id="${esc(m.id)}">
       <div class="panel-head" style="flex-wrap:wrap;gap:10px">
-        <div>
-          <h2 style="font-size:15px">${esc(m.businessName)}</h2>
-          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px">${esc(m.email)}</div>
+        <div style="min-width:0;flex:1">
+          <h2 style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.businessName)}</h2>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.email)}</div>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap">
           ${statusChip(m.kycStatus)}
-          <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${m.kycSubmittedAt?new Date(m.kycSubmittedAt).toLocaleString([],{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'}):''}</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">${m.kycSubmittedAt?new Date(m.kycSubmittedAt).toLocaleString([],{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'}):''}</span>
         </div>
       </div>
       ${m.kycData?`
-      <div style="padding:18px">
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:18px;font-size:13px;color:rgba(255,255,255,.65)">
-          <div><div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px">Full name</div>${esc(m.kycData.fullName)}</div>
-          <div><div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px">Phone</div>${esc(m.kycData.phone)}</div>
-          <div><div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px">ID type</div>${esc(m.kycData.idType)}</div>
-          <div><div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px">ID number</div>${esc(m.kycData.idNumber)}</div>
-          <div><div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px">Business</div>${esc(m.kycData.businessType==='company'?`Company · ${m.kycData.businessRegNumber||'—'}`:'Individual')}</div>
-          <div><div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px">Address</div>${esc(m.kycData.address)}</div>
+      <div style="padding:16px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px;font-size:13px;color:rgba(255,255,255,.65)">
+          <div><div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px">Full name</div>${esc(m.kycData.fullName)}</div>
+          <div><div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px">Phone</div>${esc(m.kycData.phone)}</div>
+          <div><div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px">ID type</div>${esc(m.kycData.idType)}</div>
+          <div><div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px">ID number</div>${esc(m.kycData.idNumber)}</div>
+          <div><div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px">Business</div>${esc(m.kycData.businessType==='company'?`Company · ${m.kycData.businessRegNumber||'—'}`:'Individual')}</div>
+          <div><div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px">Address</div>${esc(m.kycData.address)}</div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:16px">
           <div>
             <div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">ID — Front</div>
             ${docThumb(m.kycData.idFront)}
@@ -1166,19 +1166,68 @@ async function renderKyc(el){
             ${docThumb(m.kycData.certificate)}
           </div>
         </div>
-        ${m.kycStatus==='rejected'&&m.kycRejectionReason?`<div style="font-size:12.5px;color:var(--coral);margin-bottom:14px">Rejection reason: ${esc(m.kycRejectionReason)}</div>`:''}
+        ${m.kycStatus==='rejected'&&m.kycRejectionReason?`<div style="font-size:12.5px;color:var(--coral);margin-bottom:14px;line-height:1.5">Rejection reason: ${esc(m.kycRejectionReason)}</div>`:''}
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           ${m.kycStatus==='pending'?`
-            <button class="btn sm" style="background:rgba(26,168,119,.2);border:1px solid rgba(26,168,119,.35);color:#1FA877" data-kyc-approve="${esc(m.id)}">Approve</button>
-            <button class="btn sm" style="background:rgba(239,106,76,.15);border:1px solid rgba(239,106,76,.3);color:#EF6A4C" data-kyc-reject="${esc(m.id)}" data-biz="${esc(m.businessName)}">Reject</button>`
+            <button style="flex:1;min-width:120px;min-height:44px;padding:10px 16px;border-radius:10px;border:1.5px solid rgba(26,168,119,.4);background:rgba(26,168,119,.18);color:#1FA877;font-family:var(--display);font-weight:700;font-size:14px;cursor:pointer" data-kyc-approve="${esc(m.id)}">✓ Approve</button>
+            <button style="flex:1;min-width:120px;min-height:44px;padding:10px 16px;border-radius:10px;border:1.5px solid rgba(239,106,76,.35);background:rgba(239,106,76,.12);color:#EF6A4C;font-family:var(--display);font-weight:700;font-size:14px;cursor:pointer" data-kyc-reject="${esc(m.id)}" data-biz="${esc(m.businessName)}">✕ Reject</button>`
           :m.kycStatus==='approved'?`
-            <button class="btn sm" style="background:rgba(239,106,76,.15);border:1px solid rgba(239,106,76,.3);color:#EF6A4C" data-kyc-reject="${esc(m.id)}" data-biz="${esc(m.businessName)}">Revoke approval</button>`
+            <button style="min-height:44px;padding:10px 16px;border-radius:10px;border:1.5px solid rgba(239,106,76,.35);background:rgba(239,106,76,.12);color:#EF6A4C;font-family:var(--display);font-weight:700;font-size:14px;cursor:pointer" data-kyc-reject="${esc(m.id)}" data-biz="${esc(m.businessName)}">Revoke approval</button>`
           :m.kycStatus==='rejected'?`
-            <button class="btn sm" style="background:rgba(26,168,119,.2);border:1px solid rgba(26,168,119,.35);color:#1FA877" data-kyc-approve="${esc(m.id)}">Approve anyway</button>`
+            <button style="min-height:44px;padding:10px 16px;border-radius:10px;border:1.5px solid rgba(26,168,119,.4);background:rgba(26,168,119,.18);color:#1FA877;font-family:var(--display);font-weight:700;font-size:14px;cursor:pointer" data-kyc-approve="${esc(m.id)}">✓ Approve anyway</button>`
           :''}
         </div>
-      </div>`:'<div style="padding:18px;color:var(--muted);font-size:13px">No documents submitted yet.</div>'}
+      </div>`:'<div style="padding:16px;color:var(--muted);font-size:13px">No documents submitted yet.</div>'}
     </div>`).join('');
+
+  /* ── Reject modal (replaces prompt() which is unreliable on iOS) ── */
+  const rejectModal=document.createElement('div');
+  rejectModal.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;align-items:center;justify-content:center;padding:20px';
+  rejectModal.innerHTML=`
+    <div style="background:#1C1335;border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:28px 24px;max-width:400px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.5)">
+      <h3 style="font-size:16px;margin-bottom:6px;font-family:var(--display)">Reject submission</h3>
+      <p id="kycRejectBizName" style="font-size:12.5px;color:var(--muted);margin-bottom:16px;font-family:var(--mono)"></p>
+      <label style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:8px">Reason (optional)</label>
+      <textarea id="kycRejectReason" rows="3" placeholder="Your submission did not meet our requirements." style="width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 13px;color:#fff;font-family:var(--display);font-size:15px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button id="kycRejectConfirm" style="flex:1;min-height:44px;padding:10px;border-radius:10px;border:1.5px solid rgba(239,106,76,.4);background:rgba(239,106,76,.18);color:#EF6A4C;font-family:var(--display);font-weight:700;font-size:14px;cursor:pointer">Confirm reject</button>
+        <button id="kycRejectCancel" style="flex:1;min-height:44px;padding:10px;border-radius:10px;border:1.5px solid rgba(255,255,255,.1);background:transparent;color:rgba(255,255,255,.5);font-family:var(--display);font-weight:600;font-size:14px;cursor:pointer">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(rejectModal);
+
+  let _pendingReject=null;
+
+  function openRejectModal(id,biz){
+    _pendingReject=id;
+    rejectModal.querySelector('#kycRejectBizName').textContent=biz;
+    rejectModal.querySelector('#kycRejectReason').value='';
+    rejectModal.style.display='flex';
+    setTimeout(()=>rejectModal.querySelector('#kycRejectReason').focus(),80);
+  }
+  function closeRejectModal(){ rejectModal.style.display='none'; _pendingReject=null; }
+
+  rejectModal.querySelector('#kycRejectCancel').addEventListener('click',closeRejectModal);
+  rejectModal.addEventListener('click',e=>{ if(e.target===rejectModal) closeRejectModal(); });
+
+  rejectModal.querySelector('#kycRejectConfirm').addEventListener('click',async()=>{
+    if(!_pendingReject) return;
+    const reason=rejectModal.querySelector('#kycRejectReason').value.trim();
+    const btn=rejectModal.querySelector('#kycRejectConfirm');
+    btn.disabled=true; btn.textContent='Rejecting…';
+    try{
+      await API.post(`/api/admin/kyc/${encodeURIComponent(_pendingReject)}/reject`,{reason});
+      closeRejectModal();
+      document.body.removeChild(rejectModal);
+      await loadView('kyc');
+    }catch(err){
+      btn.disabled=false; btn.textContent='Confirm reject';
+      const errEl=document.createElement('p');
+      errEl.style.cssText='color:#F87171;font-size:12px;margin-top:8px;font-family:var(--mono)';
+      errEl.textContent=err.message;
+      rejectModal.querySelector('div').appendChild(errEl);
+    }
+  });
 
   el.addEventListener('click',async e=>{
     const approveBtn=e.target.closest('[data-kyc-approve]');
@@ -1188,15 +1237,15 @@ async function renderKyc(el){
       try{
         await API.post(`/api/admin/kyc/${encodeURIComponent(approveBtn.dataset.kycApprove)}/approve`,{});
         await loadView('kyc');
-      }catch(err){alert(err.message);approveBtn.disabled=false;approveBtn.textContent='Approve';}
+      }catch(err){
+        approveBtn.disabled=false; approveBtn.textContent='✓ Approve';
+        const errEl=document.createElement('p');
+        errEl.style.cssText='color:#F87171;font-size:12px;margin-top:8px;font-family:var(--mono)';
+        errEl.textContent=err.message;
+        approveBtn.parentNode.appendChild(errEl);
+      }
     } else if(rejectBtn){
-      const reason=prompt(`Reason for rejecting "${rejectBtn.dataset.biz}"? (leave blank for default)`);
-      if(reason===null)return;
-      rejectBtn.disabled=true; rejectBtn.textContent='Rejecting…';
-      try{
-        await API.post(`/api/admin/kyc/${encodeURIComponent(rejectBtn.dataset.kycReject)}/reject`,{reason});
-        await loadView('kyc');
-      }catch(err){alert(err.message);rejectBtn.disabled=false;rejectBtn.textContent='Reject';}
+      openRejectModal(rejectBtn.dataset.kycReject, rejectBtn.dataset.biz);
     }
   });
 }
