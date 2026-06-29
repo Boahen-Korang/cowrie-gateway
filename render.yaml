@@ -19,9 +19,9 @@ services:
       - key: COWRIE_SECRET
         generateValue: true
       - key: ADMIN_EMAIL
-        value: admin@cowrie.africa
+        sync: false
       - key: ADMIN_PASSWORD
-        value: admin2026
+        sync: false
       - key: NODE_ENV
         value: production
       - key: RESEND_API_KEY

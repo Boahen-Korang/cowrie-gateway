@@ -834,7 +834,7 @@ router.post('/kyc', requireAuth, ah(async (req, res) => {
   if (!certificate) {
     const e = new Error('Business certificate or registration document is required.'); e.status = 400; throw e;
   }
-  const MAX = 5 * 1024 * 1024; // 5 MB base64 string length ≈ 6.7 MB file
+  const MAX = 7 * 1024 * 1024; // base64 of a 5 MB file is ~6.7 MB; allow headroom
   for (const [label, val] of [['idFront', idFront], ['idBack', idBack], ['certificate', certificate]]) {
     if (typeof val !== 'string' || !val.startsWith('data:')) {
       const e = new Error(`${label} must be a valid data URL.`); e.status = 400; throw e;
