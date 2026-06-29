@@ -979,9 +979,12 @@ async function renderApiKeys(el){
   document.getElementById('saveWebsite').addEventListener('click',async()=>{
     const fb=document.getElementById('websiteFb');fb.className='fb';
     try{
-      const url=document.getElementById('websiteUrl').value.trim();
+      let url=document.getElementById('websiteUrl').value.trim();
+      if(url&&!/^https?:\/\//i.test(url)) url='https://'+url;
+      if(url){try{new URL(url);}catch{fb.textContent='Please enter a valid URL, e.g. https://yoursite.com';fb.className='fb bad';return;}}
       await API.put('/api/me/website',{url});
       M.websiteUrl=url;
+      document.getElementById('websiteUrl').value=url;
       if(!hasWebsite) return renderApiKeys(el);
       fb.textContent='Website URL saved.';fb.className='fb ok';
     }catch(err){fb.textContent=err.message;fb.className='fb bad';}
@@ -989,9 +992,12 @@ async function renderApiKeys(el){
   document.getElementById('saveWebhook').addEventListener('click',async()=>{
     const fb=document.getElementById('webhookFb');fb.className='fb';
     try{
-      const url=document.getElementById('webhookUrl').value.trim();
+      let url=document.getElementById('webhookUrl').value.trim();
+      if(url&&!/^https?:\/\//i.test(url)) url='https://'+url;
+      if(url){try{new URL(url);}catch{fb.textContent='Please enter a valid URL, e.g. https://yoursite.com/webhook';fb.className='fb bad';return;}}
       await API.put('/api/me/webhook',{url});
       M.webhookUrl=url;
+      document.getElementById('webhookUrl').value=url;
       fb.textContent='Webhook URL saved.';fb.className='fb ok';
     }catch(err){fb.textContent=err.message;fb.className='fb bad';}
   });
