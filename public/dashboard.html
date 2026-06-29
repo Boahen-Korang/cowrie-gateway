@@ -577,7 +577,8 @@ async function renderTransactions(el){
   $('#clearAllBtn').addEventListener('click',async()=>{
     modal.style.display='none';
     await API.delete('/api/transactions');
-    await renderTransactions(el);
+    document.querySelectorAll('.nav a,.mnav').forEach(x=>x.classList.toggle('active',x.dataset.view==='overview'));
+    loadView('overview');
   });
 }
 

@@ -787,7 +787,8 @@ async function renderTransactions(el){
     modal.style.display='none';
     const url = mode ? `/api/admin/transactions?mode=${mode}` : '/api/admin/transactions';
     await API.delete(url);
-    await renderTransactions(el);
+    document.querySelectorAll('[data-view]').forEach(a=>a.classList.toggle('active',a.dataset.view==='overview'));
+    loadView('overview');
   }
   document.getElementById('clearLiveBtn').addEventListener('click',()=>doClear('live'));
   document.getElementById('clearTestBtn').addEventListener('click',()=>doClear('test'));
