@@ -704,7 +704,8 @@ async function renderTransactions(el){
     const rows = filtered();
     const total = rows.length;
     const pages = Math.max(1, Math.ceil(total/PAGE));
-    page = Math.min(page, pages-1);
+    if(page >= pages) page = pages-1;
+    if(page < 0) page = 0;
     const slice = rows.slice(page*PAGE, page*PAGE+PAGE);
     const from = total ? page*PAGE+1 : 0;
     const to = Math.min(page*PAGE+PAGE, total);
@@ -712,16 +713,10 @@ async function renderTransactions(el){
     document.getElementById('txWrap').innerHTML = txTable(slice, true);
     document.getElementById('txCount').textContent = total ? `${from}–${to} of ${total}` : '0';
 
-    // pagination bar
-    document.getElementById('txPager').innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px;justify-content:center;padding:14px 16px;border-top:1px solid var(--line-2);flex-wrap:wrap">
-        <button id="txPrev" class="btn sm" style="min-width:80px;min-height:36px" ${page===0?'disabled':''}>← Prev</button>
-        <span style="font-family:var(--mono);font-size:12px;color:var(--muted)">Page ${page+1} of ${pages}</span>
-        <button id="txNext" class="btn sm" style="min-width:80px;min-height:36px" ${page>=pages-1?'disabled':''}>Next →</button>
-      </div>`;
-
-    document.getElementById('txPrev').addEventListener('click',()=>{ page--; renderPage(); });
-    document.getElementById('txNext').addEventListener('click',()=>{ page++; renderPage(); });
+    document.getElementById('txPagerInner').innerHTML = `
+      <button data-pg="prev" class="btn sm" style="min-width:80px;min-height:36px" ${page===0?'disabled':''}>← Prev</button>
+      <span style="font-family:var(--mono);font-size:12px;color:var(--muted)">Page ${page+1} of ${pages}</span>
+      <button data-pg="next" class="btn sm" style="min-width:80px;min-height:36px" ${page>=pages-1?'disabled':''}>Next →</button>`;
 
     ['all','live','test'].forEach(m=>{
       const btn=document.getElementById('txTab_'+m);
@@ -745,7 +740,9 @@ async function renderTransactions(el){
         <button id="clearTxBtn" class="btn sm" style="margin-left:auto;background:rgba(239,106,76,.12);color:var(--coral);border:1px solid rgba(239,106,76,.3);font-family:var(--mono);font-size:11px">Clear history</button>
       </div>
       <div style="overflow-x:auto" id="txWrap"></div>
-      <div id="txPager"></div>
+      <div id="txPager" style="border-top:1px solid var(--line-2)">
+        <div id="txPagerInner" style="display:flex;align-items:center;gap:10px;justify-content:center;padding:14px 16px;flex-wrap:wrap"></div>
+      </div>
     </div>
 
     <!-- confirm modal -->
@@ -766,6 +763,15 @@ async function renderTransactions(el){
     </div>`;
 
   renderPage();
+
+  // single stable listener — no re-wiring on each render
+  document.getElementById('txPager').addEventListener('click',e=>{
+    const btn=e.target.closest('[data-pg]');
+    if(!btn||btn.disabled) return;
+    if(btn.dataset.pg==='prev') page--;
+    if(btn.dataset.pg==='next') page++;
+    renderPage();
+  });
 
   document.getElementById('txSearch').addEventListener('input',()=>{ page=0; renderPage(); });
   ['all','live','test'].forEach(m=>{
