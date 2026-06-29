@@ -686,7 +686,9 @@ async function renderTransactions(el){
   const {transactions} = await API.get('/api/admin/transactions');
   txCache = transactions;
 
+  const PAGE = 10;
   let modeFilter = 'all';
+  let page = 0;
 
   function filtered(){
     let rows = modeFilter==='all' ? transactions : transactions.filter(t=>(t.mode||'test')===modeFilter);
@@ -697,10 +699,30 @@ async function renderTransactions(el){
     }
     return rows;
   }
-  function refresh(){
-    const rows=filtered();
-    document.getElementById('txWrap').innerHTML=txTable(rows,true);
-    document.getElementById('txCount').textContent=`Showing ${rows.length}`;
+
+  function renderPage(){
+    const rows = filtered();
+    const total = rows.length;
+    const pages = Math.max(1, Math.ceil(total/PAGE));
+    page = Math.min(page, pages-1);
+    const slice = rows.slice(page*PAGE, page*PAGE+PAGE);
+    const from = total ? page*PAGE+1 : 0;
+    const to = Math.min(page*PAGE+PAGE, total);
+
+    document.getElementById('txWrap').innerHTML = txTable(slice, true);
+    document.getElementById('txCount').textContent = total ? `${from}–${to} of ${total}` : '0';
+
+    // pagination bar
+    document.getElementById('txPager').innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;justify-content:center;padding:14px 16px;border-top:1px solid var(--line-2);flex-wrap:wrap">
+        <button id="txPrev" class="btn sm" style="min-width:80px;min-height:36px" ${page===0?'disabled':''}>← Prev</button>
+        <span style="font-family:var(--mono);font-size:12px;color:var(--muted)">Page ${page+1} of ${pages}</span>
+        <button id="txNext" class="btn sm" style="min-width:80px;min-height:36px" ${page>=pages-1?'disabled':''}>Next →</button>
+      </div>`;
+
+    document.getElementById('txPrev').addEventListener('click',()=>{ page--; renderPage(); });
+    document.getElementById('txNext').addEventListener('click',()=>{ page++; renderPage(); });
+
     ['all','live','test'].forEach(m=>{
       const btn=document.getElementById('txTab_'+m);
       if(btn) btn.classList.toggle('active',modeFilter===m);
@@ -718,11 +740,12 @@ async function renderTransactions(el){
     </div>
     <div class="panel r3d">
       <div class="panel-head">
-        <h2>All transactions</h2>
-        <span class="badge" id="txCount">Showing ${transactions.length}</span>
+        <h2>Transactions</h2>
+        <span class="badge" id="txCount">…</span>
         <button id="clearTxBtn" class="btn sm" style="margin-left:auto;background:rgba(239,106,76,.12);color:var(--coral);border:1px solid rgba(239,106,76,.3);font-family:var(--mono);font-size:11px">Clear history</button>
       </div>
-      <div style="overflow:auto;" id="txWrap">${txTable(transactions,true)}</div>
+      <div style="overflow-x:auto" id="txWrap"></div>
+      <div id="txPager"></div>
     </div>
 
     <!-- confirm modal -->
@@ -742,9 +765,11 @@ async function renderTransactions(el){
       </div>
     </div>`;
 
-  document.getElementById('txSearch').addEventListener('input',refresh);
+  renderPage();
+
+  document.getElementById('txSearch').addEventListener('input',()=>{ page=0; renderPage(); });
   ['all','live','test'].forEach(m=>{
-    document.getElementById('txTab_'+m).addEventListener('click',()=>{modeFilter=m;refresh();});
+    document.getElementById('txTab_'+m).addEventListener('click',()=>{ modeFilter=m; page=0; renderPage(); });
   });
 
   const modal = document.getElementById('clearModal');
