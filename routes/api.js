@@ -454,6 +454,7 @@ router.get('/admin/members', requireAdminAuth, ah(async (req, res) => {
       id: m.id,
       businessName: m.businessName,
       email: m.email,
+      websiteUrl: m.websiteUrl || null,
       createdAt: m.createdAt,
       liveCollected: liveOk.reduce((s, c) => s + c.amount, 0),
       testCollected: testOk.reduce((s, c) => s + c.amount, 0),
