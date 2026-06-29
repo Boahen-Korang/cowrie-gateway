@@ -85,8 +85,8 @@ input,select,textarea{font-family:inherit}
 
 /* ─── Grid layout ─── */
 .grid{display:grid;grid-template-columns:214px 1fr;gap:18px;padding:18px 0 70px}
-@media(max-width:860px){.grid{grid-template-columns:1fr;padding-bottom:84px}.sidebar{display:none}.wrap{padding:0 13px}.content{padding:14px;border-radius:14px}.kpis{grid-template-columns:1fr 1fr}.merchant-tag{max-width:100px;font-size:10px}}
-@media(max-width:420px){.kpis{grid-template-columns:1fr}.kpi .v{font-size:22px}.table th,.table td{padding:8px 9px;font-size:12px}input,select,textarea{font-size:16px!important}.panel-head{flex-wrap:wrap;row-gap:6px}.panel-head h2{flex:1;min-width:0}.vhdr h1{font-size:20px}.topbar-in{padding:11px 0}}
+@media(max-width:860px){.grid{grid-template-columns:1fr;padding-bottom:100px}.sidebar{display:none}.wrap{padding:0 12px}.content{padding:16px;border-radius:16px}.kpis{grid-template-columns:1fr 1fr}.merchant-tag{max-width:100px;font-size:10px}.hdr h1{font-size:22px}}
+@media(max-width:420px){.kpis{grid-template-columns:1fr}.kpi .v{font-size:22px}.table th,.table td{padding:8px 9px;font-size:12px}input,select,textarea{font-size:16px!important}.panel-head{flex-wrap:wrap;row-gap:6px}.panel-head h2{flex:1;min-width:0}.vhdr h1{font-size:20px}.hdr h1{font-size:19px}.hdr{margin-bottom:14px;padding-bottom:14px}.topbar-in{padding:9px 0}.merchant-tag{display:none}.content{padding:12px;border-radius:12px}}
 
 /* ─── Sidebar ─── */
 .sidebar{
@@ -288,8 +288,9 @@ input,select,textarea{font-family:inherit}
 
 /* ─── Mobile bottom nav ─── */
 .mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:50;background:rgba(9,7,26,.96);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border-top:1px solid rgba(255,255,255,.09);padding-bottom:env(safe-area-inset-bottom,0px)}
-.mob-nav-in{display:flex;align-items:stretch}
-.mob-nav a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px 8px;color:var(--muted);font-family:var(--mono);font-size:9px;letter-spacing:.03em;text-transform:uppercase;transition:.15s;text-decoration:none}
+.mob-nav-in{display:flex;align-items:stretch;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.mob-nav-in::-webkit-scrollbar{display:none}
+.mob-nav a{flex:none;min-width:58px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 6px 8px;color:var(--muted);font-family:var(--mono);font-size:9px;letter-spacing:.03em;text-transform:uppercase;transition:.15s;text-decoration:none}
 .mob-nav a.active{color:#C9AEFF}
 .mob-nav a svg{opacity:.45;transition:.15s}
 .mob-nav a.active svg{opacity:1}
@@ -451,6 +452,14 @@ input,select,textarea{font-family:inherit}
     <a href="#" data-view="members">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Members
+    </a>
+    <a href="#" data-view="kyc">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.4 7.7 8 10 4.6-2.3 8-5 8-10V6z"/></svg>
+      KYC
+    </a>
+    <a href="#" data-view="gateways">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+      Gateway
     </a>
     <a href="#" data-view="new-payment">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
