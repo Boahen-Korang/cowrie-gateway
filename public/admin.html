@@ -940,7 +940,7 @@ async function renderMembers(el){
     });
   }
 
-  function showDetail(m){
+  async function showDetail(m){
     const successRate = m.totalTransactions>0 ? ((m.successfulTransactions/m.totalTransactions)*100).toFixed(0)+'%' : '—';
     el.innerHTML=`
       <button id="mbBack" style="display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--muted);font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer;padding:0;margin-bottom:18px;transition:color .15s" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--muted)'">
@@ -948,45 +948,72 @@ async function renderMembers(el){
         All members
       </button>
 
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap">
         <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--plum),var(--plum-br));display:grid;place-items:center;font-weight:800;font-size:19px;color:#fff;flex-shrink:0">${esc(initials(m.businessName))}</div>
-        <div>
+        <div style="min-width:0;flex:1">
           <div style="font-weight:800;font-size:18px">${esc(m.businessName)}</div>
           <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:3px">${esc(m.email)}</div>
         </div>
-        <div style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right">Joined<br>${fmtDate(m.createdAt)}</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right;flex-shrink:0">Joined<br>${fmtDate(m.createdAt)}</div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
         <div style="background:rgba(31,168,119,.1);border:1px solid rgba(31,168,119,.2);border-radius:14px;padding:16px 18px">
           <div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--mint);margin-bottom:6px">Live collected</div>
           <div style="font-family:var(--mono);font-weight:800;font-size:22px;color:var(--mint)">${fmt(m.liveCollected,'GHS')}</div>
-          <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.35);margin-top:4px">${m.liveTransactions} live transaction${m.liveTransactions!==1?'s':''}</div>
+          <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.35);margin-top:4px">${m.liveTransactions} live txn${m.liveTransactions!==1?'s':''}</div>
         </div>
         <div style="background:rgba(224,161,46,.08);border:1px solid rgba(224,161,46,.18);border-radius:14px;padding:16px 18px">
           <div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gold);margin-bottom:6px">Test volume</div>
           <div style="font-family:var(--mono);font-weight:800;font-size:22px;color:var(--gold)">${fmt(m.testCollected,'GHS')}</div>
-          <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.35);margin-top:4px">${m.totalTransactions - m.liveTransactions} test transaction${(m.totalTransactions-m.liveTransactions)!==1?'s':''}</div>
+          <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.35);margin-top:4px">${m.totalTransactions-m.liveTransactions} test txn${(m.totalTransactions-m.liveTransactions)!==1?'s':''}</div>
         </div>
       </div>
 
       <div class="panel r3d">
-        <div class="panel-head"><h2>Transaction summary</h2></div>
-        <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
-          ${[
-            ['Total transactions', m.totalTransactions],
-            ['Successful', m.successfulTransactions],
-            ['Success rate', successRate],
-            ['Live transactions', m.liveTransactions],
-          ].map(([lbl,val])=>`
-            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--line-2)">
-              <span style="font-size:13px;color:var(--muted)">${lbl}</span>
-              <span style="font-family:var(--mono);font-size:13px;font-weight:700">${val}</span>
-            </div>`).join('')}
+        <div class="panel-head">
+          <h2>Transactions</h2>
+          <span class="badge" id="mbTxCount">Loading…</span>
+        </div>
+        <div style="overflow-x:auto" id="mbTxWrap"><div class="state-box"><div class="spinbig"></div></div></div>
+        <div id="mbTxPager" style="border-top:1px solid var(--line-2)">
+          <div id="mbTxPagerInner" style="display:flex;align-items:center;gap:10px;justify-content:center;padding:14px 16px;flex-wrap:wrap"></div>
         </div>
       </div>`;
 
     document.getElementById('mbBack').addEventListener('click', showList);
+
+    const {transactions} = await API.get(`/api/admin/members/${encodeURIComponent(m.id)}/transactions`);
+
+    const PAGE=10;
+    let page=0;
+
+    function mbRenderPage(){
+      const total=transactions.length;
+      const pages=Math.max(1,Math.ceil(total/PAGE));
+      if(page>=pages) page=pages-1;
+      if(page<0) page=0;
+      const slice=transactions.slice(page*PAGE,page*PAGE+PAGE);
+      const from=total?page*PAGE+1:0;
+      const to=Math.min(page*PAGE+PAGE,total);
+
+      document.getElementById('mbTxWrap').innerHTML=txTable(slice,true);
+      document.getElementById('mbTxCount').textContent=total?`${from}–${to} of ${total}`:'0';
+      document.getElementById('mbTxPagerInner').innerHTML=`
+        <button data-mbpg="prev" class="btn sm" style="min-width:80px;min-height:36px" ${page===0?'disabled':''}>← Prev</button>
+        <span style="font-family:var(--mono);font-size:12px;color:var(--muted)">Page ${page+1} of ${pages}</span>
+        <button data-mbpg="next" class="btn sm" style="min-width:80px;min-height:36px" ${page>=pages-1?'disabled':''}>Next →</button>`;
+    }
+
+    mbRenderPage();
+
+    document.getElementById('mbTxPager').addEventListener('click',e=>{
+      const btn=e.target.closest('[data-mbpg]');
+      if(!btn||btn.disabled) return;
+      if(btn.dataset.mbpg==='prev') page--;
+      if(btn.dataset.mbpg==='next') page++;
+      mbRenderPage();
+    });
   }
 
   showList();
