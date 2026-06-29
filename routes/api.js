@@ -11,6 +11,7 @@ const {
   merchantId, apiKey, genId, hashPassword, verifyPassword, signToken, verifyToken,
 } = require('../lib/util');
 const { findAdmin } = require('../lib/admins');
+const cloudinary = require('../lib/cloudinary');
 
 const router = express.Router();
 
@@ -843,6 +844,22 @@ router.post('/kyc', requireAuth, ah(async (req, res) => {
       const e = new Error(`${label} exceeds the 5 MB limit.`); e.status = 400; throw e;
     }
   }
+  /* Upload images to Cloudinary if configured; fall back to storing base64 */
+  async function maybeUpload(dataUrl) {
+    try {
+      const url = await cloudinary.upload(dataUrl);
+      return url || dataUrl;
+    } catch (err) {
+      console.warn('[KYC] Cloudinary upload failed, storing base64:', err.message);
+      return dataUrl;
+    }
+  }
+  const [storedFront, storedBack, storedCert] = await Promise.all([
+    maybeUpload(idFront),
+    maybeUpload(idBack),
+    maybeUpload(certificate),
+  ]);
+
   merchant.kycStatus = 'pending';
   merchant.kycData = {
     fullName: String(fullName).trim(),
@@ -852,9 +869,9 @@ router.post('/kyc', requireAuth, ah(async (req, res) => {
     businessType: String(businessType || 'individual').trim(),
     businessRegNumber: String(businessRegNumber || '').trim(),
     address: String(address).trim(),
-    idFront,
-    idBack,
-    certificate,
+    idFront: storedFront,
+    idBack: storedBack,
+    certificate: storedCert,
   };
   merchant.kycSubmittedAt = Date.now();
   merchant.kycRejectionReason = null;

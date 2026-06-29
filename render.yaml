@@ -29,10 +29,24 @@ services:
       - key: ADMIN_PASSWORD
         sync: false
 
-      # Gmail SMTP for OTP and KYC notification emails
+      # Email — Resend is preferred (higher limits); Gmail is fallback
+      # If RESEND_API_KEY is set, GMAIL_* are ignored
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: Cowrie Payments <noreply@cowrie.africa>
       - key: GMAIL_USER
         sync: false
       - key: GMAIL_APP_PASSWORD
+        sync: false
+
+      # Cloudinary — for KYC document storage (keeps DB size small)
+      # Sign up free at cloudinary.com, then set these three values
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
         sync: false
 
       # Paystack — set test and live keys in Render dashboard
