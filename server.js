@@ -75,13 +75,19 @@ async function migrateMerchantKeys() {
   const all = await store.merchants.all();
   let count = 0;
   for (const m of all) {
-    if (m.livePublicKey) continue;
-    m.livePublicKey = apiKey('public', 'live');
-    m.liveSecretKey = apiKey('secret', 'live');
-    await store.merchants.update(m);
-    count++;
+    let changed = false;
+    if (!m.livePublicKey) {
+      m.livePublicKey = apiKey('public', 'live');
+      m.liveSecretKey = apiKey('secret', 'live');
+      changed = true;
+    }
+    if (!m.webhookSecret) {
+      m.webhookSecret = 'whsec_' + apiKey('secret', 'test').slice(16);
+      changed = true;
+    }
+    if (changed) { await store.merchants.update(m); count++; }
   }
-  if (count) console.log(`  Provisioned live keys for ${count} existing merchant(s)`);
+  if (count) console.log(`  Provisioned missing keys for ${count} existing merchant(s)`);
 }
 
 async function connectWithRetry(maxAttempts = 6, delayMs = 3000) {
