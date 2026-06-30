@@ -270,8 +270,8 @@ loginForm.addEventListener('submit',async e=>{
     const res=await fetch('/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:emailEl.value.trim(),password:pw.value,remember:document.getElementById('remember').checked})});
     const data=await res.json();
     if(!res.ok)throw new Error(data.message||'Sign in failed.');
-    localStorage.setItem('cowrie_token',data.token);
-    localStorage.setItem('cowrie_merchant',JSON.stringify(data.merchant));
+    sessionStorage.setItem('cowrie_token',data.token);
+    sessionStorage.setItem('cowrie_merchant',JSON.stringify(data.merchant));
     btn.classList.remove('loading');btn.classList.add('done');btn.querySelector('.lbl').textContent='Signed in ✓';
     const next=new URLSearchParams(location.search).get('next')||'/dashboard';
     setTimeout(()=>{location.href=next;},500);

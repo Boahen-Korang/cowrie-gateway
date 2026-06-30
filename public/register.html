@@ -226,7 +226,7 @@ form.addEventListener('submit',async e=>{
       pendingEmail=data.email;
       showOtpStep(data.email);
     }else{
-      localStorage.setItem('cowrie_token',data.token);
+      sessionStorage.setItem('cowrie_token',data.token);
       btn.classList.add('done');btn.querySelector('.lbl').textContent='Account created ✓';
       setTimeout(()=>{location.href=new URLSearchParams(location.search).get('next')||'/dashboard';},500);
     }
@@ -280,8 +280,8 @@ document.getElementById('verifyBtn').addEventListener('click',async()=>{
     const res=await fetch('/api/auth/verify-email',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:pendingEmail,otp:otpValue()})});
     const data=await res.json();
     if(!res.ok)throw new Error(data.message||'Verification failed.');
-    localStorage.setItem('cowrie_token',data.token);
-    localStorage.setItem('cowrie_merchant',JSON.stringify(data.merchant));
+    sessionStorage.setItem('cowrie_token',data.token);
+    sessionStorage.setItem('cowrie_merchant',JSON.stringify(data.merchant));
     vBtn.classList.remove('loading');vBtn.classList.add('done');vBtn.querySelector('.lbl').textContent='Verified ✓';
     setTimeout(()=>{location.href=new URLSearchParams(location.search).get('next')||'/dashboard';},500);
   }catch(err){
