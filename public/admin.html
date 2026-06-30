@@ -357,6 +357,10 @@ input,select,textarea{font-family:inherit}
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
           Payment Gateways
         </a>
+        <a href="#" data-view="bank-accounts">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7h18M3 11h18M3 15h18M5 21V7M19 21V7M12 7V3l-4 4h8l-4-4"/></svg>
+          Bank Accounts
+        </a>
         <a href="#" data-view="new-payment">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
           New payment
@@ -544,7 +548,8 @@ const VIEWS = {
   'new-payment':{title:'New payment',  desc:'Create a hosted payment link and share it with a customer.'},
   'members':    {title:'Members',     desc:'All registered merchants, their stores and total collections.'},
   'kyc':        {title:'KYC Review',        desc:'Review and approve merchant identity verification submissions.'},
-  'gateways':   {title:'Payment Gateways',  desc:'Configure API keys for your payment processing providers.'},
+  'gateways':      {title:'Payment Gateways',  desc:'Configure API keys for your payment processing providers.'},
+  'bank-accounts': {title:'Bank Accounts',    desc:'Add your Nigerian bank accounts so customers can pay by direct bank transfer.'},
 };
 
 let currentView = 'overview';
@@ -568,6 +573,7 @@ async function loadView(view){
     else if(view==='members')      await renderMembers(el);
     else if(view==='kyc')          await renderKyc(el);
     else if(view==='gateways')     await renderGateways(el);
+    else if(view==='bank-accounts') await renderBankAccounts(el);
     document.getElementById('statusBadge').textContent =
       'Updated '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     reveal3d(el);
@@ -1174,9 +1180,25 @@ function openDetail(ref){
       <span class="k">${esc(k)}</span>
       <span class="v">${k==='Status'?statusTag(v):esc(String(v))}</span>
     </div>`).join('');
+  const isPending = !['success','failed'].includes(tx.status);
   document.getElementById('detailAmt').innerHTML =
     `<div class="val">${fmt(tx.amount||0,tx.currency)}</div>
-     <div class="sub">${esc(tx.reference)}</div>`;
+     <div class="sub">${esc(tx.reference)}</div>
+     ${isPending ? `<button class="btn primary sm" id="markPaidBtn" style="margin-top:12px;width:100%" data-ref="${esc(tx.reference)}">Mark as paid</button>` : ''}`;
+  if(isPending){
+    document.getElementById('markPaidBtn').addEventListener('click', async function(){
+      const btn = this;
+      btn.disabled = true; btn.textContent = 'Saving…';
+      try{
+        await API.post(`/api/admin/charges/${encodeURIComponent(tx.reference)}/mark-paid`, {});
+        const idx = txCache.findIndex(t=>t.reference===tx.reference);
+        if(idx !== -1){ txCache[idx].status='success'; txCache[idx].paidAt=Date.now(); txCache[idx].method=txCache[idx].method||'bank_transfer'; }
+        btn.textContent = 'Marked as paid ✓'; btn.style.background = '#1FA877';
+        document.getElementById('detailBody').querySelector('[data-status]') && (document.getElementById('detailBody').querySelector('[data-status]').innerHTML = statusTag('success'));
+        setTimeout(()=>{ closeDetail(); loadView('transactions'); }, 900);
+      }catch(err){ btn.disabled=false; btn.textContent='Mark as paid'; alert(err.message); }
+    });
+  }
   document.getElementById('detailOverlay').classList.add('open');
   document.getElementById('detailPanel').classList.add('open');
 }
@@ -1739,6 +1761,102 @@ document.getElementById('logoutBtn').addEventListener('click',()=>{
   localStorage.removeItem('cowrie_admin_token');
   location.href='/admin-login';
 });
+
+/* ========================= Bank Accounts ========================= */
+async function renderBankAccounts(el){
+  const {accounts,banks}=await API.get('/api/admin/bank-accounts');
+  let accs=[...accounts];
+
+  function row(a,i){
+    return `<div class="card" style="padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap" id="bac-row-${i}">
+      <div style="flex:1;min-width:180px">
+        <div style="font-weight:700;font-size:14px">${esc(a.accountName)}</div>
+        <div style="font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:2px">${esc(a.accountNumber)} · ${esc(a.bankName)}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(a.currency)}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:var(--muted)">
+          <input type="checkbox" id="bac-active-${i}" ${a.active!==false?'checked':''} style="cursor:pointer"> Active
+        </label>
+        <button class="btn sm ghost" id="bac-del-${i}">Delete</button>
+      </div>
+    </div>`;
+  }
+
+  el.innerHTML=`
+    <div class="card" style="padding:20px 22px;margin-bottom:18px">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:4px">Configured bank accounts</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Customers selecting "Bank Transfer" at NGN checkout will see these accounts and the charge reference to use as payment description.</p>
+      <div id="bacList">${accs.length?accs.map((a,i)=>row(a,i)).join(''):'<p style="color:var(--muted);font-size:13px">No accounts added yet.</p>'}</div>
+    </div>
+
+    <div class="card" style="padding:20px 22px">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">Add bank account</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field"><label class="lbl">Bank name</label>
+          <select id="bacBank"><option value="">Select bank</option>${(banks||[]).map(b=>`<option>${esc(b)}</option>`).join('')}</select>
+        </div>
+        <div class="field"><label class="lbl">Currency</label>
+          <select id="bacCurrency"><option value="NGN">NGN — Nigerian Naira</option><option value="GHS">GHS — Ghana Cedi</option><option value="USD">USD — US Dollar</option></select>
+        </div>
+        <div class="field"><label class="lbl">Account number</label>
+          <input id="bacNum" placeholder="e.g. 0123456789" maxlength="20" inputmode="numeric">
+        </div>
+        <div class="field"><label class="lbl">Account name</label>
+          <input id="bacName" placeholder="e.g. Cowrie Payments Ltd">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:14px;align-items:center">
+        <button class="btn primary sm" id="bacAddBtn">Add account</button>
+        <button class="btn primary sm" id="bacSaveBtn" style="margin-left:auto">Save all changes</button>
+        <span class="fb" id="bacFb" style="font-size:13px"></span>
+      </div>
+    </div>`;
+
+  function rebindRows(){
+    accs.forEach((_,i)=>{
+      const chk=document.getElementById(`bac-active-${i}`);
+      const del=document.getElementById(`bac-del-${i}`);
+      if(chk) chk.addEventListener('change',()=>{ accs[i].active=chk.checked; });
+      if(del) del.addEventListener('click',()=>{ accs.splice(i,1); rerender(); });
+    });
+  }
+
+  function rerender(){
+    document.getElementById('bacList').innerHTML=accs.length?accs.map((a,i)=>row(a,i)).join(''):'<p style="color:var(--muted);font-size:13px">No accounts added yet.</p>';
+    rebindRows();
+  }
+
+  rebindRows();
+
+  document.getElementById('bacAddBtn').addEventListener('click',()=>{
+    const fb=document.getElementById('bacFb');
+    const bank=document.getElementById('bacBank').value;
+    const num=document.getElementById('bacNum').value.trim();
+    const name=document.getElementById('bacName').value.trim();
+    const cur=document.getElementById('bacCurrency').value;
+    if(!bank||!num||!name){fb.textContent='Please fill in all fields.';fb.className='fb bad';return;}
+    if(!/^\d{6,20}$/.test(num)){fb.textContent='Account number must be 6–20 digits.';fb.className='fb bad';return;}
+    if(accs.length>=5){fb.textContent='Maximum 5 accounts allowed.';fb.className='fb bad';return;}
+    accs.push({id:'bac_'+Date.now(),bankName:bank,accountNumber:num,accountName:name,currency:cur,active:true});
+    document.getElementById('bacBank').value='';
+    document.getElementById('bacNum').value='';
+    document.getElementById('bacName').value='';
+    fb.textContent=''; rerender();
+  });
+
+  document.getElementById('bacSaveBtn').addEventListener('click',async()=>{
+    const fb=document.getElementById('bacFb');
+    const btn=document.getElementById('bacSaveBtn');
+    btn.disabled=true;btn.textContent='Saving…';
+    try{
+      await API.put('/api/admin/bank-accounts',{accounts:accs});
+      fb.textContent='Saved!';fb.className='fb ok';
+      btn.textContent='Saved ✓';
+      setTimeout(()=>{btn.disabled=false;btn.textContent='Save all changes';},2000);
+    }catch(err){fb.textContent=err.message;fb.className='fb bad';btn.disabled=false;btn.textContent='Save all changes';}
+  });
+}
 
 /* ========================= Boot ========================= */
 (async()=>{

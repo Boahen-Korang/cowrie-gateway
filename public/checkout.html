@@ -215,15 +215,24 @@ const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $=s=>document.querySelector(s);
 const SYMS={GHS:'₵',NGN:'₦',KES:'KSh',ZAR:'R',USD:'$',EUR:'€',GBP:'£'};
 const fmt=(minor,ccy)=>(SYMS[ccy]||(ccy+' '))+' '+(minor/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-const S={method:'card',step:'form',provider:'MTN',charge:null,bankDetail:null,ussdDetail:null,threeDsUrl:null};
+const S={method:'card',step:'form',provider:'MTN',charge:null,bankDetail:null,ussdDetail:null,threeDsUrl:null,staticAccounts:[]};
 const amount=()=>S.charge?S.charge.amount:0;
 const ccy=()=>S.charge?S.charge.currency:'GHS';
 const merchantName=()=>(S.charge&&S.charge.merchantName)||'Cowrie';
 function getMethods(){
   const c=ccy();
-  if(c==='NGN') return [['card','Card'],['bank','Bank transfer'],['ussd','USSD']];
+  const hasStatic=S.staticAccounts&&S.staticAccounts.length>0;
+  if(c==='NGN'){
+    const m=[['card','Card'],['ussd','USSD']];
+    if(hasStatic) m.splice(1,0,['transfer','Bank transfer']);
+    else m.splice(1,0,['bank','Bank transfer']);
+    return m;
+  }
   if(c==='GHS') return [['card','Card'],['momo','Mobile money']];
-  return [['card','Card'],['bank','Bank transfer']];
+  const m=[['card','Card']];
+  if(hasStatic) m.push(['transfer','Bank transfer']);
+  else m.push(['bank','Bank transfer']);
+  return m;
 }
 
 const API={
@@ -236,6 +245,7 @@ const API={
 const ICONS={
   card:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>',
   bank:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg>',
+  transfer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg>',
   momo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>',
   ussd:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3h14M5 21h14M7 3v18M17 3v18M9 8h6M9 12h6"/></svg>'
 };
@@ -289,6 +299,9 @@ function formFor(m){
   if(m==='bank') return `
     <div class="hint">${info}A one-time virtual bank account will be generated. Transfer the exact amount to complete your payment.</div>
     ${payBtn('Get account number')}`;
+  if(m==='transfer') return `
+    <div class="hint">${info}Transfer the exact amount to one of the accounts below. Use your payment reference as the narration.</div>
+    ${payBtn('View account details')}`;
   if(m==='ussd'){
     const NG_BANKS=[['737','GTBank'],['966','Zenith Bank'],['919','UBA'],['894','First Bank'],['901','Access Bank'],['822','Sterling Bank'],['833','Polaris Bank']];
     return `
@@ -342,6 +355,8 @@ function bindForm(){
     });
   }else if(m==='bank'){
     $('#pay').addEventListener('click',()=>submitPay($('#pay'),'bank',{}));
+  }else if(m==='transfer'){
+    $('#pay').addEventListener('click',()=>go('static_transfer'));
   }else if(m==='ussd'){
     $('#pay').addEventListener('click',()=>{
       const ussd_type=$('#ussdBank').value;
@@ -406,6 +421,7 @@ function render(){
   else if(S.step==='pin')renderPin(b);
   else if(S.step==='approve')b.innerHTML=stateApprove();
   else if(S.step==='bank')renderBankDetails(b);
+  else if(S.step==='static_transfer')renderStaticTransfer(b);
   else if(S.step==='ussd_wait')renderUssdWait(b);
   else if(S.step==='verify_3ds')renderVerify3ds(b);
   else if(S.step==='set-amount')renderSetAmount(b);
@@ -472,6 +488,29 @@ function renderBankDetails(b){
   <div class="hint" style="justify-content:center"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Transfer the exact amount above. Waiting for confirmation…</div>`;
   b.querySelectorAll('.copy').forEach(c=>c.addEventListener('click',()=>{navigator.clipboard&&navigator.clipboard.writeText(c.dataset.c).catch(()=>{});c.textContent='copied!';setTimeout(()=>c.textContent='copy',1200);}));
   startPolling();
+}
+
+function renderStaticTransfer(b){
+  const accs=S.staticAccounts||[];
+  const ref=S.charge?S.charge.reference:'—';
+  const accsHtml=accs.map((a,i)=>`
+    <div class="detail-box" style="${i>0?'margin-top:12px':''}">
+      <div class="drow"><span class="k">BANK</span><span class="v">${esc(a.bankName)}</span></div>
+      <div class="drow"><span class="k">ACCOUNT</span><span class="v">${esc(a.accountNumber)} <button class="copy" data-c="${esc(a.accountNumber)}">copy</button></span></div>
+      <div class="drow"><span class="k">NAME</span><span class="v">${esc(a.accountName)}</span></div>
+      <div class="drow"><span class="k">AMOUNT</span><span class="v">${fmt(amount(),ccy())}</span></div>
+    </div>`).join('');
+  b.innerHTML=`<button class="back" id="back">← Back</button>
+    ${accsHtml}
+    <div class="detail-box" style="margin-top:12px;background:rgba(91,44,143,.12);border-color:rgba(91,44,143,.3)">
+      <div class="drow"><span class="k">REFERENCE</span><span class="v" style="font-family:var(--mono);font-size:12px">${esc(ref)} <button class="copy" data-c="${esc(ref)}">copy</button></span></div>
+    </div>
+    <div class="hint" style="justify-content:center;flex-direction:column;gap:5px;text-align:center;margin-top:12px">
+      <span>Use the reference above as the payment narration / description.</span>
+      <span style="color:var(--faint)">Your order will be confirmed once we receive your transfer.</span>
+    </div>`;
+  b.querySelectorAll('.copy').forEach(c=>c.addEventListener('click',()=>{navigator.clipboard&&navigator.clipboard.writeText(c.dataset.c).catch(()=>{});c.textContent='copied!';setTimeout(()=>c.textContent='copy',1200);}));
+  $('#back').addEventListener('click',()=>go('form'));
 }
 
 function renderUssdWait(b){
@@ -624,6 +663,13 @@ async function boot(){
   }
   await infoP;
   if(!TEST_MODE){const tb=document.querySelector('.testbadge');if(tb)tb.style.display='none';}
+  /* Pre-fetch static bank accounts for the charge currency */
+  if(S.charge){
+    try{
+      const {accounts}=await API.get('/api/bank-accounts?currency='+encodeURIComponent(ccy()));
+      S.staticAccounts=accounts||[];
+    }catch(e){ S.staticAccounts=[]; }
+  }
   routeFromCharge();
 }
 

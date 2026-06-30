@@ -605,6 +605,57 @@ router.post('/admin/new-payment', requireAdminAuth, ah(async (req, res) => {
   res.status(201).json({ charge, checkoutUrl: `/checkout?reference=${charge.reference}` });
 }));
 
+/* ========================= Bank accounts (manual transfer) ========================= */
+
+const NG_BANKS = [
+  'Access Bank','Citibank Nigeria','Ecobank Nigeria','Fidelity Bank','First Bank of Nigeria',
+  'First City Monument Bank','Globus Bank','Guaranty Trust Bank','Heritage Bank','Keystone Bank',
+  'Kuda Bank','Moniepoint Microfinance Bank','OPay','Palmpay','Polaris Bank','Providus Bank',
+  'Stanbic IBTC Bank','Standard Chartered Bank','Sterling Bank','Suntrust Bank','Union Bank',
+  'United Bank for Africa','Unity Bank','VFD Microfinance Bank','Wema Bank','Zenith Bank',
+];
+
+router.get('/admin/bank-accounts', requireAdminAuth, ah(async (req, res) => {
+  const accounts = (await store.settings.get('bank_accounts')) || [];
+  res.json({ accounts, banks: NG_BANKS });
+}));
+
+router.put('/admin/bank-accounts', requireAdminAuth, ah(async (req, res) => {
+  const { accounts } = req.body || {};
+  if (!Array.isArray(accounts)) throw Object.assign(new Error('accounts must be an array.'), { status: 400 });
+  const cleaned = accounts.slice(0, 5).map(a => ({
+    id: a.id || genId('bac_'),
+    bankName:      String(a.bankName      || '').trim(),
+    accountNumber: String(a.accountNumber || '').trim(),
+    accountName:   String(a.accountName   || '').trim(),
+    currency:      String(a.currency      || 'NGN').toUpperCase(),
+    active:        a.active !== false,
+  })).filter(a => a.bankName && a.accountNumber && a.accountName);
+  await store.settings.set('bank_accounts', cleaned);
+  res.json({ accounts: cleaned });
+}));
+
+router.get('/bank-accounts', ah(async (req, res) => {
+  const all = (await store.settings.get('bank_accounts')) || [];
+  const { currency } = req.query;
+  const accounts = all.filter(a => a.active !== false && (!currency || a.currency === currency));
+  res.json({ accounts });
+}));
+
+router.post('/admin/charges/:reference/mark-paid', requireAdminAuth, ah(async (req, res) => {
+  const charge = await store.charges.byReference(req.params.reference);
+  if (!charge) throw Object.assign(new Error('Charge not found.'), { status: 404 });
+  if (charge.status === 'success') throw Object.assign(new Error('Charge is already marked as paid.'), { status: 409 });
+  charge.status = 'success';
+  charge.paidAt = Date.now();
+  charge.method = charge.method || 'bank_transfer';
+  charge.updatedAt = Date.now();
+  await store.charges.update(charge);
+  const merchant = await store.merchants.byId(charge.merchantId);
+  if (merchant) webhooks.emit(merchant, 'charge.success', charge).catch(() => {});
+  res.json({ charge });
+}));
+
 /* ========================= Paystack integration ========================= */
 
 async function emitWebhookIfTerminal(charge) {
