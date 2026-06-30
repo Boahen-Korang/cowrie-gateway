@@ -6,7 +6,7 @@ const cfg = require('../lib/config');
 const payments = require('../lib/payments');
 const paystack = require('../lib/paystack');
 const webhooks = require('../lib/webhooks');
-const { sendOtp, sendKycApproved, sendKycRejected } = require('../lib/email');
+const { sendOtp, sendKycApproved, sendKycRejected, sendPendingTransferAlert } = require('../lib/email');
 const {
   merchantId, apiKey, genId, hashPassword, verifyPassword, signToken, verifyToken,
 } = require('../lib/util');
@@ -640,6 +640,25 @@ router.get('/bank-accounts', ah(async (req, res) => {
   const { currency } = req.query;
   const accounts = all.filter(a => a.active !== false && (!currency || a.currency === currency));
   res.json({ accounts });
+}));
+
+/* Called by checkout when customer views static bank details — emails admin once per charge */
+router.post('/charges/:reference/notify-transfer', loadCharge, ah(async (req, res) => {
+  const charge = req.charge;
+  if (charge.transferNotified) return res.json({ ok: true });
+  charge.transferNotified = true;
+  await store.charges.update(charge);
+  const adminEmail = process.env.ADMIN_EMAIL || cfg.ADMIN_EMAIL;
+  if (adminEmail) {
+    const merchant = await store.merchants.byId(charge.merchantId);
+    sendPendingTransferAlert(adminEmail, {
+      reference: charge.reference,
+      amount: charge.amount,
+      currency: charge.currency || 'GHS',
+      merchantName: merchant ? merchant.businessName : 'Unknown',
+    }).catch(err => console.warn('[transfer-alert]', err.message));
+  }
+  res.json({ ok: true });
 }));
 
 router.post('/admin/charges/:reference/mark-paid', requireAdminAuth, ah(async (req, res) => {

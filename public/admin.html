@@ -696,8 +696,12 @@ async function renderTransactions(el){
   let modeFilter = 'all';
   let page = 0;
 
+  const pendingCount = transactions.filter(t=>!['success','failed'].includes(t.status)).length;
+
   function filtered(){
-    let rows = modeFilter==='all' ? transactions : transactions.filter(t=>(t.mode||'test')===modeFilter);
+    let rows = modeFilter==='pending'
+      ? transactions.filter(t=>!['success','failed'].includes(t.status))
+      : modeFilter==='all' ? transactions : transactions.filter(t=>(t.mode||'test')===modeFilter);
     const q = (document.getElementById('txSearch')||{}).value;
     if(q&&q.trim()){
       const s=q.toLowerCase().trim();
@@ -724,7 +728,7 @@ async function renderTransactions(el){
       <span style="font-family:var(--mono);font-size:12px;color:var(--muted)">Page ${page+1} of ${pages}</span>
       <button data-pg="next" class="btn sm" style="min-width:80px;min-height:36px" ${page>=pages-1?'disabled':''}>Next →</button>`;
 
-    ['all','live','test'].forEach(m=>{
+    ['all','pending','live','test'].forEach(m=>{
       const btn=document.getElementById('txTab_'+m);
       if(btn) btn.classList.toggle('active',modeFilter===m);
     });
@@ -733,10 +737,11 @@ async function renderTransactions(el){
   el.innerHTML = `
     <div class="search-row" style="display:flex;gap:8px;align-items:center">
       <input id="txSearch" type="text" placeholder="Search by reference, method or status…" style="flex:1">
-      <div style="display:flex;gap:4px;flex-shrink:0">
-        <button id="txTab_all"  class="btn sm active" style="font-family:var(--mono);font-size:11px;min-height:36px;padding:6px 10px">All</button>
-        <button id="txTab_live" class="btn sm" style="font-family:var(--mono);font-size:11px;min-height:36px;padding:6px 10px;background:rgba(26,155,110,.15);color:var(--mint);border:1px solid rgba(26,155,110,.3)">Live</button>
-        <button id="txTab_test" class="btn sm" style="font-family:var(--mono);font-size:11px;min-height:36px;padding:6px 10px;background:rgba(200,134,10,.1);color:var(--gold);border:1px solid rgba(200,134,10,.25)">Test</button>
+      <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap">
+        <button id="txTab_all"     class="btn sm active" style="font-family:var(--mono);font-size:11px;min-height:36px;padding:6px 10px">All</button>
+        <button id="txTab_pending" class="btn sm" style="font-family:var(--mono);font-size:11px;min-height:36px;padding:6px 10px;background:rgba(224,161,46,.13);color:var(--gold);border:1px solid rgba(224,161,46,.3)">Pending${pendingCount>0?` <span style="background:rgba(224,161,46,.3);border-radius:8px;padding:1px 6px">${pendingCount}</span>`:''}</button>
+        <button id="txTab_live"    class="btn sm" style="font-family:var(--mono);font-size:11px;min-height:36px;padding:6px 10px;background:rgba(26,155,110,.15);color:var(--mint);border:1px solid rgba(26,155,110,.3)">Live</button>
+        <button id="txTab_test"    class="btn sm" style="font-family:var(--mono);font-size:11px;min-height:36px;padding:6px 10px;background:rgba(200,134,10,.1);color:var(--gold);border:1px solid rgba(200,134,10,.25)">Test</button>
       </div>
     </div>
     <div class="panel r3d">
@@ -780,7 +785,7 @@ async function renderTransactions(el){
   });
 
   document.getElementById('txSearch').addEventListener('input',()=>{ page=0; renderPage(); });
-  ['all','live','test'].forEach(m=>{
+  ['all','pending','live','test'].forEach(m=>{
     document.getElementById('txTab_'+m).addEventListener('click',()=>{ modeFilter=m; page=0; renderPage(); });
   });
 

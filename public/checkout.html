@@ -511,6 +511,8 @@ function renderStaticTransfer(b){
     </div>`;
   b.querySelectorAll('.copy').forEach(c=>c.addEventListener('click',()=>{navigator.clipboard&&navigator.clipboard.writeText(c.dataset.c).catch(()=>{});c.textContent='copied!';setTimeout(()=>c.textContent='copy',1200);}));
   $('#back').addEventListener('click',()=>go('form'));
+  /* Notify admin once so they know to watch their bank */
+  if(S.charge) fetch(`/api/charges/${encodeURIComponent(S.charge.reference)}/notify-transfer`,{method:'POST'}).catch(()=>{});
   startPolling();
 }
 
