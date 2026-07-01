@@ -526,6 +526,15 @@ router.post('/admin/members/:merchantId/lock', requireAdminAuth, ah(async (req, 
   res.json({ ok: true, merchantId: merchant.id, locked: merchant.locked });
 }));
 
+/* TEMP — clear a merchant's payouts so available balance == gross */
+router.post('/admin/clear-merchant-payouts', requireAdminAuth, ah(async (req, res) => {
+  const { merchantId } = req.body || {};
+  if (!merchantId) return res.status(400).json({ error: 'merchantId required' });
+  const before = (await store.payouts.forMerchant(merchantId)).length;
+  await store.payouts.clearForMerchant(merchantId);
+  res.json({ ok: true, merchantId, payoutsCleared: before });
+}));
+
 router.delete('/admin/transactions', requireAdminAuth, ah(async (req, res) => {
   const { mode } = req.query; // ?mode=live or ?mode=test — omit for all
   if (mode === 'live' || mode === 'test') {
