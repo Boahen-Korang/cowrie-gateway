@@ -65,6 +65,7 @@ async function requireAuth(req, res, next) {
     const payload = token && verifyToken(token);
     const merchant = payload && await store.merchants.byId(payload.sub);
     if (!merchant) { const e = new Error('Unauthorized'); e.status = 401; return next(e); }
+    if (merchant.locked) { const e = new Error('This account has been locked. Please contact support.'); e.status = 403; return next(e); }
     req.merchant = merchant;
     req.mode = (req.headers['x-cowrie-mode'] === 'live') ? 'live' : 'test';
     next();
@@ -86,6 +87,7 @@ async function resolveMerchantByKey(req, res, next) {
       merchant = await store.merchants.byPublicKey(key) || await store.merchants.bySecretKey(key);
     }
     if (!merchant) { const e = new Error('Invalid or missing API key'); e.status = 401; return next(e); }
+    if (merchant.locked) { const e = new Error('This account has been locked.'); e.status = 403; return next(e); }
     req.merchant = merchant;
     req.mode = isLive ? 'live' : 'test';
     next();
@@ -257,6 +259,9 @@ router.post('/auth/login', authLimiter, ah(async (req, res) => {
   const merchant = email && await store.merchants.byEmail(email);
   if (!merchant || !verifyPassword(password || '', merchant.passwordHash)) {
     const e = new Error('Invalid email or password.'); e.status = 401; throw e;
+  }
+  if (merchant.locked) {
+    const e = new Error('This account has been locked. Please contact support.'); e.status = 403; throw e;
   }
   const ttl = remember ? cfg.REMEMBER_TTL_MS : cfg.TOKEN_TTL_MS;
   const token = signToken({ sub: merchant.id, exp: Date.now() + ttl });
@@ -496,6 +501,7 @@ router.get('/admin/members', requireAdminAuth, ah(async (req, res) => {
       email: m.email,
       websiteUrl: m.websiteUrl || null,
       createdAt: m.createdAt,
+      locked: !!m.locked,
       liveCollected: Math.max(0, liveOk.reduce((s, c) => s + toGhs(c.amount, c.currency), 0) - livePaidOut),
       testCollected: Math.max(0, testOk.reduce((s, c) => s + toGhs(c.amount, c.currency), 0) - testPaidOut),
       totalTransactions: charges.length,
@@ -510,6 +516,14 @@ router.get('/admin/members/:merchantId/transactions', requireAdminAuth, ah(async
   const charges = await store.charges.forMerchant(req.params.merchantId);
   charges.sort((a, b) => b.createdAt - a.createdAt);
   res.json({ transactions: charges });
+}));
+
+router.post('/admin/members/:merchantId/lock', requireAdminAuth, ah(async (req, res) => {
+  const merchant = await store.merchants.byId(req.params.merchantId);
+  if (!merchant) { const e = new Error('Merchant not found.'); e.status = 404; throw e; }
+  merchant.locked = !!(req.body && req.body.locked);
+  await store.merchants.update(merchant);
+  res.json({ ok: true, merchantId: merchant.id, locked: merchant.locked });
 }));
 
 router.delete('/admin/transactions', requireAdminAuth, ah(async (req, res) => {
