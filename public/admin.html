@@ -379,6 +379,10 @@ input,select,textarea{font-family:inherit}
           <p id="viewDesc">Real-time balances, settlements, payouts and reconciliation.</p>
         </div>
         <div class="hdr-actions">
+          <div style="position:relative;display:flex;align-items:center">
+            <svg style="position:absolute;left:10px;pointer-events:none;opacity:.4" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+            <input id="globalSearch" type="search" placeholder="Search reference…" style="background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:9px;padding:7px 12px 7px 30px;color:var(--ink);font-family:var(--mono);font-size:12px;width:190px;outline:none;transition:.15s" onfocus="this.style.borderColor='rgba(91,44,143,.55)';this.style.boxShadow='0 0 0 3px rgba(91,44,143,.15)'" onblur="this.style.borderColor='';this.style.boxShadow=''">
+          </div>
           <span class="badge" id="statusBadge">Loading…</span>
           <button class="btn" id="refreshBtn">↻ Refresh</button>
         </div>
@@ -563,6 +567,7 @@ const VIEWS = {
 
 let currentView = 'overview';
 let txCache = [];
+let _pendingSearch = '';
 
 async function loadView(view){
   currentView = view;
@@ -814,6 +819,14 @@ async function renderTransactions(el){
   document.getElementById('clearLiveBtn').addEventListener('click',()=>doClear('live'));
   document.getElementById('clearTestBtn').addEventListener('click',()=>doClear('test'));
   document.getElementById('clearAllBtn').addEventListener('click',()=>doClear(''));
+
+  if(_pendingSearch){
+    document.getElementById('txSearch').value = _pendingSearch;
+    _pendingSearch = '';
+    page = 0;
+    renderPage();
+    document.getElementById('txSearch').focus();
+  }
 }
 
 function modeTag(mode){
@@ -1847,6 +1860,21 @@ window.addEventListener('scroll', () => {
 }, {passive:true});
 
 /* ========================= Wiring ========================= */
+function doGlobalSearch(q){
+  q = q.trim();
+  if(!q) return;
+  if(currentView === 'transactions'){
+    const el = document.getElementById('txSearch');
+    if(el){ el.value = q; el.dispatchEvent(new Event('input')); el.focus(); }
+  } else {
+    _pendingSearch = q;
+    loadView('transactions');
+  }
+}
+document.getElementById('globalSearch').addEventListener('keydown', e=>{
+  if(e.key === 'Enter') doGlobalSearch(e.target.value);
+});
+
 document.querySelectorAll('[data-view]').forEach(a=>{
   a.addEventListener('click',e=>{e.preventDefault();loadView(a.dataset.view);});
 });

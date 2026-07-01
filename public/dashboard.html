@@ -218,6 +218,10 @@ input,select,textarea{font-family:inherit}
     <div class="wrap topbar-in">
       <a href="/" class="brand" style="text-decoration:none;color:inherit"><span class="shell"></span>Cowrie</a>
       <div class="topbar-right">
+        <div style="position:relative;display:flex;align-items:center">
+          <svg style="position:absolute;left:9px;pointer-events:none;opacity:.4" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+          <input id="globalSearch" type="search" placeholder="Search reference…" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:6px 11px 6px 28px;color:#fff;font-family:var(--mono);font-size:11.5px;width:170px;outline:none;transition:.15s" onfocus="this.style.borderColor='rgba(91,44,143,.55)';this.style.boxShadow='0 0 0 3px rgba(91,44,143,.15)'" onblur="this.style.borderColor='';this.style.boxShadow=''">
+        </div>
         <span class="merchant-tag" id="merchantTag">…</span>
         <!-- Mode dropdown -->
         <div style="position:relative" id="modeWrap">
@@ -572,6 +576,14 @@ async function renderTransactions(el){
   });
 
   $('#txSearch').addEventListener('input',()=>{ page=0; renderPage(); });
+
+  if(_pendingSearch){
+    $('#txSearch').value = _pendingSearch;
+    _pendingSearch = '';
+    page = 0;
+    renderPage();
+    $('#txSearch').focus();
+  }
 
   const modal=$('#clearModal');
   $('#clearTxBtn').addEventListener('click',()=>{ modal.style.display='flex'; });
@@ -1386,6 +1398,23 @@ function showModeToast(msg){
   clearTimeout(t._tid);
   t._tid=setTimeout(()=>t.style.display='none',3500);
 }
+
+let _pendingSearch = '';
+function doGlobalSearch(q){
+  q = q.trim();
+  if(!q) return;
+  const onTxns = document.querySelector('.nav a[data-view="transactions"],.mnav[data-view="transactions"]');
+  if(onTxns && onTxns.classList.contains('active')){
+    const el = document.getElementById('txSearch');
+    if(el){ el.value = q; el.dispatchEvent(new Event('input')); el.focus(); }
+  } else {
+    _pendingSearch = q;
+    loadView('transactions');
+  }
+}
+document.getElementById('globalSearch').addEventListener('keydown', e=>{
+  if(e.key === 'Enter') doGlobalSearch(e.target.value);
+});
 
 document.getElementById('modeBtn').addEventListener('click',e=>{
   e.stopPropagation();
