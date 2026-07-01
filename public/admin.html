@@ -419,7 +419,7 @@ input,select,textarea{font-family:inherit}
       </div>
       <div class="formrow">
         <div class="field">
-          <div class="lbl">Amount (GHS)</div>
+          <div class="lbl">Amount (USD)</div>
           <input id="pyAmount" type="number" step="0.01" min="1" placeholder="0.00">
         </div>
         <div class="field">
@@ -493,7 +493,7 @@ if (!token) { location.href = '/admin-login'; throw 0; }
 
 /* ---- helpers ---- */
 const SYMS = { GHS:'₵', NGN:'₦', KES:'KSh', ZAR:'R', USD:'$', EUR:'€', GBP:'£' };
-const fmt = (minor, ccy='GHS') =>
+const fmt = (minor, ccy='USD') =>
   (SYMS[ccy]||ccy+' ')+' '+(minor/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 
 const fmtDate = ts => new Date(ts).toLocaleString([],{
@@ -871,7 +871,7 @@ async function renderConfirmations(el){
   }
 
   function confCard(t, i){
-    const amt = fmt(t.amount||0, t.currency||'GHS');
+    const amt = fmt(t.amount||0, t.currency||'USD');
     return `<div id="confCard_${i}" style="background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;transition:.3s opacity">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line-2);flex-wrap:wrap">
         <div>
@@ -975,7 +975,7 @@ function payoutsTable(rows){
         <td style="font-weight:700;font-size:13px">${esc(r.merchantName||'—')}</td>
         <td style="font-size:13px">${r.method==='mobile_money'?'Mobile money':'Bank transfer'}</td>
         <td>${dest}</td>
-        <td style="font-family:var(--mono);font-weight:800">${fmt(r.amount||0,r.currency||'GHS')}</td>
+        <td style="font-family:var(--mono);font-weight:800">${fmt(r.amount||0,r.currency||'USD')}</td>
         <td style="font-size:12px;color:var(--muted);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.note||'—')}</td>
         <td>${statusTag(r.status==='completed'?'success':r.status==='pending'?'pending':'pending')}</td>
         <td style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap">${fmtDate(r.createdAt)}</td>
@@ -1039,7 +1039,7 @@ async function renderMembers(el){
               <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.email)}</div>
             </div>
             <div style="text-align:right;flex-shrink:0">
-              <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--mint)">${fmt(m.liveCollected,'GHS')}</div>
+              <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--mint)">${fmt(m.liveCollected,'USD')}</div>
               <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px">live revenue</div>
             </div>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="2" style="flex-shrink:0"><path d="M9 18l6-6-6-6"/></svg>
@@ -1078,12 +1078,12 @@ async function renderMembers(el){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
         <div style="background:rgba(31,168,119,.1);border:1px solid rgba(31,168,119,.2);border-radius:14px;padding:16px 18px">
           <div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--mint);margin-bottom:6px">Live collected</div>
-          <div style="font-family:var(--mono);font-weight:800;font-size:22px;color:var(--mint)">${fmt(m.liveCollected,'GHS')}</div>
+          <div style="font-family:var(--mono);font-weight:800;font-size:22px;color:var(--mint)">${fmt(m.liveCollected,'USD')}</div>
           <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.35);margin-top:4px">${m.liveTransactions} live txn${m.liveTransactions!==1?'s':''}</div>
         </div>
         <div style="background:rgba(224,161,46,.08);border:1px solid rgba(224,161,46,.18);border-radius:14px;padding:16px 18px">
           <div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gold);margin-bottom:6px">Test volume</div>
-          <div style="font-family:var(--mono);font-weight:800;font-size:22px;color:var(--gold)">${fmt(m.testCollected,'GHS')}</div>
+          <div style="font-family:var(--mono);font-weight:800;font-size:22px;color:var(--gold)">${fmt(m.testCollected,'USD')}</div>
           <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.35);margin-top:4px">${m.totalTransactions-m.liveTransactions} test txn${(m.totalTransactions-m.liveTransactions)!==1?'s':''}</div>
         </div>
       </div>
@@ -1147,10 +1147,10 @@ function renderNewPayment(el){
           <div class="field">
             <div class="lbl">Currency</div>
             <select id="npCurrency">
-              <option value="GHS">GHS — Ghana Cedi</option>
-              <option value="NGN">NGN — Nigerian Naira</option>
-              <option value="KES">KES — Kenyan Shilling</option>
               <option value="USD">USD — US Dollar</option>
+              <option value="NGN">NGN — Nigerian Naira</option>
+              <option value="GHS">GHS — Ghana Cedi</option>
+              <option value="KES">KES — Kenyan Shilling</option>
               <option value="EUR">EUR — Euro</option>
             </select>
           </div>
@@ -1274,7 +1274,7 @@ function openDetail(ref){
     ['Status',     tx.status],
     tx.payerName ? ['Payer name', tx.payerName] : null,
     ['Method',     methodLabel(tx.method)],
-    ['Currency',   tx.currency||'GHS'],
+    ['Currency',   tx.currency||'USD'],
     ['Created',    fmtDate(tx.createdAt)],
     ['Updated',    fmtDate(tx.updatedAt)],
     tx.paidAt ? ['Paid at', fmtDate(tx.paidAt)] : null,
@@ -1342,7 +1342,7 @@ document.getElementById('submitPayoutBtn').addEventListener('click',async()=>{
   const btn=document.getElementById('submitPayoutBtn');
   btn.disabled=true; btn.textContent='Creating…';
   try{
-    await API.post('/api/admin/payouts',{amount:Math.round(amount*100),currency:'GHS',recipient,method,note});
+    await API.post('/api/admin/payouts',{amount:Math.round(amount*100),currency:'USD',recipient,method,note});
     closePayoutModal();
     await loadView('payouts');
   }catch(e){

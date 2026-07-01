@@ -8,6 +8,7 @@ const paystack = require('../lib/paystack');
 const webhooks = require('../lib/webhooks');
 const { sendOtp, sendKycApproved, sendKycRejected, sendPendingTransferAlert, sendDepositAlert } = require('../lib/email');
 const fx = require('../lib/fx');
+const { toUsdMinor } = fx;
 const {
   merchantId, apiKey, genId, hashPassword, verifyPassword, signToken, verifyToken,
 } = require('../lib/util');
@@ -297,7 +298,7 @@ router.get('/transactions', requireAuth, ah(async (req, res) => {
   const mode = req.mode || 'test';
   const raw = all.filter(c => (c.mode || 'test') === mode);
   const rates = await fx.getRates();
-  const transactions = raw.map(c => ({ ...c, amountGhs: fx.toGhsMinor(c.amount, c.currency, rates) }));
+  const transactions = raw.map(c => ({ ...c, amountUsd: fx.toUsdMinor(c.amount, c.currency, rates) }));
   res.json({ transactions });
 }));
 
@@ -441,15 +442,15 @@ router.get('/admin/overview', requireAdminAuth, ah(async (req, res) => {
   const todayTs = today.getTime();
 
   const rates = await fx.getRates();
-  const toGhs = (amount, currency) => fx.toGhsMinor(amount, currency, rates);
+  const toUsd = (amount, currency) => fx.toUsdMinor(amount, currency, rates);
 
   const successAll = allCharges.filter((c) => c.status === 'success');
   const liveSuccess = successAll.filter((c) => (c.mode || 'test') === 'live');
   const testSuccess = successAll.filter((c) => (c.mode || 'test') === 'test');
   const allPayouts = await store.payouts.all();
-  const collectedToday = liveSuccess.filter((c) => c.createdAt >= todayTs).reduce((s, c) => s + toGhs(c.amount, c.currency), 0);
-  const grossCollected = liveSuccess.reduce((s, c) => s + toGhs(c.amount, c.currency), 0);
-  const testCollected  = testSuccess.reduce((s, c) => s + toGhs(c.amount, c.currency), 0);
+  const collectedToday = liveSuccess.filter((c) => c.createdAt >= todayTs).reduce((s, c) => s + toUsd(c.amount, c.currency), 0);
+  const grossCollected = liveSuccess.reduce((s, c) => s + toUsd(c.amount, c.currency), 0);
+  const testCollected  = testSuccess.reduce((s, c) => s + toUsd(c.amount, c.currency), 0);
   const totalPaidOut   = allPayouts.filter((p) => p.status === 'completed').reduce((s, p) => s + p.amount, 0);
   const totalCollected = Math.max(0, grossCollected - totalPaidOut);
   const paidOutToday = allPayouts.filter((p) => p.createdAt >= todayTs && p.status === 'completed').reduce((s, p) => s + p.amount, 0);
@@ -464,11 +465,11 @@ router.get('/admin/overview', requireAdminAuth, ah(async (req, res) => {
     const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
     const start = d.getTime(); const end = start + 86_400_000;
     const daySucc = successAll.filter((c) => c.createdAt >= start && c.createdAt < end);
-    last7Days.push({ date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), amount: daySucc.reduce((s, c) => s + toGhs(c.amount, c.currency), 0), count: daySucc.length });
+    last7Days.push({ date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), amount: daySucc.reduce((s, c) => s + toUsd(c.amount, c.currency), 0), count: daySucc.length });
   }
 
   const byMethod = {};
-  successAll.forEach((c) => { const m = c.method || 'unknown'; byMethod[m] = (byMethod[m] || 0) + toGhs(c.amount, c.currency); });
+  successAll.forEach((c) => { const m = c.method || 'unknown'; byMethod[m] = (byMethod[m] || 0) + toUsd(c.amount, c.currency); });
 
   res.json({ overview: { collectedToday, paidOutToday, totalCollected, testCollected, merchantCount, successRate, pendingCount, last7Days, byMethod } });
 }));
@@ -477,7 +478,7 @@ router.get('/admin/members', requireAdminAuth, ah(async (req, res) => {
   const merchants = (await store.merchants.all()).filter((m) => !m.demo);
   const [allCharges, allPayouts] = await Promise.all([store.charges.all(), store.payouts.all()]);
   const rates = await fx.getRates();
-  const toGhs = (amount, currency) => fx.toGhsMinor(amount, currency, rates);
+  const toUsd = (amount, currency) => fx.toUsdMinor(amount, currency, rates);
   const members = merchants.map((m) => {
     const charges = allCharges.filter((c) => c.merchantId === m.id);
     const successful = charges.filter((c) => c.status === 'success');
@@ -495,8 +496,8 @@ router.get('/admin/members', requireAdminAuth, ah(async (req, res) => {
       email: m.email,
       websiteUrl: m.websiteUrl || null,
       createdAt: m.createdAt,
-      liveCollected: Math.max(0, liveOk.reduce((s, c) => s + toGhs(c.amount, c.currency), 0) - livePaidOut),
-      testCollected: Math.max(0, testOk.reduce((s, c) => s + toGhs(c.amount, c.currency), 0) - testPaidOut),
+      liveCollected: Math.max(0, liveOk.reduce((s, c) => s + toUsd(c.amount, c.currency), 0) - livePaidOut),
+      testCollected: Math.max(0, testOk.reduce((s, c) => s + toUsd(c.amount, c.currency), 0) - testPaidOut),
       totalTransactions: charges.length,
       liveTransactions: charges.filter((c) => (c.mode || 'test') === 'live').length,
       successfulTransactions: successful.length,
@@ -548,7 +549,7 @@ router.post('/admin/payouts', requireAdminAuth, ah(async (req, res) => {
   if (!merchant) { const e = new Error('No merchant available.'); e.status = 400; throw e; }
   const payout = await store.payouts.insert({
     id: genId('pyt_'), merchantId: merchant.id, amount: Math.round(Number(amount)),
-    currency: currency || 'GHS', recipient: String(recipient).trim(),
+    currency: currency || 'USD', recipient: String(recipient).trim(),
     method: method || 'bank_transfer', note: String(note || '').trim(),
     status: 'processing', createdAt: Date.now(),
   });
@@ -583,7 +584,7 @@ router.post('/payouts', requireAuth, ah(async (req, res) => {
   }
   const payout = await store.payouts.insert({
     id: genId('pyt_'), merchantId: req.merchant.id,
-    amount: amt, currency: 'GHS',
+    amount: amt, currency: 'USD',
     mode: req.mode || 'test',
     method: method || 'bank',
     bank: String(bank || '').trim(),
@@ -607,7 +608,7 @@ router.post('/admin/settlements', requireAdminAuth, ah(async (req, res) => {
   const amount = unsettled.reduce((s, c) => s + c.amount, 0);
   await Promise.all(unsettled.map((c) => { c.settled = true; return store.charges.update(c); }));
   const settlement = await store.settlements.insert({
-    id: genId('stl_'), merchantId: 'admin', amount, currency: 'GHS',
+    id: genId('stl_'), merchantId: 'admin', amount, currency: 'USD',
     chargeCount: unsettled.length, status: 'completed', createdAt: Date.now(),
   });
   res.status(201).json({ settlement });
@@ -621,7 +622,7 @@ router.post('/admin/new-payment', requireAdminAuth, ah(async (req, res) => {
   if (!merchant) { const e = new Error('No merchant available.'); e.status = 400; throw e; }
   const charge = await payments.createCharge(merchant, {
     amount: isOpen ? 0 : Number(amount) || 0,
-    currency: currency || 'GHS',
+    currency: currency || 'USD',
     email: String(email || '').trim(),
     openAmount: isOpen,
   });
@@ -681,7 +682,7 @@ router.post('/charges/:reference/notify-transfer', loadCharge, ah(async (req, re
     sendPendingTransferAlert(toList, {
       reference: charge.reference,
       amount: charge.amount,
-      currency: charge.currency || 'GHS',
+      currency: charge.currency || 'USD',
       merchantName: merchant ? merchant.businessName : 'Unknown',
     }).catch(err => console.warn('[transfer-alert]', err.message));
   }
@@ -707,7 +708,7 @@ router.post('/admin/charges/:reference/mark-paid', requireAdminAuth, ah(async (r
         sendDepositAlert(toList, {
           reference: charge.reference,
           amount: charge.amount,
-          currency: charge.currency || 'GHS',
+          currency: charge.currency || 'USD',
           merchantName: merchant.businessName,
           customerEmail: charge.customerEmail,
           payerName: charge.payerName,
@@ -735,7 +736,7 @@ async function emitWebhookIfTerminal(charge) {
       sendDepositAlert(toList, {
         reference: charge.reference,
         amount: charge.amount,
-        currency: charge.currency || 'GHS',
+        currency: charge.currency || 'USD',
         merchantName: merchant.businessName,
         customerEmail: charge.customerEmail,
         payerName: charge.payerName,
@@ -793,7 +794,7 @@ router.post('/charges/:reference/pay', payLimiter, loadCharge, ah(async (req, re
     || charge.customerEmail || 'customer@cowrie.africa';
   const paystackRef = `cwr_${charge.reference}_${Date.now()}`;
 
-  const body = { email, amount: charge.amount, currency: charge.currency || 'GHS', reference: paystackRef, metadata: { cowrie_reference: charge.reference } };
+  const body = { email, amount: charge.amount, currency: charge.currency || 'USD', reference: paystackRef, metadata: { cowrie_reference: charge.reference } };
 
   if (method === 'card') {
     body.card = { number: String(number || '').replace(/\s/g, ''), cvv: String(cvv || ''), expiry_month: String(expiry_month || ''), expiry_year: String(expiry_year || '') };
@@ -876,7 +877,7 @@ router.post('/charges/:reference/paystack-init', payLimiter, loadCharge, ah(asyn
     || charge.customerEmail || 'customer@cowrie.africa';
   const channels = Array.isArray(req.body && req.body.channels) ? req.body.channels : undefined;
   const paystackRef = `cwr_${charge.reference}_${Date.now()}`;
-  const data = await paystack.initialize({ email, amount: charge.amount, currency: charge.currency || 'GHS', reference: paystackRef, channels, metadata: { cowrie_reference: charge.reference, merchantId: charge.merchantId } }, chargeMode);
+  const data = await paystack.initialize({ email, amount: charge.amount, currency: charge.currency || 'USD', reference: paystackRef, channels, metadata: { cowrie_reference: charge.reference, merchantId: charge.merchantId } }, chargeMode);
   charge.paystackRef = paystackRef;
   await store.charges.update(charge);
   res.json({ accessCode: data.access_code, publicKey: paystack.publicKey(chargeMode), paystackRef });
