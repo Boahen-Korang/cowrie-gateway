@@ -422,6 +422,7 @@ function render(){
   else if(S.step==='approve')b.innerHTML=stateApprove();
   else if(S.step==='bank')renderBankDetails(b);
   else if(S.step==='static_transfer')renderStaticTransfer(b);
+  else if(S.step==='transfer_sent')renderTransferSent(b);
   else if(S.step==='ussd_wait')renderUssdWait(b);
   else if(S.step==='verify_3ds')renderVerify3ds(b);
   else if(S.step==='set-amount')renderSetAmount(b);
@@ -510,11 +511,23 @@ function renderStaticTransfer(b){
     <div class="hint" style="justify-content:center;flex-direction:column;gap:5px;text-align:center;margin-top:12px">
       <span>Use the reference above as the payment narration / description.</span>
       <span style="color:var(--faint)">Your order will be confirmed once we receive your transfer.</span>
-    </div>`;
+    </div>
+    <button class="pay" id="paidBtn" style="margin-top:16px;background:linear-gradient(135deg,#1A9B6E,#15825d)">I've made the payment ✓</button>`;
   b.querySelectorAll('.copy').forEach(c=>c.addEventListener('click',()=>{navigator.clipboard&&navigator.clipboard.writeText(c.dataset.c).catch(()=>{});c.textContent='copied!';setTimeout(()=>c.textContent='copy',1200);}));
   $('#back').addEventListener('click',()=>go('form'));
+  $('#paidBtn').addEventListener('click',()=>go('transfer_sent'));
   /* Notify admin once so they know to watch their bank */
   if(S.charge) fetch(`/api/charges/${encodeURIComponent(S.charge.reference)}/notify-transfer`,{method:'POST'}).catch(()=>{});
+  startPolling();
+}
+
+function renderTransferSent(b){
+  b.innerHTML=`<div class="state">
+    <div class="ic" style="background:#e8f8f1;color:#1A9B6E"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <h3>Payment submitted</h3>
+    <p>We're waiting to confirm your transfer of <strong>${fmt(amount(),ccy())}</strong> to ${merchantName()}. This usually takes a few minutes.</p>
+    <div class="hint" style="justify-content:center;margin-top:14px"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>You can close this page — your order will be updated automatically.</div>
+  </div>`;
   startPolling();
 }
 
