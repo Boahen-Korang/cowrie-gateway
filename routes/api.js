@@ -16,6 +16,11 @@ const cloudinary = require('../lib/cloudinary');
 
 const router = express.Router();
 
+/* Returns all admin recipient emails as an array (supports comma-separated ADMIN_EMAIL) */
+function adminEmails() {
+  return (process.env.ADMIN_EMAIL || cfg.ADMIN_EMAIL).split(',').map(e => e.trim()).filter(Boolean);
+}
+
 /* ── rate limiters ── */
 function rateLimit({ windowMs, max }) {
   const hits = new Map();
@@ -670,10 +675,10 @@ router.post('/charges/:reference/notify-transfer', loadCharge, ah(async (req, re
   if (charge.transferNotified) { await store.charges.update(charge); return res.json({ ok: true }); }
   charge.transferNotified = true;
   await store.charges.update(charge);
-  const adminEmail = process.env.ADMIN_EMAIL || cfg.ADMIN_EMAIL;
-  if (adminEmail) {
+  const toList = adminEmails();
+  if (toList.length) {
     const merchant = await store.merchants.byId(charge.merchantId);
-    sendPendingTransferAlert(adminEmail, {
+    sendPendingTransferAlert(toList, {
       reference: charge.reference,
       amount: charge.amount,
       currency: charge.currency || 'GHS',
@@ -697,9 +702,9 @@ router.post('/admin/charges/:reference/mark-paid', requireAdminAuth, ah(async (r
   if (merchant) {
     webhooks.emit(merchant, 'charge.success', charge).catch(() => {});
     if ((charge.mode || 'test') === 'live') {
-      const adminEmail = process.env.ADMIN_EMAIL || cfg.ADMIN_EMAIL;
-      if (adminEmail) {
-        sendDepositAlert(adminEmail, {
+      const toList = adminEmails();
+      if (toList.length) {
+        sendDepositAlert(toList, {
           reference: charge.reference,
           amount: charge.amount,
           currency: charge.currency || 'GHS',
@@ -725,9 +730,9 @@ async function emitWebhookIfTerminal(charge) {
   if (charge.status === 'success' && !charge.successEmailSent && (charge.mode || 'test') === 'live') {
     charge.successEmailSent = true;
     await store.charges.update(charge);
-    const adminEmail = process.env.ADMIN_EMAIL || cfg.ADMIN_EMAIL;
-    if (adminEmail) {
-      sendDepositAlert(adminEmail, {
+    const toList = adminEmails();
+    if (toList.length) {
+      sendDepositAlert(toList, {
         reference: charge.reference,
         amount: charge.amount,
         currency: charge.currency || 'GHS',
