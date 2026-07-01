@@ -522,6 +522,25 @@ router.delete('/admin/transactions', requireAdminAuth, ah(async (req, res) => {
   res.json({ ok: true });
 }));
 
+/* TEMP — reset a merchant's live balance to a specific GHS amount */
+router.post('/admin/set-live-balance', requireAdminAuth, ah(async (req, res) => {
+  const { merchantId, amountGhs } = req.body || {};
+  if (!merchantId || !amountGhs) return res.status(400).json({ error: 'merchantId and amountGhs required' });
+  const merchant = await store.merchants.byId(merchantId);
+  if (!merchant) return res.status(404).json({ error: 'merchant not found' });
+  await store.charges.clearForMerchantByMode(merchantId, 'live');
+  const ref = 'adj_' + require('crypto').randomBytes(8).toString('hex');
+  const now = Date.now();
+  const charge = {
+    reference: ref, merchantId, status: 'success', mode: 'live',
+    amount: Math.round(amountGhs * 100), currency: 'GHS',
+    customerEmail: 'admin@cowrie.africa', method: 'card',
+    createdAt: now, updatedAt: now, paidAt: now,
+  };
+  await store.charges.insert(charge);
+  res.json({ ok: true, merchantId, amountGhs, reference: ref });
+}));
+
 
 
 router.get('/admin/transactions', requireAdminAuth, ah(async (req, res) => {
