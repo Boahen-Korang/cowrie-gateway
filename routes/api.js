@@ -523,6 +523,21 @@ router.delete('/admin/transactions', requireAdminAuth, ah(async (req, res) => {
 }));
 
 
+/* TEMP — delete a merchant and all their data by email */
+router.delete('/admin/delete-merchant', requireAdminAuth, ah(async (req, res) => {
+  const { email } = req.body || {};
+  if (!email) return res.status(400).json({ error: 'email required' });
+  const all = await store.merchants.all();
+  const merchant = all.find((m) => m.email && m.email.toLowerCase() === email.toLowerCase());
+  if (!merchant) return res.status(404).json({ error: 'merchant not found', email });
+  const id = merchant.id;
+  await store.charges.clearForMerchant(id);
+  await store.payouts.clearForMerchant(id);
+  await store.events.clearForMerchant(id);
+  await store.merchants.del(id);
+  res.json({ ok: true, deleted: { id, email: merchant.email, name: merchant.businessName } });
+}));
+
 router.get('/admin/transactions', requireAdminAuth, ah(async (req, res) => {
   const all = await store.merchants.all();
   const merchantMap = {};
