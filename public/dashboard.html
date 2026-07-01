@@ -338,7 +338,7 @@ input,select,textarea{font-family:inherit}
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const SYMS={GHS:'₵',NGN:'₦',KES:'KSh',ZAR:'R',USD:'$',EUR:'€',GBP:'£'};
-const fmt=(n,c='USD')=>(SYMS[c]||c+' ')+' '+(n/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt=(n,c='GHS')=>(SYMS[c]||c+' ')+' '+(n/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtDate=ts=>new Date(ts).toLocaleString([],{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const ML={card:'Card',mobile_money:'Mobile money',bank_transfer:'Bank transfer',ussd:'USSD'};
 
@@ -412,8 +412,8 @@ async function renderOverview(el){
   const success=transactions.filter(t=>t.status==='success');
   const failed=transactions.filter(t=>t.status==='failed');
   const pending=transactions.filter(t=>t.status==='pending');
-  const ccy='USD';
-  const grossCollected=success.reduce((s,t)=>s+(t.amountUsd??t.amount),0);
+  const ccy='GHS';
+  const grossCollected=success.reduce((s,t)=>s+(t.amountGhs??t.amount),0);
   const completedPayouts=payouts.filter(p=>p.status==='completed').reduce((s,p)=>s+p.amount,0);
   const collected=Math.max(0,grossCollected-completedPayouts);
   const rate=transactions.length?((success.length/transactions.length)*100).toFixed(1):'0.0';
@@ -474,7 +474,7 @@ async function renderOverview(el){
       </div>
       <div class="kpi-tile r3d">
         <div class="kl">Payout pending</div>
-        <div class="kv">${fmt(pendingPayout,'USD')}</div>
+        <div class="kv">${fmt(pendingPayout,'GHS')}</div>
         <div class="ks">${payouts.filter(p=>p.status==='pending').length} request${payouts.filter(p=>p.status==='pending').length!==1?'s':''} awaiting</div>
       </div>
     </div>
@@ -624,7 +624,7 @@ async function renderPaymentLinks(el){
           <div>
             <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Currency</label>
             <select id="plCcy" style="${ipt}">
-              <option value="USD">USD — US Dollar</option>
+              <option value="GHS">GHS — Cedis</option>
               <option value="NGN">NGN — Naira</option>
               <option value="GHS">GHS — Cedis</option>
               <option value="EUR">EUR — Euro</option>
@@ -755,7 +755,7 @@ function renderRequestPayout(el){
         </div>
 
         <div class="formrow">
-          <div class="field"><div class="lbl">Amount (USD)</div><input id="pyAmount" type="number" min="1" step="0.01" placeholder="e.g. 500.00"></div>
+          <div class="field"><div class="lbl">Amount (GHS)</div><input id="pyAmount" type="number" min="1" step="0.01" placeholder="e.g. 500.00"></div>
           <div class="field"><div class="lbl">Note <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div><input id="pyNote" placeholder="e.g. Weekly withdrawal"></div>
         </div>
 
@@ -821,7 +821,7 @@ async function renderPayoutHistory(el){
         <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap">${fmtDate(p.createdAt)}</td>
         <td>${p.method==='mobile_money'?'Mobile money':'Bank transfer'}</td>
         <td style="font-size:12.5px">${dest}</td>
-        <td style="font-family:var(--mono);font-weight:700">${fmt(p.amount,'USD')}</td>
+        <td style="font-family:var(--mono);font-weight:700">${fmt(p.amount,'GHS')}</td>
         <td style="font-size:12px;color:var(--muted)">${esc(p.note||'—')}</td>
         <td>${statusTag(p.status)}</td>
       </tr>`;
