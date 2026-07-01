@@ -369,7 +369,11 @@ router.post('/charges', chargeLimiter, resolveMerchantByKey, ah(async (req, res)
 
 router.get('/charges/:reference', loadCharge, ah(async (req, res) => {
   const merchant = await store.merchants.byId(req.charge.merchantId);
-  res.json({ charge: { ...req.charge, merchantName: merchant ? merchant.businessName : 'Cowrie' } });
+  res.json({ charge: {
+    ...req.charge,
+    merchantName:    merchant ? merchant.businessName : 'Cowrie',
+    merchantWebsite: merchant ? (merchant.websiteUrl || null) : null,
+  }});
 }));
 
 router.post('/charges/:reference/method', loadCharge, ah(async (req, res) => {
