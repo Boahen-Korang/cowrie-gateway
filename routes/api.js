@@ -290,7 +290,9 @@ router.put('/me/website', requireAuth, ah(async (req, res) => {
 router.get('/transactions', requireAuth, ah(async (req, res) => {
   const all = await store.charges.forMerchant(req.merchant.id);
   const mode = req.mode || 'test';
-  const transactions = all.filter(c => (c.mode || 'test') === mode);
+  const raw = all.filter(c => (c.mode || 'test') === mode);
+  const rates = await fx.getRates();
+  const transactions = raw.map(c => ({ ...c, amountGhs: fx.toGhsMinor(c.amount, c.currency, rates) }));
   res.json({ transactions });
 }));
 
