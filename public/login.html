@@ -125,6 +125,14 @@ h1{font-size:27px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-b
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
       Back to home
     </a>
+    <div id="alreadySignedIn" style="display:none;background:rgba(91,44,143,.15);border:1px solid rgba(91,44,143,.35);border-radius:12px;padding:12px 14px;margin-bottom:18px;font-size:13.5px">
+      <div style="font-weight:700;margin-bottom:4px">Already signed in</div>
+      <div style="color:rgba(255,255,255,.55);font-size:12.5px;margin-bottom:10px" id="alreadyEmail"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/dashboard" style="flex:1;text-align:center;padding:7px 10px;background:rgba(91,44,143,.4);border:1px solid rgba(91,44,143,.5);border-radius:8px;color:#fff;text-decoration:none;font-size:12.5px;font-weight:700">Go to dashboard</a>
+        <button id="switchAccountBtn" style="flex:1;padding:7px 10px;background:none;border:1px solid rgba(255,255,255,.15);border-radius:8px;color:rgba(255,255,255,.55);font-size:12.5px;cursor:pointer">Use different account</button>
+      </div>
+    </div>
     <h1>Welcome back.</h1>
     <p class="sub">Sign in to your merchant dashboard to manage payments, payouts and settlements.</p>
     <form id="loginForm" novalidate>
@@ -241,6 +249,27 @@ h1{font-size:27px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-b
 function show(name){
   document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===name));
 }
+
+/* ── already signed in banner ── */
+(function(){
+  const existing = sessionStorage.getItem('cowrie_token');
+  if(!existing) return;
+  try {
+    const payload = JSON.parse(atob(existing.split('.')[1]));
+    if(payload.exp && payload.exp < Date.now()) { sessionStorage.removeItem('cowrie_token'); return; }
+  } catch(e) { /* non-JWT or parse error — show banner anyway */ }
+  const saved = sessionStorage.getItem('cowrie_merchant');
+  let email = '';
+  try { email = JSON.parse(saved).email || ''; } catch(e) {}
+  const banner = document.getElementById('alreadySignedIn');
+  if(email) document.getElementById('alreadyEmail').textContent = email;
+  banner.style.display = 'block';
+  document.getElementById('switchAccountBtn').addEventListener('click', () => {
+    sessionStorage.removeItem('cowrie_token');
+    sessionStorage.removeItem('cowrie_merchant');
+    banner.style.display = 'none';
+  });
+})();
 
 /* ── login ── */
 const pw=document.getElementById('pw'),togglePw=document.getElementById('togglePw');
