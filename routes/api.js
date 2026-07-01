@@ -526,6 +526,16 @@ router.post('/admin/members/:merchantId/lock', requireAdminAuth, ah(async (req, 
   res.json({ ok: true, merchantId: merchant.id, locked: merchant.locked });
 }));
 
+/* TEMP — delete a single charge by reference */
+router.post('/admin/delete-charge', requireAdminAuth, ah(async (req, res) => {
+  const { reference } = req.body || {};
+  if (!reference) return res.status(400).json({ error: 'reference required' });
+  const charge = await store.charges.byReference(reference);
+  if (!charge) return res.status(404).json({ error: 'charge not found', reference });
+  await store.charges.delByReference(reference);
+  res.json({ ok: true, deleted: { reference, amount: charge.amount, currency: charge.currency, status: charge.status } });
+}));
+
 router.delete('/admin/transactions', requireAdminAuth, ah(async (req, res) => {
   const { mode } = req.query; // ?mode=live or ?mode=test — omit for all
   if (mode === 'live' || mode === 'test') {
