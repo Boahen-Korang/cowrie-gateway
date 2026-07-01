@@ -1108,6 +1108,19 @@ function maskSecret(val) {
   return val.slice(0, 8) + '•'.repeat(Math.min(val.length - 8, 24));
 }
 
+/* TEMP — remove after email test */
+router.post('/admin/test-email', requireAdminAuth, ah(async (req, res) => {
+  const { sendEmail } = require('../lib/email');
+  const to = adminEmails();
+  await sendEmail({
+    to,
+    subject: 'Cowrie — test email ✓',
+    html: `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f4f4f8;font-family:'Helvetica Neue',Arial,sans-serif"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f8;padding:40px 16px"><tr><td align="center"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)"><tr><td style="background:linear-gradient(135deg,#0f5c3a,#1A9B6E);padding:28px 32px"><p style="margin:0;color:rgba(255,255,255,.7);font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700">Cowrie Payments</p></td></tr><tr><td style="padding:36px 32px 28px"><p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#1a0a2e">Email is working ✓</p><p style="margin:0 0 20px;font-size:15px;color:#666;line-height:1.6">This is a test message from your Cowrie Payment Gateway. Your admin email notifications are set up correctly and will be delivered to all recipients.</p><p style="margin:0;font-size:13px;color:#999">Sent to: ${to.join(', ')}</p></td></tr><tr><td style="padding:20px 32px;border-top:1px solid #f0ecf8"><p style="margin:0;font-size:12px;color:#bbb">© Cowrie Payment Gateway</p></td></tr></table></td></tr></table></body></html>`,
+    text: `Email is working!\n\nThis is a test message from your Cowrie Payment Gateway. Notifications are configured correctly.\n\nSent to: ${to.join(', ')}\n\n— Cowrie Payments`,
+  });
+  res.json({ ok: true, sentTo: to });
+}));
+
 router.get('/admin/gateways', requireAdminAuth, ah(async (req, res) => {
   const gs = (await store.settings.get('gateways')) || { activeGateway: null, installed: [], gateways: {} };
   const installed = (gs.installed || []).map(id => {
