@@ -409,7 +409,9 @@ async function renderOverview(el){
   const failed=transactions.filter(t=>t.status==='failed');
   const pending=transactions.filter(t=>t.status==='pending');
   const ccy=(success[0]||transactions[0]||{}).currency||'GHS';
-  const collected=success.reduce((s,t)=>s+t.amount,0);
+  const grossCollected=success.reduce((s,t)=>s+t.amount,0);
+  const completedPayouts=payouts.filter(p=>p.status==='completed').reduce((s,p)=>s+p.amount,0);
+  const collected=Math.max(0,grossCollected-completedPayouts);
   const rate=transactions.length?((success.length/transactions.length)*100).toFixed(1):'0.0';
   const pendingPayout=payouts.filter(p=>p.status==='pending').reduce((s,p)=>s+p.amount,0);
   const kycStatus=kycRes?.kycStatus||'none';
@@ -452,9 +454,9 @@ async function renderOverview(el){
     ${kycBanner}
     <div class="kpis">
       <div class="kpi-tile r3d">
-        <div class="kl">Total collected</div>
+        <div class="kl">Available balance</div>
         <div class="kv">${fmt(collected,ccy)}</div>
-        <div class="ks">${success.length} successful payment${success.length!==1?'s':''}</div>
+        <div class="ks">${success.length} payment${success.length!==1?'s':''} · ${fmt(grossCollected,ccy)} gross</div>
       </div>
       <div class="kpi-tile r3d">
         <div class="kl">Success rate</div>

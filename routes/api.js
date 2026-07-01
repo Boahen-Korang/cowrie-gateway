@@ -435,10 +435,12 @@ router.get('/admin/overview', requireAdminAuth, ah(async (req, res) => {
   const successAll = allCharges.filter((c) => c.status === 'success');
   const liveSuccess = successAll.filter((c) => (c.mode || 'test') === 'live');
   const testSuccess = successAll.filter((c) => (c.mode || 'test') === 'test');
-  const collectedToday = liveSuccess.filter((c) => c.createdAt >= todayTs).reduce((s, c) => s + toGhs(c.amount, c.currency), 0);
-  const totalCollected = liveSuccess.reduce((s, c) => s + toGhs(c.amount, c.currency), 0);
-  const testCollected  = testSuccess.reduce((s, c) => s + toGhs(c.amount, c.currency), 0);
   const allPayouts = await store.payouts.all();
+  const collectedToday = liveSuccess.filter((c) => c.createdAt >= todayTs).reduce((s, c) => s + toGhs(c.amount, c.currency), 0);
+  const grossCollected = liveSuccess.reduce((s, c) => s + toGhs(c.amount, c.currency), 0);
+  const testCollected  = testSuccess.reduce((s, c) => s + toGhs(c.amount, c.currency), 0);
+  const totalPaidOut   = allPayouts.filter((p) => p.status === 'completed').reduce((s, p) => s + p.amount, 0);
+  const totalCollected = Math.max(0, grossCollected - totalPaidOut);
   const paidOutToday = allPayouts.filter((p) => p.createdAt >= todayTs && p.status === 'completed').reduce((s, p) => s + p.amount, 0);
   const total = allCharges.length;
   const successRate = total > 0 ? ((successAll.length / total) * 100).toFixed(1) : '100.0';
@@ -462,7 +464,7 @@ router.get('/admin/overview', requireAdminAuth, ah(async (req, res) => {
 
 router.get('/admin/members', requireAdminAuth, ah(async (req, res) => {
   const merchants = (await store.merchants.all()).filter((m) => !m.demo);
-  const allCharges = await store.charges.all();
+  const [allCharges, allPayouts] = await Promise.all([store.charges.all(), store.payouts.all()]);
   const rates = await fx.getRates();
   const toGhs = (amount, currency) => fx.toGhsMinor(amount, currency, rates);
   const members = merchants.map((m) => {
@@ -470,14 +472,20 @@ router.get('/admin/members', requireAdminAuth, ah(async (req, res) => {
     const successful = charges.filter((c) => c.status === 'success');
     const liveOk = successful.filter((c) => (c.mode || 'test') === 'live');
     const testOk = successful.filter((c) => (c.mode || 'test') === 'test');
+    const livePaidOut = allPayouts
+      .filter((p) => p.merchantId === m.id && p.status === 'completed' && (p.mode || 'test') === 'live')
+      .reduce((s, p) => s + p.amount, 0);
+    const testPaidOut = allPayouts
+      .filter((p) => p.merchantId === m.id && p.status === 'completed' && (p.mode || 'test') === 'test')
+      .reduce((s, p) => s + p.amount, 0);
     return {
       id: m.id,
       businessName: m.businessName,
       email: m.email,
       websiteUrl: m.websiteUrl || null,
       createdAt: m.createdAt,
-      liveCollected: liveOk.reduce((s, c) => s + toGhs(c.amount, c.currency), 0),
-      testCollected: testOk.reduce((s, c) => s + toGhs(c.amount, c.currency), 0),
+      liveCollected: Math.max(0, liveOk.reduce((s, c) => s + toGhs(c.amount, c.currency), 0) - livePaidOut),
+      testCollected: Math.max(0, testOk.reduce((s, c) => s + toGhs(c.amount, c.currency), 0) - testPaidOut),
       totalTransactions: charges.length,
       liveTransactions: charges.filter((c) => (c.mode || 'test') === 'live').length,
       successfulTransactions: successful.length,
