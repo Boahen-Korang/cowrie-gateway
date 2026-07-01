@@ -7,6 +7,7 @@ const payments = require('../lib/payments');
 const paystack = require('../lib/paystack');
 const webhooks = require('../lib/webhooks');
 const { sendOtp, sendKycApproved, sendKycRejected, sendPendingTransferAlert } = require('../lib/email');
+const fx = require('../lib/fx');
 const {
   merchantId, apiKey, genId, hashPassword, verifyPassword, signToken, verifyToken,
 } = require('../lib/util');
@@ -428,12 +429,15 @@ router.get('/admin/overview', requireAdminAuth, ah(async (req, res) => {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const todayTs = today.getTime();
 
+  const rates = await fx.getRates();
+  const toGhs = (amount, currency) => fx.toGhsMinor(amount, currency, rates);
+
   const successAll = allCharges.filter((c) => c.status === 'success');
   const liveSuccess = successAll.filter((c) => (c.mode || 'test') === 'live');
   const testSuccess = successAll.filter((c) => (c.mode || 'test') === 'test');
-  const collectedToday = liveSuccess.filter((c) => c.createdAt >= todayTs).reduce((s, c) => s + c.amount, 0);
-  const totalCollected = liveSuccess.reduce((s, c) => s + c.amount, 0);
-  const testCollected  = testSuccess.reduce((s, c) => s + c.amount, 0);
+  const collectedToday = liveSuccess.filter((c) => c.createdAt >= todayTs).reduce((s, c) => s + toGhs(c.amount, c.currency), 0);
+  const totalCollected = liveSuccess.reduce((s, c) => s + toGhs(c.amount, c.currency), 0);
+  const testCollected  = testSuccess.reduce((s, c) => s + toGhs(c.amount, c.currency), 0);
   const allPayouts = await store.payouts.all();
   const paidOutToday = allPayouts.filter((p) => p.createdAt >= todayTs && p.status === 'completed').reduce((s, p) => s + p.amount, 0);
   const total = allCharges.length;
@@ -447,11 +451,11 @@ router.get('/admin/overview', requireAdminAuth, ah(async (req, res) => {
     const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
     const start = d.getTime(); const end = start + 86_400_000;
     const daySucc = successAll.filter((c) => c.createdAt >= start && c.createdAt < end);
-    last7Days.push({ date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), amount: daySucc.reduce((s, c) => s + c.amount, 0), count: daySucc.length });
+    last7Days.push({ date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), amount: daySucc.reduce((s, c) => s + toGhs(c.amount, c.currency), 0), count: daySucc.length });
   }
 
   const byMethod = {};
-  successAll.forEach((c) => { const m = c.method || 'unknown'; byMethod[m] = (byMethod[m] || 0) + c.amount; });
+  successAll.forEach((c) => { const m = c.method || 'unknown'; byMethod[m] = (byMethod[m] || 0) + toGhs(c.amount, c.currency); });
 
   res.json({ overview: { collectedToday, paidOutToday, totalCollected, testCollected, merchantCount, successRate, pendingCount, last7Days, byMethod } });
 }));
@@ -459,6 +463,8 @@ router.get('/admin/overview', requireAdminAuth, ah(async (req, res) => {
 router.get('/admin/members', requireAdminAuth, ah(async (req, res) => {
   const merchants = (await store.merchants.all()).filter((m) => !m.demo);
   const allCharges = await store.charges.all();
+  const rates = await fx.getRates();
+  const toGhs = (amount, currency) => fx.toGhsMinor(amount, currency, rates);
   const members = merchants.map((m) => {
     const charges = allCharges.filter((c) => c.merchantId === m.id);
     const successful = charges.filter((c) => c.status === 'success');
@@ -470,8 +476,8 @@ router.get('/admin/members', requireAdminAuth, ah(async (req, res) => {
       email: m.email,
       websiteUrl: m.websiteUrl || null,
       createdAt: m.createdAt,
-      liveCollected: liveOk.reduce((s, c) => s + c.amount, 0),
-      testCollected: testOk.reduce((s, c) => s + c.amount, 0),
+      liveCollected: liveOk.reduce((s, c) => s + toGhs(c.amount, c.currency), 0),
+      testCollected: testOk.reduce((s, c) => s + toGhs(c.amount, c.currency), 0),
       totalTransactions: charges.length,
       liveTransactions: charges.filter((c) => (c.mode || 'test') === 'live').length,
       successfulTransactions: successful.length,
