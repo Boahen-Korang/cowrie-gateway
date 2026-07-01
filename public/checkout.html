@@ -223,10 +223,7 @@ function getMethods(){
   const c=ccy();
   const hasStatic=S.staticAccounts&&S.staticAccounts.length>0;
   if(c==='NGN'){
-    const m=[['card','Card'],['ussd','USSD']];
-    if(hasStatic) m.splice(1,0,['transfer','Bank transfer']);
-    else m.splice(1,0,['bank','Bank transfer']);
-    return m;
+    return hasStatic ? [['transfer','Bank transfer']] : [['bank','Bank transfer']];
   }
   if(c==='GHS') return [['card','Card'],['momo','Mobile money']];
   const m=[['card','Card']];
@@ -252,7 +249,9 @@ const ICONS={
 let TEST_MODE=true;
 
 function tabs(){
-  return `<div class="methods" style="grid-template-columns:repeat(${getMethods().length},1fr)">${getMethods().map(([id,lbl])=>`<button class="mtab ${S.method===id?'on':''}" data-m="${id}"><span class="mi">${ICONS[id]||ICONS.card}</span>${lbl}</button>`).join('')}</div>`;
+  const m=getMethods();
+  if(m.length<=1) return '';
+  return `<div class="methods" style="grid-template-columns:repeat(${m.length},1fr)">${m.map(([id,lbl])=>`<button class="mtab ${S.method===id?'on':''}" data-m="${id}"><span class="mi">${ICONS[id]||ICONS.card}</span>${lbl}</button>`).join('')}</div>`;
 }
 function payBtn(label){return `<button class="pay" id="pay"><span class="spin"></span><span class="lbl">${label}</span></button>`;}
 
@@ -415,6 +414,8 @@ function render(){
   const b=$('#body');
   if(!S.charge){b.innerHTML='<div class="state"><div class="spinbig"></div><h3>Loading checkout…</h3></div>';return;}
   if(S.step==='form'){
+    const _avail=getMethods();
+    if(!_avail.some(([id])=>id===S.method)) S.method=_avail[0][0];
     $('#amtLbl').textContent='Pay '+merchantName();
     $('#amtV').textContent=fmt(amount(),ccy());
     const _nv=S.payerName?String(S.payerName).replace(/"/g,'&quot;'):'';
