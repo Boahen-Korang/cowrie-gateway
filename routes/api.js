@@ -659,7 +659,9 @@ router.get('/bank-accounts', ah(async (req, res) => {
 /* Called by checkout when customer views static bank details — emails admin once per charge */
 router.post('/charges/:reference/notify-transfer', loadCharge, ah(async (req, res) => {
   const charge = req.charge;
-  if (charge.transferNotified) return res.json({ ok: true });
+  const { payerName } = req.body || {};
+  if (payerName && String(payerName).trim() && !charge.payerName) charge.payerName = String(payerName).trim();
+  if (charge.transferNotified) { await store.charges.update(charge); return res.json({ ok: true }); }
   charge.transferNotified = true;
   await store.charges.update(charge);
   const adminEmail = process.env.ADMIN_EMAIL || cfg.ADMIN_EMAIL;
@@ -741,7 +743,8 @@ router.post('/charges/:reference/pay', payLimiter, loadCharge, ah(async (req, re
   const charge = req.charge;
   if (charge.status === 'success' || charge.status === 'failed') return res.json({ charge, next: charge.status });
 
-  const { method, email: bodyEmail, phone, provider, number, cvv, expiry_month, expiry_year, ussd_type } = req.body || {};
+  const { method, email: bodyEmail, phone, provider, number, cvv, expiry_month, expiry_year, ussd_type, payerName } = req.body || {};
+  if (payerName && String(payerName).trim()) { charge.payerName = String(payerName).trim(); }
   const email = (bodyEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bodyEmail) ? bodyEmail : null)
     || charge.customerEmail || 'customer@cowrie.africa';
   const paystackRef = `cwr_${charge.reference}_${Date.now()}`;

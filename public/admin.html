@@ -1272,6 +1272,7 @@ function openDetail(ref){
   const rows = [
     ['Reference',  tx.reference],
     ['Status',     tx.status],
+    tx.payerName ? ['Payer name', tx.payerName] : null,
     ['Method',     methodLabel(tx.method)],
     ['Currency',   tx.currency||'GHS'],
     ['Created',    fmtDate(tx.createdAt)],
