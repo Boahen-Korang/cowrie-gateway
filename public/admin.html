@@ -381,7 +381,7 @@ input,select,textarea{font-family:inherit}
         <div class="hdr-actions">
           <div style="position:relative;display:flex;align-items:center">
             <svg style="position:absolute;left:10px;pointer-events:none;opacity:.4" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
-            <input id="globalSearch" type="search" placeholder="Search reference…" style="background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:9px;padding:7px 12px 7px 30px;color:var(--ink);font-family:var(--mono);font-size:12px;width:190px;outline:none;transition:.15s" onfocus="this.style.borderColor='rgba(91,44,143,.55)';this.style.boxShadow='0 0 0 3px rgba(91,44,143,.15)'" onblur="this.style.borderColor='';this.style.boxShadow=''">
+            <input id="globalSearch" type="search" placeholder="Search name or reference…" style="background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:9px;padding:7px 12px 7px 30px;color:var(--ink);font-family:var(--mono);font-size:12px;width:190px;outline:none;transition:.15s" onfocus="this.style.borderColor='rgba(91,44,143,.55)';this.style.boxShadow='0 0 0 3px rgba(91,44,143,.15)'" onblur="this.style.borderColor='';this.style.boxShadow=''">
           </div>
           <span class="badge" id="statusBadge">Loading…</span>
           <button class="btn" id="refreshBtn">↻ Refresh</button>
@@ -720,7 +720,7 @@ async function renderTransactions(el){
     const q = (document.getElementById('txSearch')||{}).value;
     if(q&&q.trim()){
       const s=q.toLowerCase().trim();
-      rows=rows.filter(t=>(t.reference||'').toLowerCase().includes(s)||(t.customerEmail||'').toLowerCase().includes(s)||(t.method||'').toLowerCase().includes(s)||(t.status||'').toLowerCase().includes(s));
+      rows=rows.filter(t=>(t.reference||'').toLowerCase().includes(s)||(t.customerEmail||'').toLowerCase().includes(s)||(t.payerName||'').toLowerCase().includes(s)||(t.method||'').toLowerCase().includes(s)||(t.status||'').toLowerCase().includes(s));
     }
     return rows;
   }
@@ -751,7 +751,7 @@ async function renderTransactions(el){
 
   el.innerHTML = `
     <div class="search-row" style="display:flex;gap:8px;align-items:center">
-      <input id="txSearch" type="text" placeholder="Search by reference, method or status…" style="flex:1">
+      <input id="txSearch" type="text" placeholder="Search by name, reference, method or status…" style="flex:1">
       <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap">
         <button id="txTab_all"     class="btn sm active" style="font-family:var(--mono);font-size:11px;min-height:36px;padding:6px 10px">All</button>
         <button id="txTab_pending" class="btn sm" style="font-family:var(--mono);font-size:11px;min-height:36px;padding:6px 10px;background:rgba(224,161,46,.13);color:var(--gold);border:1px solid rgba(224,161,46,.3)">Pending${pendingCount>0?` <span style="background:rgba(224,161,46,.3);border-radius:8px;padding:1px 6px">${pendingCount}</span>`:''}</button>
