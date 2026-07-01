@@ -521,16 +521,6 @@ router.delete('/admin/transactions', requireAdminAuth, ah(async (req, res) => {
   res.json({ ok: true });
 }));
 
-/* TEMP — remove after selective clear */
-router.post('/admin/clear-except', requireAdminAuth, ah(async (req, res) => {
-  const { keep } = req.body || {};
-  if (!Array.isArray(keep) || !keep.length) throw Object.assign(new Error('keep array required'), { status: 400 });
-  const pool = require('../lib/db');
-  const placeholders = keep.map((_, i) => `$${i + 1}`).join(',');
-  const result = await pool.query(`DELETE FROM charges WHERE reference NOT IN (${placeholders})`, keep);
-  res.json({ ok: true, deleted: result.rowCount });
-}));
-
 router.get('/admin/transactions', requireAdminAuth, ah(async (req, res) => {
   const all = await store.merchants.all();
   const merchantMap = {};
