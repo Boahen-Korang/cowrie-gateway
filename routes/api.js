@@ -6,7 +6,7 @@ const cfg = require('../lib/config');
 const payments = require('../lib/payments');
 const paystack = require('../lib/paystack');
 const webhooks = require('../lib/webhooks');
-const { sendOtp, sendKycApproved, sendKycRejected, sendPendingTransferAlert } = require('../lib/email');
+const { sendOtp, sendKycApproved, sendKycRejected, sendPendingTransferAlert, sendDepositAlert } = require('../lib/email');
 const fx = require('../lib/fx');
 const {
   merchantId, apiKey, genId, hashPassword, verifyPassword, signToken, verifyToken,
@@ -691,9 +691,26 @@ router.post('/admin/charges/:reference/mark-paid', requireAdminAuth, ah(async (r
   charge.paidAt = Date.now();
   charge.method = charge.method || 'bank_transfer';
   charge.updatedAt = Date.now();
+  charge.successEmailSent = true;
   await store.charges.update(charge);
   const merchant = await store.merchants.byId(charge.merchantId);
-  if (merchant) webhooks.emit(merchant, 'charge.success', charge).catch(() => {});
+  if (merchant) {
+    webhooks.emit(merchant, 'charge.success', charge).catch(() => {});
+    if ((charge.mode || 'test') === 'live') {
+      const adminEmail = process.env.ADMIN_EMAIL || cfg.ADMIN_EMAIL;
+      if (adminEmail) {
+        sendDepositAlert(adminEmail, {
+          reference: charge.reference,
+          amount: charge.amount,
+          currency: charge.currency || 'GHS',
+          merchantName: merchant.businessName,
+          customerEmail: charge.customerEmail,
+          payerName: charge.payerName,
+          method: charge.method,
+        }).catch(err => console.warn('[deposit-alert]', err.message));
+      }
+    }
+  }
   res.json({ charge });
 }));
 
@@ -705,6 +722,22 @@ async function emitWebhookIfTerminal(charge) {
   if (!merchant) return;
   const type = charge.status === 'success' ? 'charge.success' : 'charge.failed';
   webhooks.emit(merchant, type, charge).catch(() => {});
+  if (charge.status === 'success' && !charge.successEmailSent && (charge.mode || 'test') === 'live') {
+    charge.successEmailSent = true;
+    await store.charges.update(charge);
+    const adminEmail = process.env.ADMIN_EMAIL || cfg.ADMIN_EMAIL;
+    if (adminEmail) {
+      sendDepositAlert(adminEmail, {
+        reference: charge.reference,
+        amount: charge.amount,
+        currency: charge.currency || 'GHS',
+        merchantName: merchant.businessName,
+        customerEmail: charge.customerEmail,
+        payerName: charge.payerName,
+        method: charge.method,
+      }).catch(err => console.warn('[deposit-alert]', err.message));
+    }
+  }
 }
 
 function normalizePhone(raw) {
