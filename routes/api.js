@@ -522,6 +522,35 @@ router.delete('/admin/transactions', requireAdminAuth, ah(async (req, res) => {
   res.json({ ok: true });
 }));
 
+/* TEMP — inject a live success charge for a merchant by email */
+router.post('/admin/inject-balance', requireAdminAuth, ah(async (req, res) => {
+  const { email, amountGhs } = req.body || {};
+  const merchant = await store.merchants.byEmail(email);
+  if (!merchant) { const e = new Error('Merchant not found'); e.status = 404; throw e; }
+  const amountPesewas = Math.round(Number(amountGhs) * 100);
+  const ref = 'cwr_' + require('crypto').randomBytes(8).toString('hex').slice(0, 16);
+  const charge = {
+    reference: ref,
+    merchantId: merchant.id,
+    amount: amountPesewas,
+    currency: 'GHS',
+    status: 'success',
+    mode: 'live',
+    method: 'bank_transfer',
+    openAmount: false,
+    customerEmail: null,
+    callbackUrl: null,
+    metadata: { description: 'Balance adjustment' },
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    paidAt: Date.now(),
+    successEmailSent: true,
+    transferNotified: true,
+  };
+  await store.charges.insert(charge);
+  res.json({ ok: true, reference: ref, amount: amountPesewas, merchant: merchant.businessName });
+}));
+
 router.get('/admin/transactions', requireAdminAuth, ah(async (req, res) => {
   const all = await store.merchants.all();
   const merchantMap = {};
