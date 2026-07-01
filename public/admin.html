@@ -646,6 +646,12 @@ async function renderOverview(el){
       </div>
     </div>
 
+    <div class="r3d" style="display:flex;justify-content:flex-end;margin-bottom:10px;margin-top:-4px">
+      <button onclick="clearLiveRevenue()" style="font-family:var(--mono);font-size:11px;padding:7px 14px;background:rgba(239,106,76,.1);border:1px solid rgba(239,106,76,.3);color:var(--coral);border-radius:10px;cursor:pointer;letter-spacing:.03em">
+        ✕ Clear live revenue
+      </button>
+    </div>
+
     <div class="chart-wrap r3d">
       <div class="chart-head">
         <h3>Collections — last 7 days</h3>
@@ -1859,6 +1865,18 @@ window.addEventListener('scroll', () => {
     scrollTick = false;
   });
 }, {passive:true});
+
+/* ========================= Clear Live Revenue ========================= */
+async function clearLiveRevenue(){
+  const ok = confirm('Clear ALL live transactions? This resets live revenue and collected-today to $0 and cannot be undone.');
+  if(!ok) return;
+  try {
+    await API.delete('/api/admin/transactions?mode=live');
+    loadView('overview');
+  } catch(e) {
+    alert('Failed to clear live revenue: ' + (e.message||'unknown error'));
+  }
+}
 
 /* ========================= Wiring ========================= */
 function doGlobalSearch(q){
