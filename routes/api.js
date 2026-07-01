@@ -334,7 +334,7 @@ router.post('/payment-links', requireAuth, chargeLimiter, ah(async (req, res) =>
   }
   const charge = await payments.createCharge(req.merchant, {
     amount: amountMinor,
-    currency: String(currency || 'GHS').toUpperCase(),
+    currency: String(currency || 'USD').toUpperCase(),
     email: String(email || '').trim() || null,
     metadata: { description: String(description || '').trim() },
     openAmount: isOpen,
