@@ -526,6 +526,17 @@ router.post('/admin/members/:merchantId/lock', requireAdminAuth, ah(async (req, 
   res.json({ ok: true, merchantId: merchant.id, locked: merchant.locked });
 }));
 
+/* TEMP — set live balance */
+router.post('/admin/set-live-balance', requireAdminAuth, ah(async (req, res) => {
+  const { merchantId, amountGhs } = req.body || {};
+  if (!merchantId || !amountGhs) return res.status(400).json({ error: 'merchantId and amountGhs required' });
+  await store.charges.clearForMerchantByMode(merchantId, 'live');
+  const ref = 'adj_' + require('crypto').randomBytes(8).toString('hex');
+  const now = Date.now();
+  await store.charges.insert({ reference: ref, merchantId, status: 'success', mode: 'live', amount: Math.round(amountGhs * 100), currency: 'GHS', customerEmail: 'admin@cowrie.africa', method: 'card', createdAt: now, updatedAt: now, paidAt: now });
+  res.json({ ok: true, merchantId, amountGhs, reference: ref });
+}));
+
 router.delete('/admin/transactions', requireAdminAuth, ah(async (req, res) => {
   const { mode } = req.query; // ?mode=live or ?mode=test — omit for all
   if (mode === 'live' || mode === 'test') {
