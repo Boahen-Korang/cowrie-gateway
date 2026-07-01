@@ -336,6 +336,10 @@ input,select,textarea{font-family:inherit}
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
           Transactions
         </a>
+        <a href="#" data-view="confirmations">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Confirmations
+        </a>
         <a href="#" data-view="payouts">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>
           Payouts
@@ -445,6 +449,10 @@ input,select,textarea{font-family:inherit}
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
       Txns
     </a>
+    <a href="#" data-view="confirmations">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Confirm
+    </a>
     <a href="#" data-view="payouts">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>
       Payouts
@@ -542,7 +550,8 @@ const API = {
 
 const VIEWS = {
   overview:     {title:'Overview',     desc:'Real-time balances, settlements, payouts and reconciliation.'},
-  transactions: {title:'Transactions', desc:'All payment collections across your payment rails.'},
+  transactions:  {title:'Transactions',  desc:'All payment collections across your payment rails.'},
+  confirmations: {title:'Confirmations', desc:'Bank transfers the customer has confirmed — verify receipt and mark as paid.'},
   payouts:      {title:'Payouts',      desc:'Review and process payout requests submitted by merchants.'},
   settlements:  {title:'Settlements',  desc:'Reconcile and trigger settlements to your bank account.'},
   'new-payment':{title:'New payment',  desc:'Create a hosted payment link and share it with a customer.'},
@@ -566,7 +575,8 @@ async function loadView(view){
   el.innerHTML = '<div class="state-box"><div class="spinbig"></div></div>';
   try{
     if(view==='overview')          await renderOverview(el);
-    else if(view==='transactions') await renderTransactions(el);
+    else if(view==='transactions')   await renderTransactions(el);
+    else if(view==='confirmations')  await renderConfirmations(el);
     else if(view==='payouts')      await renderPayouts(el);
     else if(view==='settlements')  await renderSettlements(el);
     else if(view==='new-payment')  renderNewPayment(el);
@@ -827,6 +837,85 @@ function txTable(rows, viewable=false){
       ${viewable?`<td style="text-align:right"><button class="btn sm ghost" data-ref="${esc(r.reference||'')}">View</button></td>`:''}
     </tr>`).join('')}</tbody>
   </table>`;
+}
+
+/* ========================= Confirmations ========================= */
+async function renderConfirmations(el){
+  const {transactions} = await API.get('/api/admin/transactions');
+  txCache = transactions;
+
+  /* Only show transfers where the customer confirmed they sent the money */
+  let pending = transactions.filter(t =>
+    !['success','failed'].includes(t.status) && t.transferNotified
+  );
+
+  function timeAgo(ts){
+    const s = Math.floor((Date.now()-ts)/1000);
+    if(s < 60) return s+'s ago';
+    const m = Math.floor(s/60); if(m < 60) return m+'m ago';
+    const h = Math.floor(m/60); if(h < 24) return h+'h ago';
+    return Math.floor(h/24)+'d ago';
+  }
+
+  function confCard(t, i){
+    const amt = fmt(t.amount||0, t.currency||'GHS');
+    return `<div id="confCard_${i}" style="background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;transition:.3s opacity">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line-2);flex-wrap:wrap">
+        <div>
+          <div style="font-size:26px;font-weight:800;letter-spacing:-.5px">${esc(amt)}</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:4px">${esc(t.reference)}</div>
+        </div>
+        <span class="badge" style="background:rgba(224,161,46,.18);color:#E0A12E;border-color:rgba(224,161,46,.3);white-space:nowrap;flex-shrink:0">Awaiting confirmation</span>
+      </div>
+      <div style="padding:14px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        ${t.customerEmail ? `<span style="font-size:13px;color:var(--ink-soft)">${esc(t.customerEmail)}</span><span style="color:var(--line);font-size:12px">·</span>` : ''}
+        <span style="font-size:12px;color:var(--muted);font-family:var(--mono)">${timeAgo(t.createdAt)}</span>
+        <div style="margin-left:auto;display:flex;gap:8px;flex-shrink:0">
+          <button class="btn sm" data-ref="${esc(t.reference)}" style="font-size:12px">View details</button>
+          <button id="confPay_${i}" class="btn primary sm">Mark as paid</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function draw(){
+    document.getElementById('statusBadge').textContent = pending.length ? pending.length+' pending' : 'All clear';
+    if(!pending.length){
+      el.innerHTML = `<div style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:64px 24px;text-align:center">
+        <div style="width:56px;height:56px;border-radius:50%;background:rgba(26,155,110,.12);border:1.5px solid rgba(26,155,110,.25);display:flex;align-items:center;justify-content:center;margin:0 auto 18px">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#1A9B6E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <h3 style="font-size:17px;margin-bottom:8px">All caught up</h3>
+        <p style="color:var(--muted);font-size:14px">No bank transfers waiting for confirmation right now.</p>
+      </div>`;
+      return;
+    }
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <span style="font-size:13px;color:var(--muted);font-weight:600">${pending.length} transfer${pending.length!==1?'s':''} waiting — check your bank account, then mark each one as paid.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${pending.map((t,i)=>confCard(t,i)).join('')}
+      </div>`;
+    pending.forEach((t, i)=>{
+      const btn = document.getElementById('confPay_'+i);
+      if(!btn) return;
+      btn.addEventListener('click', async function(){
+        const self = this;
+        self.disabled = true; self.textContent = 'Saving…';
+        try{
+          await API.post('/api/admin/charges/'+encodeURIComponent(t.reference)+'/mark-paid', {});
+          const card = document.getElementById('confCard_'+i);
+          card.style.opacity = '0.45'; card.style.pointerEvents = 'none';
+          self.textContent = 'Confirmed ✓'; self.style.background = '#1A9B6E'; self.style.borderColor = '#1A9B6E';
+          pending = pending.filter(p=>p.reference!==t.reference);
+          setTimeout(()=>draw(), 1100);
+        }catch(err){ self.disabled = false; self.textContent = 'Mark as paid'; alert(err.message); }
+      });
+    });
+  }
+
+  draw();
 }
 
 /* ========================= Payouts ========================= */
