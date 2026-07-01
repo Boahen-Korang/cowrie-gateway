@@ -1108,21 +1108,6 @@ function maskSecret(val) {
   return val.slice(0, 8) + '•'.repeat(Math.min(val.length - 8, 24));
 }
 
-/* TEMP — remove after email test */
-router.post('/admin/test-email', requireAdminAuth, ah(async (req, res) => {
-  const to = adminEmails();
-  await sendDepositAlert(to, {
-    reference: 'TEST-' + Date.now(),
-    amount: 25000,
-    currency: 'GHS',
-    merchantName: 'Test Merchant',
-    customerEmail: 'customer@example.com',
-    payerName: 'Test Customer',
-    method: 'card',
-  });
-  res.json({ ok: true, sentTo: to });
-}));
-
 router.get('/admin/gateways', requireAdminAuth, ah(async (req, res) => {
   const gs = (await store.settings.get('gateways')) || { activeGateway: null, installed: [], gateways: {} };
   const installed = (gs.installed || []).map(id => {
